@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.mvp.example">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity android:name=".view.MainActivity" android:label="@string/app_name">
+
+        </activity>
+        <activity android:name=".viewpager.ViewPagerActivity" android:label="ViewPager"/>
+
+        <activity android:name=".photostream.view.container.MainActivity">
+            <intent-filter>
+                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".photostream.FullscreenActivity" android:theme="@style/AppTheme.NoActionBar"/>
+
+        <!-- URL festlegen für den Photostream Server -->
+        <meta-data
+            android:name="PHOTOSTREAM_URL"
+            android:value="http://5.45.97.155:8082" />
+
+        <!-- Größe festlegen für eine Seite aus dem Photostream -->
+        <meta-data
+            android:name="PAGE_SIZE"
+            android:value="3" />
+
+    </application>
+
+</manifest>

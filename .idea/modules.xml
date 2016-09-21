@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Android-MVP.iml" filepath="$PROJECT_DIR$/Android-MVP.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" filepath="$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" filepath="$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sample/sample.iml" filepath="$PROJECT_DIR$/sample/sample.iml" />
+    </modules>
+  </component>
+</project>
