@@ -29,9 +29,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity implements IMainActivityView {
 
-    private MvpActivityDelegate<IMainActivityView, GithubRepositoryPresenter> delegate;
-    private MvpViewDelegate<IProgressBar, ProgressBarPresenter> progressBarDelegate;
-    private MvpViewDelegate<IRecyclerView, RecyclerViewPresenter> recyclerViewDelegate;
+    private MainActivityDelegate delegate;
+    private ProgressBarDelegate progressBarDelegate;
+    private RecyclerViewDelegate recyclerViewDelegate;
     private SearchViewDelegate searchViewDelegate;
     private Bundle savedInstanceState;
 
@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements IMainActivityView
         super.onCreate(savedInstanceState);
         setContentView(R.layout.photostream_layout);
         this.savedInstanceState = savedInstanceState;
-        delegate = new PhotoActivityDelegate();
+        delegate = new MainActivityDelegate();
 
         progressBarDelegate = new ProgressBarDelegate();
         recyclerViewDelegate = new RecyclerViewDelegate();
@@ -109,9 +109,9 @@ public class MainActivity extends AppCompatActivity implements IMainActivityView
         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
     }
 
-    private class PhotoActivityDelegate extends MvpActivityDelegate<IMainActivityView, GithubRepositoryPresenter> {
+    private class MainActivityDelegate extends MvpActivityDelegate<IMainActivityView, GithubRepositoryPresenter> {
 
-        PhotoActivityDelegate() {
+        MainActivityDelegate() {
             super(MainActivity.this, getApplicationContext(), getSupportLoaderManager());
         }
 
