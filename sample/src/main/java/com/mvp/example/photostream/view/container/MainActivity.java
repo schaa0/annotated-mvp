@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements IMainActivityView
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.photostream_layout);
+        setContentView(R.layout.activity_main);
         this.savedInstanceState = savedInstanceState;
         delegate = new MainActivityDelegate();
 
