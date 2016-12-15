@@ -4,17 +4,21 @@ import android.os.Looper;
 
 import com.mvp.IMvpEventBus;
 import com.mvp.MvpEventBus;
-import com.mvp.annotation.processor.GithubRepositoryPresenterProxy;
+import com.mvp.MvpPresenterFactory;
 import com.mvp.example.photostream.view.viewcontract.IMainActivityView;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.annotation.Config;
 import org.robolectric.util.concurrent.RoboExecutorService;
 
 import static org.mockito.Mockito.mock;
 
-
+@RunWith(RobolectricGradleTestRunner.class)
+@Config(constants = com.mvp.example.BuildConfig.class, sdk = 21)
 public class GithubRepositoryPresenterTest {
 
     private GithubRepositoryPresenter presenter;
@@ -25,9 +29,12 @@ public class GithubRepositoryPresenterTest {
     public void setUp() throws Exception {
         eventBus =  new MvpEventBus();
         view = mock(IMainActivityView.class);
-        GithubRepositoryPresenter presenterImpl = new GithubRepositoryPresenter(eventBus, Looper.myLooper(), new RoboExecutorService());
-        presenter = new GithubRepositoryPresenterProxy(presenterImpl);
-        presenter.onInitialize();
+        presenter = new MvpPresenterFactory<IMainActivityView, GithubRepositoryPresenter>() {
+            @Override
+            public GithubRepositoryPresenter create() {
+                return new GithubRepositoryPresenter(eventBus, Looper.myLooper(), new RoboExecutorService());
+            }
+        }.build();
         presenter.setView(view);
     }
 

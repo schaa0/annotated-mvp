@@ -12,6 +12,8 @@ import com.mvp.example.photostream.view.viewcontract.IMainActivityView;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
+import javax.inject.Inject;
+
 @Presenter(
         viewEvents = {
                 @ViewEvent(eventType = IOException.class, viewMethodName = "showError")
@@ -21,6 +23,7 @@ public class GithubRepositoryPresenter extends MvpPresenter<IMainActivityView> {
 
     public GithubRepositoryPresenter() { }
 
+    @Inject
     public GithubRepositoryPresenter(IMvpEventBus eventBus) {
         super(eventBus);
     }

@@ -5,4 +5,5 @@ targetCompatibility = JavaVersion.VERSION_1_7
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'javax.inject:javax.inject:1'
 }

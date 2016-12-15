@@ -72,4 +72,5 @@ public class SearchResult {
         this.repositories = repositories;
     }
 
+
 }

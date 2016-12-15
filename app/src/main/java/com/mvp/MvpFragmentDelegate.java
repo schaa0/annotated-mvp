@@ -8,16 +8,19 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 
-public abstract class MvpFragmentDelegate<V extends MvpView, P extends IMvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P> {
+public abstract class MvpFragmentDelegate<V extends MvpView, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P> {
 
+    private IMvpEventBus eventBus;
+    private final PresenterComponent<V, P> component;
     private Context context;
     private final String fragmentTag;
     private V view;
-    IMvpEventBus eventBus = MvpEventBus.get();
 
     private boolean firstDelivery = true;
 
-    public MvpFragmentDelegate(V view, Context context, String fragmentTag){
+    public MvpFragmentDelegate(IMvpEventBus eventBus, PresenterComponent<V, P> component, V view, Context context, String fragmentTag){
+        this.eventBus = eventBus;
+        this.component = component;
         this.view = view;
         this.context = context;
         this.fragmentTag = fragmentTag;
@@ -53,20 +56,17 @@ public abstract class MvpFragmentDelegate<V extends MvpView, P extends IMvpPrese
         }
         view = null;
         context = null;
-        eventBus = null;
     }
 
     @Override
     public Loader<P> onCreateLoader(int id, Bundle args) {
-        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>() {
+        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>(eventBus) {
             @Override
             public P create() {
-                return MvpFragmentDelegate.this.create(eventBus);
+                return component.newInstance();
             }
         });
     }
-
-    protected abstract P create(IMvpEventBus eventBus);
 
     @Override
     public void onLoadFinished(Loader<P> loader, P presenter) {

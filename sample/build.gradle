@@ -10,17 +10,16 @@ android {
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
-        jackOptions {
+        /*jackOptions {
             enabled true
-        }
+        }*/
         testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
     }
 
-    compileOptions {
+    /*compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-        incremental true
-    }
+    }*/
 
     buildTypes {
         release {
@@ -43,4 +42,5 @@ dependencies {
     compile 'com.github.bumptech.glide:glide:3.7.0'
     compile project(':app')
     annotationProcessor project(':mvp-annotation-processor')
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.0'
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MVPD Sample</string>
+    <string name="app_name">Example</string>
     <string name="action_settings">Settings</string>
     <string name="button">Show Toast After Delay</string>
     <string name="action_search">Search</string>

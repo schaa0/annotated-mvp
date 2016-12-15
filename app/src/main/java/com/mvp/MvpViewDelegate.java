@@ -7,10 +7,15 @@ import android.support.annotation.IdRes;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 
-public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IMvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P> {
+import javax.inject.Inject;
+
+public class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P> {
 
     public static final int CONTAINER_ACTIVITY = 0x1;
     public static final int CONTAINER_FRAGMENT = 0x2;
+
+    private IMvpEventBus eventBus;
+    private final PresenterComponent<V, P> component;
 
     private Context context;
     private final int containerType;
@@ -20,8 +25,11 @@ public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IM
     private V view;
     private boolean firstDelivery = true;
     private Bundle savedState;
+    private boolean alreadyRestored = false;
 
-    public MvpViewDelegate(LoaderManager loaderManager, Context context, @IdRes int viewId, int containerType){
+    public MvpViewDelegate(IMvpEventBus eventBus, PresenterComponent<V, P> component, LoaderManager loaderManager, Context context, @IdRes int viewId, int containerType){
+        this.eventBus = eventBus;
+        this.component = component;
         this.loaderManager = loaderManager;
         this.context = context;
         this.containerType = containerType;
@@ -31,30 +39,37 @@ public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IM
     private P presenter;
     private int id = -1;
 
-    IMvpEventBus eventBus = MvpEventBus.get();
     private boolean loadFinishedCalled = false;
 
     public void attachView(Bundle savedInstanceState, V view){
         this.view = view;
+        this.savedState = savedInstanceState;
         firstDelivery = savedInstanceState == null;
         id = savedInstanceState == null ? hashCode() : savedInstanceState.getInt(viewId);
+        /*if (!firstDelivery && !alreadyRestored){
+            internalOnRestoreInstanceState(savedInstanceState);
+        }*/
         loaderManager.initLoader(id, null, this);
     }
 
-    private boolean isActivityContainer() {
-        return containerType == CONTAINER_ACTIVITY;
-    }
-
-    private boolean isFragmentContainer() {
-        return containerType == CONTAINER_FRAGMENT;
-    }
-
     public void onSaveInstanceState(Bundle outState) {
+        alreadyRestored = false;
         outState.putInt(viewId, id);
+        if (view instanceof MvpViewWithStateInLayout){
+            ((MvpViewWithStateInLayout) view).onSaveInstanceState(outState);
+        }
     }
 
     public void onRestoreInstanceState(Bundle savedState){
         this.savedState = savedState;
+        internalOnRestoreInstanceState(savedState);
+    }
+
+    private void internalOnRestoreInstanceState(Bundle savedState) {
+        if (!alreadyRestored && view instanceof MvpViewWithStateInLayout && savedState != null && view != null){
+            ((MvpViewWithStateInLayout) view).onRestoreInstanceState(savedState);
+            alreadyRestored = true;
+        }
     }
 
     public void onDestroy() {
@@ -63,7 +78,6 @@ public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IM
             presenter.onViewDetached(view);
         }
         view = null;
-        eventBus = null;
         context = null;
         savedState = null;
     }
@@ -74,15 +88,13 @@ public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IM
 
     @Override
     public Loader<P> onCreateLoader(int id, Bundle args) {
-        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>() {
+        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>(eventBus) {
             @Override
             public P create() {
-                return MvpViewDelegate.this.create(eventBus);
+                return component.newInstance();
             }
         });
     }
-
-    public abstract P create(IMvpEventBus eventBus);
 
     @Override
     public void onLoadFinished(Loader<P> loader, P presenter) {
@@ -95,6 +107,7 @@ public abstract class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends IM
                 presenter.onViewAttached(view);
             } else {
                 presenter.onViewReattached(view);
+                internalOnRestoreInstanceState(savedState);
             }
         }
     }

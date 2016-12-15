@@ -3,7 +3,7 @@ package com.mvp;
 import android.content.Context;
 import android.support.v4.content.Loader;
 
-class PresenterLoader<V extends MvpView, I extends IMvpPresenter<V>> extends Loader<I> {
+class PresenterLoader<V extends MvpView, I extends MvpPresenter<V>> extends Loader<I> {
 
     private final MvpPresenterFactory<V, I> factory;
     private I presenter;

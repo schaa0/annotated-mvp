@@ -13,6 +13,8 @@ import com.mvp.example.photostream.view.viewcontract.IProgressBar;
 
 import java.util.concurrent.ExecutorService;
 
+import javax.inject.Inject;
+
 @Presenter(
         viewEvents = {
                 @ViewEvent(eventType = Contract.LoadingStartedEvent.class, viewMethodName = "showProgressBar"),
@@ -25,6 +27,7 @@ public class ProgressBarPresenter extends MvpPresenter<IProgressBar> {
 
     public ProgressBarPresenter() { }
 
+    @Inject
     public ProgressBarPresenter(IMvpEventBus eventBus){
         super(eventBus);
     }

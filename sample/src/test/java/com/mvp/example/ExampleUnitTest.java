@@ -4,13 +4,10 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.mvp.*;
-import com.mvp.annotation.OnEventListener;
-import com.mvp.annotation.processor.ProgressBarPresenterProxy;
 import com.mvp.example.photostream.event.Contract;
 import com.mvp.example.photostream.presenter.ProgressBarPresenter;
 import com.mvp.example.photostream.presenter.RecyclerViewPresenter;
 import com.mvp.example.photostream.view.viewcontract.IProgressBar;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,10 +15,6 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricGradleTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.util.concurrent.RoboExecutorService;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.ExecutorService;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -38,10 +31,14 @@ public class ExampleUnitTest {
     @Before
     public void setUp() throws Exception {
         eventBus = new MvpEventBus();
-        RoboExecutorService executorService = new RoboExecutorService();
-        Looper looper = Looper.myLooper();
-        progressBarPresenter = new ProgressBarPresenterProxy(new ProgressBarPresenter(eventBus, looper, executorService));
+        progressBarPresenter = new MvpPresenterFactory<IProgressBar, ProgressBarPresenter>(){
+            @Override
+            public ProgressBarPresenter create() {
+                return new ProgressBarPresenter(eventBus, Looper.myLooper(), new RoboExecutorService());
+            }
+        }.build();
         progressBarView = mock(IProgressBar.class);
+        progressBarPresenter.setView(progressBarView);
     }
 
     @After
@@ -53,23 +50,19 @@ public class ExampleUnitTest {
 
     @Test
     public void viewShouldBeAttachedToPresenter() {
-        progressBarPresenter.onInitialize();
         progressBarPresenter.onViewAttached(progressBarView);
         assertNotNull(progressBarPresenter.getView());
     }
 
     @Test
     public void viewShouldBeDetachedFromPresenter() {
-        progressBarPresenter.onInitialize();
         progressBarPresenter.onViewAttached(progressBarView);
         assertNotNull(progressBarPresenter.getView());
         progressBarPresenter.onViewDetached(progressBarView);
-        assertNull(progressBarPresenter.getView());
     }
 
     @Test
     public void shouldShowProgressBar() {
-        progressBarPresenter.onInitialize();
         progressBarPresenter.onViewAttached(progressBarView);
         eventBus.dispatchEvent(new Contract.LoadingStartedEvent(), ProgressBarPresenter.class);
         verify(progressBarView).showProgressBar();
@@ -78,8 +71,8 @@ public class ExampleUnitTest {
     @Test
     public void progressBarPresenterShouldReceiveLoadingEvent(){
         ProgressBarPresenter progressBarPresenter = new ProgressBarPresenter(eventBus, Looper.myLooper(), new RoboExecutorService());
-        IProgressBar progressBar = mock(IProgressBar.class);
         progressBarPresenter.onInitialize();
+        IProgressBar progressBar = mock(IProgressBar.class);
         progressBarPresenter.setView(progressBar);
         eventBus.dispatchEvent(new Contract.LoadingStartedEvent());
         verify(progressBar).showProgressBar();
@@ -87,7 +80,6 @@ public class ExampleUnitTest {
 
     @Test
     public void shouldHideProgressBar() {
-        progressBarPresenter.onInitialize();
         progressBarPresenter.onViewAttached(progressBarView);
         eventBus.dispatchEvent(new Contract.LoadingFinishedEvent(), ProgressBarPresenter.class);
         verify(progressBarView).hideProgressBar();
@@ -99,7 +91,7 @@ public class ExampleUnitTest {
         Handler handler = new Handler();
         RoboExecutorService service = new RoboExecutorService();
         eventBus.addEventListener(EventListenerUtil.createEventListener(RecyclerViewPresenter.class, String.class, mock, handler, service));
-        eventBus.dispatchEvent("query", RecyclerViewPresenter.class);
+        eventBus.dispatchEvent("query");
         verify(mock).searchRepositories("query");
     }
 

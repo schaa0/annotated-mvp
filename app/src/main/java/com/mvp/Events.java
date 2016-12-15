@@ -10,9 +10,9 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 
-public class Events {
+class Events {
 
-    private static final String PACKAGE_PREFIX = "com.mvp.annotation.processor.";
+    private static final String PACKAGE_PREFIX = "com.mvp.";
 
     private static Method m;
 
@@ -28,15 +28,23 @@ public class Events {
     }
 
     @SuppressWarnings("unchecked")
-    public static <V extends MvpView, T extends MvpPresenter<V>> void bind(T presenter, Handler handler, ExecutorService executorService){
+    static <V extends MvpView, T extends MvpPresenter<V>> void bind(T presenter, IMvpEventBus eventBus, Handler handler, ExecutorService executorService){
         synchronized (Events.class) {
             long begin = System.currentTimeMillis();
             String presenterClassName = presenter.getClass().getName();
+            boolean isMock = false;
+            if (presenterClassName.contains("$MockitoMock$")){
+                presenterClassName = presenter.getClass().getSuperclass().getName();
+                isMock = true;
+            }
             try {
-                ArrayList<OnEventListener<?>> onEventListenersWrappers =
+                ArrayList<OnEventListener<?>> onEventListeners =
                         (ArrayList<OnEventListener<?>>) m.invoke(null, presenterClassName, presenter, handler, executorService);
-                for (OnEventListener<?> eventListenerWrapper : onEventListenersWrappers) {
-                    presenter.addEventListener(eventListenerWrapper);
+                for (OnEventListener<?> eventListener : onEventListeners) {
+                    if (!isMock)
+                        presenter.addEventListener(eventListener);
+                    else
+                        eventBus.addEventListener(eventListener);
                 }
             } catch (InvocationTargetException e) {
                 e.printStackTrace();

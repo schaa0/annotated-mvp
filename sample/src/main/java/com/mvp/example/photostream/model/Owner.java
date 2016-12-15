@@ -1,10 +1,14 @@
 
 package com.mvp.example.photostream.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.support.annotation.NonNull;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class Owner {
+public class Owner implements Parcelable {
 
     @SerializedName("login")
     @Expose
@@ -364,4 +368,35 @@ public class Owner {
         this.siteAdmin = siteAdmin;
     }
 
+    protected Owner(Parcel in) {
+        id = in.readInt();
+        login = in.readString();
+        avatarUrl = in.readString();
+        url = in.readString();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(login);
+        dest.writeString(avatarUrl);
+        dest.writeString(url);
+    }
+
+    public static final Creator<Owner> CREATOR = new Creator<Owner>() {
+        @Override
+        public Owner createFromParcel(Parcel in) {
+            return new Owner(in);
+        }
+
+        @Override
+        public Owner[] newArray(int size) {
+            return new Owner[size];
+        }
+    };
 }

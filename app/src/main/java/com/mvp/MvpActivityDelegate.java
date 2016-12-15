@@ -10,22 +10,25 @@ import android.support.v7.app.AppCompatActivity;
 
 import java.lang.ref.WeakReference;
 
-public abstract class MvpActivityDelegate<V extends MvpView, P extends IMvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P>   {
+public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P>   {
 
     private static final String KEY_INSTANCE_ID = "KEY_INSTANCE_ID";
     private final LoaderManager loaderManager;
+    private IMvpEventBus eventBus;
+    private final PresenterComponent<V, P> component;
     private Context context;
     private V view;
 
     private P presenter;
     private int id = -1;
 
-    IMvpEventBus eventBus = MvpEventBus.get();
     private boolean loadFinishedCalled = false;
     private boolean onViewsInitializedCalled;
     private boolean firstDelivery = true;
 
-    public MvpActivityDelegate(V view, Context context, LoaderManager loaderManager){
+    public MvpActivityDelegate(IMvpEventBus eventBus, PresenterComponent<V, P> component, V view, Context context, LoaderManager loaderManager){
+        this.eventBus = eventBus;
+        this.component = component;
         this.view = view;
         this.context = context;
         this.loaderManager = loaderManager;
@@ -54,7 +57,6 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends IMvpPrese
             presenter.setView(null);
         }
         view = null;
-        eventBus = null;
         context = null;
     }
 
@@ -64,15 +66,13 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends IMvpPrese
 
     @Override
     public Loader<P> onCreateLoader(int id, Bundle args) {
-        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>() {
+        return new PresenterLoader<>(context.getApplicationContext(), new MvpPresenterFactory<V, P>(eventBus) {
             @Override
             public P create() {
-                return MvpActivityDelegate.this.create(eventBus);
+                return component.newInstance();
             }
         });
     }
-
-    protected abstract P create(IMvpEventBus eventBus);
 
     @Override
     public void onLoadFinished(Loader<P> loader, P presenter) {

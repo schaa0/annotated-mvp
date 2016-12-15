@@ -33,4 +33,5 @@ public class ProgressBarContainer implements IProgressBar {
     public boolean isLoading() {
         return progressBar.getVisibility() == ProgressBar.VISIBLE;
     }
+
 }

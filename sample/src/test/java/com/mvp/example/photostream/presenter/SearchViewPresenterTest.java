@@ -1,5 +1,6 @@
 package com.mvp.example.photostream.presenter;
 
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import com.mvp.EventListenerUtil;
@@ -39,9 +40,8 @@ public class SearchViewPresenterTest {
             public SearchViewPresenter create() {
                 return new SearchViewPresenter(eventBus, Looper.myLooper(), new RoboExecutorService());
             }
-        }.create();
+        }.build();
 
-        searchViewPresenter.onInitialize();
         searchView = mock(ISearchView.class);
         searchViewPresenter.onInitialize();
         searchViewPresenter.setView(searchView);
@@ -66,14 +66,16 @@ public class SearchViewPresenterTest {
     @Test
     public void onViewDetached() throws Exception {
         searchViewPresenter.onViewDetached(searchView);
-        verify(searchView).saveCurrentState();
+        verify(searchView).onSaveInstanceState(new Bundle());
+        searchViewPresenter.setView(null);
+        assertNull(searchViewPresenter.getView());
     }
 
     @Test
     public void onViewReattached() throws Exception {
         searchViewPresenter.onViewReattached(searchView);
         verify(searchView, times(1)).setUp();
-        verify(searchView).restoreState(ArgumentMatchers.any());
+        verify(searchView).onRestoreInstanceState(ArgumentMatchers.<Bundle>any());
     }
 
     @Test

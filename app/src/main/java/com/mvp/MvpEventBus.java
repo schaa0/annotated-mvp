@@ -8,25 +8,18 @@ import com.mvp.annotation.OnEventListener;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Singleton;
+
 public class MvpEventBus implements IMvpEventBus {
 
     private static final boolean DEBUG = true;
 
-    private static MvpEventBus instance = null;
-
     private HashMap<Class<?>, OnEventListener<?>> eventListeners = new HashMap<>();
 
-    @VisibleForTesting
     public MvpEventBus() {}
 
-    public static synchronized MvpEventBus get(){
-        if (instance == null)
-            instance = new MvpEventBus();
-        return instance;
-    }
-
     @Override
-    public <V, T extends OnEventListener<V>> boolean addEventListener(T eventListener) {
+    public synchronized <V, T extends OnEventListener<V>>  boolean addEventListener(T eventListener) {
         boolean actuallyAdded = false;
         Class<?> clazz = eventListener.getDataClass();
         if (DEBUG) Log.e(MvpEventBus.class.getName(), clazz.toString());
@@ -58,7 +51,7 @@ public class MvpEventBus implements IMvpEventBus {
     }
 
     @Override
-    public <V, T extends OnEventListener<V>> boolean removeEventListener(T eventListenerWrapper) {
+    public synchronized <V, T extends OnEventListener<V>> boolean removeEventListener(T eventListenerWrapper) {
         Class<V> dataClass = eventListenerWrapper.getDataClass();
         if (DEBUG) Log.e(MvpEventBus.class.getName(), "searching for listener: " + eventListenerWrapper.toString());
         boolean actuallyRemoved = false;
@@ -133,7 +126,7 @@ public class MvpEventBus implements IMvpEventBus {
     }
 
     @Override
-    public <V> void dispatchEvent(V data, Class<? extends MvpPresenter<?>>... targets) {
+    public synchronized <V> void dispatchEvent(V data, Class<? extends IMvpPresenter<?>>... targets) {
         if (targets.length == 0) targets = null;
         Class<?> clazz = data.getClass();
         Log.d(getClass().getName(), clazz.toString());

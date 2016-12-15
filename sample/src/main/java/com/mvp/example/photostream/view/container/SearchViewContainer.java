@@ -24,6 +24,7 @@
 
 package com.mvp.example.photostream.view.container;
 
+import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
@@ -114,13 +115,13 @@ public class SearchViewContainer implements ISearchView {
     }
 
     @Override
-    public SavedState saveCurrentState() {
-        return saveInstanceState();
+    public void onSaveInstanceState(Bundle bundle) {
+        bundle.putParcelable("mykey", saveInstanceState());
     }
 
     @Override
-    public void restoreState(SavedState savedState) {
-        internalRestoreInstanceState(savedState);
+    public void onRestoreInstanceState(Bundle bundle) {
+        internalRestoreInstanceState(bundle.<SavedState>getParcelable("mykey"));
     }
 
     public static class SavedState extends View.BaseSavedState {

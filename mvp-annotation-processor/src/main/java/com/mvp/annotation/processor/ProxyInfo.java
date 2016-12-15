@@ -13,15 +13,19 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
@@ -45,6 +49,25 @@ public class ProxyInfo {
     public TypeSpec processMethods(Types typeUtils){
         List<MethodSpec> writtenMethods = new ArrayList<>();
         DeclaredType declaredType = (DeclaredType) presenterClass;
+        List<? extends Element> elements = declaredType.asElement().getEnclosedElements();
+        String constructorParams = "";
+        for (Element element : elements){
+            if (element.getKind() == ElementKind.CONSTRUCTOR){
+                ExecutableElement e = (ExecutableElement) element;
+                List<? extends VariableElement> params = e.getParameters();
+                if (params.isEmpty()) {
+                    constructorParams = "";
+                    break;
+                }else if(!constructorParams.equals("")){
+                    continue;
+                }
+                for (int i = 0; i < params.size(); i++) {
+                    constructorParams += "null";
+                    if (i < params.size() - 1)
+                        constructorParams += ", ";
+                }
+            }
+        }
         TypeSpec.Builder builder = TypeSpec.classBuilder(convertDataClassToString(presenterClass) + "Proxy");
         builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         builder.superclass(ClassName.get(presenterClass));
@@ -52,14 +75,64 @@ public class ProxyInfo {
         builder.addMethod(MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(ClassName.get(presenterClass), "presenterImpl")
+                .addStatement("super(" + constructorParams + ")")
                 .addCode(CodeBlock.of("this.presenterImpl = presenterImpl;"))
                 .build());
         for (ExecutableElement initialMethod : initialMethods) {
-            boolean paramsShouldBeFinal = initialMethod.getAnnotation(Event.class) != null || initialMethod.getAnnotation(BackgroundThread.class) != null;
+            boolean paramsShouldBeFinal = initialMethod.getAnnotation(Event.class) != null || initialMethod.getAnnotation(BackgroundThread.class) != null || initialMethod.getAnnotation(UiThread.class) != null;
             MethodSpec.Builder methodBuilder = delegate(initialMethod, declaredType, typeUtils, paramsShouldBeFinal);
             MethodSpec method = methodBuilder.build();
+
             String statement;
-            if (method.returnType == TypeName.VOID){
+
+            if (methodIsPackageProtected(initialMethod.getModifiers())){
+
+                int size = initialMethod.getParameters().size();
+                String[] typeNames = new String[size];
+                String[] parameters = new String[size];
+                String typeMirrorFormat = "";
+                String parameterFormat = "";
+                for (int i = 0; i < size; i++){
+                    VariableElement e = initialMethod.getParameters().get(i);
+                    if (!e.asType().toString().equals("T"))
+                        typeNames[i] = e.asType().toString();
+                    parameters[i] = e.getSimpleName().toString();
+                    if (!e.asType().toString().equals("T"))
+                        typeMirrorFormat += "%s.class";
+                    parameterFormat += "%s";
+                    if (i < size - 1){
+                        if (!e.asType().toString().equals("T"))
+                            typeMirrorFormat += ", ";
+                        parameterFormat += ", ";
+                    }
+                }
+
+                if (!typeMirrorFormat.equals("")) {
+                    typeMirrorFormat = String.format(typeMirrorFormat, typeNames);
+                    typeMirrorFormat = ", " + typeMirrorFormat;
+                }
+
+                if (!parameterFormat.equals("")){
+                    parameterFormat = String.format(parameterFormat, parameters);
+                    parameterFormat = ", " + parameterFormat;
+                }
+
+                String ret = (method.returnType != TypeName.VOID ? "return " : "");
+                String cast = (method.returnType != TypeName.VOID) ? ("(" + method.returnType  + ")") : "";
+                methodBuilder.addCode(CodeBlock.of("try {"));
+                methodBuilder.addCode(CodeBlock.of("$T m = this.presenterImpl.getClass().getDeclaredMethod(\"" + initialMethod.getSimpleName() + "\"" + typeMirrorFormat + ");\n", Method.class));
+                methodBuilder.addCode(CodeBlock.of( ret + cast + "m.invoke(this.presenterImpl" + parameterFormat + ");"));
+                methodBuilder.addCode(CodeBlock.of("} catch (NoSuchMethodException e) {\n" +
+                        "            e.printStackTrace();\n" +
+                        "        } catch ($T e) {\n" +
+                        "            e.printStackTrace();\n" +
+                        "        } catch (IllegalAccessException e) {\n" +
+                        "            e.printStackTrace();\n" +
+                        "        }", InvocationTargetException.class));
+
+                methodBuilder.addCode(CodeBlock.of("throw new $T();", IllegalStateException.class));
+
+            }else if (method.returnType == TypeName.VOID){
                 statement = "presenterImpl." + method.name + "(" + parametersToString(method.parameters)  + ")";
                 BackgroundThread backgroundAnnotation = initialMethod.getAnnotation(BackgroundThread.class);
                 UiThread uiThreadAnnotation = initialMethod.getAnnotation(UiThread.class);
@@ -91,6 +164,12 @@ public class ProxyInfo {
         }
 
         return builder.build();
+    }
+
+    private boolean methodIsPackageProtected(Set<Modifier> modifiers) {
+        if (modifiers.contains(Modifier.PUBLIC)) return false;
+        if (modifiers.contains(Modifier.PROTECTED)) return false;
+        return true;
     }
 
     private String parametersToString(List<ParameterSpec> parameters) {

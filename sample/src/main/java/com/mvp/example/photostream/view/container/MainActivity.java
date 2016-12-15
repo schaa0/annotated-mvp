@@ -8,43 +8,30 @@ import android.view.MenuItem;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.mvp.IMvpEventBus;
-import com.mvp.MvpActivityDelegate;
-import com.mvp.MvpViewDelegate;
 import com.mvp.example.R;
+import com.mvp.example.photostream.DaggerComponents_ComponentActivity;
+import com.mvp.example.photostream.ModuleDefault;
 import com.mvp.example.photostream.presenter.GithubRepositoryPresenter;
-import com.mvp.example.photostream.presenter.ProgressBarPresenter;
-import com.mvp.example.photostream.presenter.RecyclerViewPresenter;
-import com.mvp.example.photostream.presenter.SearchViewPresenter;
-import com.mvp.example.photostream.service.GithubService;
-import com.mvp.example.photostream.view.viewcontract.IProgressBar;
-import com.mvp.example.photostream.view.viewcontract.IRecyclerView;
-import com.mvp.example.photostream.view.viewcontract.ISearchView;
 import com.mvp.example.photostream.view.viewcontract.IMainActivityView;
 
 import java.io.IOException;
 
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import javax.inject.Inject;
 
 public class MainActivity extends AppCompatActivity implements IMainActivityView {
 
-    private MainActivityDelegate delegate;
-    private ProgressBarDelegate progressBarDelegate;
-    private RecyclerViewDelegate recyclerViewDelegate;
-    private SearchViewDelegate searchViewDelegate;
-    private Bundle savedInstanceState;
+    @Inject MainActivityDelegate delegate;
+
+    Bundle savedInstanceState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        this.savedInstanceState = savedInstanceState;
-        delegate = new MainActivityDelegate();
 
-        progressBarDelegate = new ProgressBarDelegate();
-        recyclerViewDelegate = new RecyclerViewDelegate();
-        searchViewDelegate = new SearchViewDelegate();
+        DaggerComponents_ComponentActivity.builder().moduleDefault(new ModuleDefault(this)).build().inject(this);
+
+        this.savedInstanceState = savedInstanceState;
 
         delegate.onCreate(savedInstanceState);
 
@@ -87,7 +74,9 @@ public class MainActivity extends AppCompatActivity implements IMainActivityView
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
+        progressBarDelegate.onRestoreInstanceState(savedInstanceState);
         searchViewDelegate.onRestoreInstanceState(savedInstanceState);
+        recyclerViewDelegate.onRestoreInstanceState(savedInstanceState);
     }
 
     @Override
@@ -107,59 +96,6 @@ public class MainActivity extends AppCompatActivity implements IMainActivityView
     @Override
     public void showError(IOException e) {
         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-    }
-
-    private class MainActivityDelegate extends MvpActivityDelegate<IMainActivityView, GithubRepositoryPresenter> {
-
-        MainActivityDelegate() {
-            super(MainActivity.this, getApplicationContext(), getSupportLoaderManager());
-        }
-
-        @Override
-        protected GithubRepositoryPresenter create(IMvpEventBus eventBus) {
-            return new GithubRepositoryPresenter(eventBus);
-        }
-    }
-
-    private class ProgressBarDelegate extends MvpViewDelegate<IProgressBar, ProgressBarPresenter> {
-
-        ProgressBarDelegate() {
-            super(getSupportLoaderManager(), getApplicationContext(), R.id.progressBar, MvpViewDelegate.CONTAINER_ACTIVITY);
-        }
-
-        @Override
-        public ProgressBarPresenter create(IMvpEventBus eventBus) {
-            return new ProgressBarPresenter(eventBus);
-        }
-    }
-
-    private class RecyclerViewDelegate extends MvpViewDelegate<IRecyclerView, RecyclerViewPresenter> {
-
-        RecyclerViewDelegate() {
-            super(getSupportLoaderManager(), getApplicationContext(), R.id.recyclerView, MvpViewDelegate.CONTAINER_ACTIVITY);
-        }
-
-        @Override
-        public RecyclerViewPresenter create(IMvpEventBus eventBus) {
-            GithubService service = new Retrofit.Builder()
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .baseUrl("https://api.github.com")
-                    .build().create(GithubService.class);
-            return new RecyclerViewPresenter(eventBus, service);
-        }
-
-    }
-
-    private class SearchViewDelegate extends MvpViewDelegate<ISearchView, SearchViewPresenter>{
-
-        public SearchViewDelegate() {
-            super(getSupportLoaderManager(), getApplicationContext(), R.id.action_search, MvpViewDelegate.CONTAINER_ACTIVITY);
-        }
-
-        @Override
-        public SearchViewPresenter create(IMvpEventBus eventBus) {
-            return new SearchViewPresenter(eventBus);
-        }
     }
 
 }

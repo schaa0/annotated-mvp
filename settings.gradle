@@ -1,1 +1,1 @@
-include ':app', ':sample', ':mvp-annotation-processor', ':mvp-annotation'
+include ':app', ':mvp-annotation-processor', ':mvp-annotation', ':simple-example'

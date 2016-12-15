@@ -1,12 +1,19 @@
 package com.mvp.annotation.processor;
 
+import com.mvp.annotation.MvpScope;
+import com.mvp.annotation.Provider;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.OnEventListener;
+import com.mvp.annotation.ProvidesComponent;
+import com.mvp.annotation.ProvidesModule;
+import com.mvp.annotation.UIView;
 import com.mvp.annotation.ViewEvent;
 import com.mvp.annotation.Presenter;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -26,10 +33,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -42,14 +53,27 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
+import static com.mvp.annotation.processor.AnnotationUtils.getAnnotationValue;
+
 public class AnnotationProcessor extends AbstractProcessor {
 
-    static final ParameterizedTypeName IFACTORY_CLASS_NAME = ParameterizedTypeName.get(ClassName.get("com.mvp.annotation.processor", "IFactory"), WildcardTypeName.subtypeOf(TypeName.OBJECT));
+    static final ParameterizedTypeName IFACTORY_CLASS_NAME = ParameterizedTypeName.get(ClassName.get("com.mvp", "IFactory"), WildcardTypeName.subtypeOf(TypeName.OBJECT));
+    public static final String CLASSNAME_DEPENDENCY_PROVIDER = "DependencyProvider";
+    public static final String MEMBER_NEEDS_MODULES = "needsModules";
+    public static final String MEMBER_NEEDS_COMPONENTS = "needsComponents";
+    private static final String MEMBER_VIEW_IMPLEMENTATION = "viewImplementation";
+    private static ClassName APP_COMPAT_ACTIVITY;
+
     private HashMap<TypeMirror, List<Interceptor>> interceptors = new HashMap<>();
     private Types typeUtils;
     private Elements elementUtils;
 
     private HashMap<String, List<String>> allGeneratedEventListenerClasses = new HashMap<>();
+    private HashMap<String, TypeMirror> allViewTypes = new HashMap<>();
+    private List<TypeComponentPresenter> allComponentPresenters = new ArrayList<>();
+    private TypeMirror applicationClassType;
+    private Set<? extends Element> componentProviders;
+    private Set<? extends Element> uiViewClasses;
 
     @Override
     public synchronized void init(ProcessingEnvironment env) {
@@ -60,6 +84,18 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env) {
+
+        APP_COMPAT_ACTIVITY = ClassName.get("android.support.v7.app", "AppCompatActivity");
+
+        if (componentProviders == null)
+            componentProviders = env.getElementsAnnotatedWith(Provider.class);
+
+        if (uiViewClasses == null)
+            uiViewClasses = env.getElementsAnnotatedWith(UIView.class);
+
+        Element componentProvider = componentProviders.iterator().next();
+
+        applicationClassType = componentProvider.asType();
 
         DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
 
@@ -73,11 +109,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                 List<? extends TypeMirror> typeArguments = declaredClassType.getTypeArguments();
 
                 if (typeArguments.size() > 0) {
-                    /* anonymous instances of generic classes are not supported, so no classes must be generated for this type */
+                    /* anonymous instances of generic moduleClasses are not supported, so no moduleClasses must be generated for this type */
                     continue;
                 }
                 if (declaredClassType.asElement().getModifiers().contains(Modifier.ABSTRACT)) {
-                    /* anonymous abstract class instances are not supported, so no classes must be generated for this type */
+                    /* anonymous abstract class instances are not supported, so no moduleClasses must be generated for this type */
                     continue;
                 }
 
@@ -88,23 +124,399 @@ public class AnnotationProcessor extends AbstractProcessor {
                     throw new IllegalStateException(String.format("class: %s is annotated with @Presenter, but does not derive from: %s", classType, presenterType));
                 }
 
+                String presenterPackage = extractPackage(classType);
+
+                String viewPackage = extractPackage(viewType);
+                Presenter presenterAnnotation = element.getAnnotation(Presenter.class);
+
+                AnnotationMemberModuleClasses annotationMemberModuleClasses = new AnnotationMemberModuleClasses(presenterPackage).parse(element);
+                AnnotationMemberComponentClasses annotationMemberComponentClasses = new AnnotationMemberComponentClasses(presenterPackage).parse(element);
+
+                AnnotationValue annotationValue = getAnnotationValue(element, MEMBER_VIEW_IMPLEMENTATION);
+                Object object = annotationValue.getValue();
+
+                ClassName viewImplementationClassName = ClassName.bestGuess(object.toString().replace(".class", ""));
+
+                String simpleComponentPresenterClassName = "Component" + element.getSimpleName().toString();
+                TypeSpec.Builder builder = TypeSpec.interfaceBuilder(simpleComponentPresenterClassName);
+
+                String moduleFormat = annotationMemberModuleClasses.getModuleFormat();
+                ClassName[] moduleClasses = annotationMemberModuleClasses.getClasses();
+
+                String componentFormat = annotationMemberComponentClasses.getComponentFormat();
+                ClassName[] componentClasses = annotationMemberComponentClasses.getClasses();
+
+                ClassName annotationClass = ClassName.get("dagger", "Component");
+                ClassName moduleAnnotation = ClassName.get("dagger", "Module");
+
+                String componentDelegateBinderClassName = viewImplementationClassName.packageName() + ".Component" + viewImplementationClassName.simpleName() + "DelegateBinder";
+                String delegateBinderClassName = viewImplementationClassName.packageName() + "." + viewImplementationClassName.simpleName() + "DelegateBinder";
+                String delegateClassName = viewImplementationClassName.packageName() + "." + viewImplementationClassName.simpleName() + "Delegate";
+                ClassName modulePresenterClass = ClassName.bestGuess("Module" + element.getSimpleName().toString());
+
+                //builder.addAnnotation(MvpScope.class);
+                builder.addAnnotation(AnnotationSpec.builder(annotationClass)
+                        .addMember("modules", CodeBlock.of(moduleFormat, moduleClasses))
+                        .build());
+
+                builder.addMethod(MethodSpec.methodBuilder("view")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .returns(ClassName.get(viewType))
+                        .build());
+
+                builder.addMethod(MethodSpec.methodBuilder("context")
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .returns(ClassName.bestGuess("android.content.Context"))
+                        .build());
+
+                builder.addMethod(MethodSpec.methodBuilder("loaderManager")
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .returns(ClassName.bestGuess("android.support.v4.app.LoaderManager"))
+                        .build());
+
+                ParameterizedTypeName componentPresenterType = ParameterizedTypeName.get(ClassName.get("com.mvp", "ComponentPresenter"), ClassName.bestGuess(delegateBinderClassName), TypeName.get(viewType), TypeName.get(classType), ClassName.bestGuess(componentDelegateBinderClassName), modulePresenterClass);
+
+                /*builder.addMethod(MethodSpec.methodBuilder("presenter")
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .returns(componentPresenterType)
+                        .build());*/
+
+                builder.addModifiers(Modifier.PUBLIC);
+
+                ParameterizedTypeName mvpPresenterModule = ParameterizedTypeName.get(ClassName.get("com.mvp", "MvpPresenterModule"), ClassName.get(viewType), ClassName.get(classType));
+                ParameterizedTypeName presenterComponent = ParameterizedTypeName.get(ClassName.get("com.mvp", "PresenterComponent"), ClassName.get(viewType), ClassName.get(classType));
+
+                builder.addSuperinterface(componentPresenterType);
+
+                writeClass(builder.build(), presenterPackage);
+
+                String componentPresenterClassName = presenterPackage + "." + simpleComponentPresenterClassName;
+
+                allComponentPresenters.add(new TypeComponentPresenter(classType, componentPresenterClassName, moduleClasses, componentClasses));
+
+                ParameterizedTypeName mvpModule = ParameterizedTypeName.get(ClassName.get("com.mvp", "MvpModule"), ClassName.get(viewType));
+
+                ClassName activityType = APP_COMPAT_ACTIVITY;
+
+                builder = TypeSpec.classBuilder("Module" + element.getSimpleName().toString() + "Dependencies");
+                builder.superclass(mvpModule);
+                builder.addModifiers(Modifier.PUBLIC);
+                builder.addAnnotation(AnnotationSpec.builder(moduleAnnotation).build());
+                builder.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC)
+                        .addParameter(activityType, "activity")
+                        .addParameter(ClassName.get(viewType), "view")
+                        .addCode("super(activity, view);")
+                        .build());
+
+                writeClass(builder.build(), presenterPackage);
+
+                builder = TypeSpec.classBuilder("Module" + element.getSimpleName().toString());
+                builder.superclass(mvpPresenterModule);
+                builder.addModifiers(Modifier.PUBLIC);
+                builder.addAnnotation(AnnotationSpec.builder(moduleAnnotation).build());
+                builder.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC)
+                        .addParameter(activityType, "activity")
+                        .addParameter(ClassName.get(viewType), "view")
+                        .addParameter(presenterComponent, "componentPresenter")
+                        .addCode("super(activity, view, componentPresenter);")
+                        .build());
+
+                /*builder.addMethod(MethodSpec.methodBuilder("provideBinder")
+                        .addModifiers(Modifier.PUBLIC)
+                        .returns(ClassName.bestGuess(delegateBinderClassName))
+                        .addAnnotation(ClassName.get("dagger", "Provides"))
+                        .addParameter(ClassName.bestGuess(delegateClassName), "delegate")
+                        .addCode("return new $T(delegate);",  ClassName.bestGuess(delegateBinderClassName))
+                        .build());
+
+                //IMvpEventBus eventBus, PresenterComponent<IView, ExamplePresenter> presenterComponent, IView view, Context context, LoaderManager loaderManager
+                builder.addMethod(MethodSpec.methodBuilder("provideDelegate")
+                        .addAnnotation(ClassName.get("dagger", "Provides"))
+                        .addParameter(ClassName.get("com.mvp", "IMvpEventBus"), "eventBus")
+                        .addParameter(presenterComponent, "presenterComponent")
+                        .addParameter(ClassName.get(viewType), "view")
+                        .addParameter(ClassName.bestGuess("android.content.Context"), "context")
+                        .addParameter(ClassName.bestGuess("android.support.v4.app.LoaderManager"), "loaderManager")
+                        .addModifiers(Modifier.PUBLIC)
+                        .returns(ClassName.bestGuess(delegateClassName))
+                        .addCode("return new $T(eventBus, presenterComponent, view, context, loaderManager);",  ClassName.bestGuess(delegateClassName))
+                        .build());
+                */
+
+                writeClass(builder.build(), presenterPackage);
+
                 processPresenter(element, classType, basePresenters, viewType);
 
-            } else {
-                throw new IllegalStateException(element.getSimpleName() + " is not a class!");
+                allViewTypes.put(classType.toString(), viewType);
+
             }
         }
 
         writeFactoryInterface();
         writeMethodsClass();
+        processUiViewClasses(env);
+
+        if (env.processingOver()){
+            generateDependencyProvider(env);
+        }
 
         return true;
+    }
+
+    private HashMap<String, ExecutableElement> findProvidingMethods(Set<? extends Element> componentProviders){
+        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
+        for (Element element : componentProviders){
+            if (element.getKind() == ElementKind.CLASS){
+                TypeElement typeElement = (TypeElement) element;
+                for (Map.Entry<String, ExecutableElement> e : findProvidingMethodsInternal(typeElement, providingMethods).entrySet()) {
+                    if (!providingMethods.containsKey(e.getKey()))
+                        providingMethods.put(e.getKey(), e.getValue());
+                }
+                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+                while (!typeElement.toString().equals(Object.class.getName())) {
+                    for (Map.Entry<String, ExecutableElement> e : findProvidingMethodsInternal(typeElement, providingMethods).entrySet()) {
+                        if (!providingMethods.containsKey(e.getKey()))
+                            providingMethods.put(e.getKey(), e.getValue());
+                    }
+                    typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+                }
+            }
+        }
+        return providingMethods;
+    }
+
+    private HashMap<String, ExecutableElement> findProvidingMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
+        List<? extends Element> enclosedElements = element.getEnclosedElements();
+        for (Element enclosedElement : enclosedElements) {
+            if (enclosedElement.getKind() == ElementKind.METHOD){
+                ProvidesModule providesModule = enclosedElement.getAnnotation(ProvidesModule.class);
+                if (providesModule != null){
+                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
+                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
+                }
+            }
+        }
+        return providingMethods;
+    }
+
+    private void generateDependencyProvider(RoundEnvironment env) {
+
+        HashMap<String, ExecutableElement> providingMethods = findProvidingMethods(this.componentProviders);
+
+        TypeName applicationClassTypeName = ClassName.get(applicationClassType);
+        TypeSpec.Builder builder = TypeSpec.classBuilder(CLASSNAME_DEPENDENCY_PROVIDER)
+                .addModifiers(Modifier.PUBLIC)
+                .addField(applicationClassTypeName, "application", Modifier.PRIVATE)
+                .addMethod(MethodSpec.constructorBuilder()
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(applicationClassTypeName, "application")
+                        .addCode("this.application = application;")
+                        .build());
+
+        for (TypeComponentPresenter typeComponentPresenter : allComponentPresenters) {
+            TypeMirror mirroredPresenterClass = typeComponentPresenter.getPresenterClass();
+            ClassName presenterClass = ClassName.get(extractPackage(mirroredPresenterClass), typeUtils.asElement(mirroredPresenterClass).getSimpleName().toString());
+            String presenterPackage = extractPackage(mirroredPresenterClass);
+            String providerMethodName = Character.toLowerCase(presenterClass.simpleName().toString().charAt(0)) + presenterClass.simpleName().substring(1);
+
+            TypeMirror viewTypeClass = allViewTypes.get(mirroredPresenterClass.toString());
+            MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(providerMethodName)
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(ProvidesComponent.class)
+                    .returns(ClassName.bestGuess(typeComponentPresenter.getComponentPresenterClassName()))
+                    .addParameter(APP_COMPAT_ACTIVITY, "activity")
+                    .addParameter(ClassName.get(viewTypeClass), "view");
+            methodBuilder.addCode("return $T.builder()", ClassName.bestGuess(presenterPackage + ".DaggerComponent" + presenterClass.simpleName()));
+            ClassName[] moduleClasses = typeComponentPresenter.getModuleClasses();
+            for (int position = 0; position < moduleClasses.length - 1; position++) {
+                ClassName moduleClass = moduleClasses[position];
+                String simpleName = moduleClass.simpleName();
+                String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+                String o = moduleClass.packageName() + "." + moduleClass.simpleName();
+                ExecutableElement executableElement = providingMethods.get(o);
+                String moduleCode = String.format(".%s(application.%s())", methodName, executableElement.getSimpleName());
+                methodBuilder.addCode(moduleCode);
+            }
+
+            ClassName[] componentClasses = typeComponentPresenter.getComponentClasses();
+            for (ClassName componentClass : componentClasses) {
+                String simpleName = componentClass.simpleName();
+                String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+                String componentCodeFormat = String.format(".%s(new $T)", methodName);
+                methodBuilder.addCode(componentCodeFormat, componentClass);
+            }
+
+            ClassName modulePresenterDependencies = moduleClasses[moduleClasses.length-1];
+            String methodName = Character.toLowerCase(modulePresenterDependencies.simpleName().charAt(0)) + modulePresenterDependencies.simpleName().substring(1);
+            methodBuilder.addCode(String.format(".%s(new $T(activity, view))", methodName), modulePresenterDependencies);
+            methodBuilder.addCode(".build();");
+            builder.addMethod(methodBuilder.build());
+
+        }
+
+        writeClass(builder.build(), "com.mvp");
+    }
+
+    private String extractPackage(TypeMirror classType) {
+        return classType.toString().replaceAll("." + convertDataClassToString(classType), "");
+    }
+
+    private void buildDelegateAndBinder(TypeMirror presenterClass, TypeMirror viewType, TypeMirror activityType, ParameterizedTypeName presenterComponent) {
+
+        // Build Delegate
+
+        String activityName = typeUtils.asElement(activityType).getSimpleName().toString();
+        String delegateClassName = activityName + "Delegate";
+
+        ParameterizedTypeName mvpActivityDelegate = ParameterizedTypeName.get(ClassName.bestGuess("com.mvp.MvpActivityDelegate"), ClassName.get(viewType), ClassName.get(presenterClass));
+
+        TypeSpec delegateClass = TypeSpec.classBuilder(delegateClassName)
+                .addModifiers(Modifier.PUBLIC)
+                .addMethod(MethodSpec.constructorBuilder()
+                        .addModifiers(Modifier.PUBLIC)
+                        .addAnnotation(Inject.class)
+                        .addParameter(ClassName.get("com.mvp", "IMvpEventBus"), "eventBus")
+                        .addParameter(presenterComponent, "presenterComponent")
+                        .addParameter(ClassName.get(viewType), "view")
+                        .addParameter(ClassName.bestGuess("android.content.Context"), "context")
+                        .addParameter(ClassName.bestGuess("android.support.v4.app.LoaderManager"), "loaderManager")
+                        .addCode("super(eventBus, presenterComponent, view, context, loaderManager);")
+                        .build())
+                .superclass(mvpActivityDelegate)
+                .build();
+
+        String activityPackage = extractPackage(activityType);
+        writeClass(delegateClass, activityPackage);
+
+        String binderClassName = delegateClassName + "Binder";
+
+        ParameterizedTypeName delegateBinderInterface = ParameterizedTypeName.get(ClassName.get("com.mvp", "DelegateBinder"), ClassName.get(viewType), ClassName.get(presenterClass));
+
+        String activityPackageName = activityPackage;
+        String presenterPackageName = extractPackage(presenterClass);
+        String initCode = "this.delegate = delegate;";
+        String castCode = "$T binder = ($T) presenterComponent;\n";
+        String binderConstructorCode = "binder.component(new $T(presenterComponent)).inject(this);";
+
+        String constructCode = String.format("$T.builder()\n" +
+                "            .%s(new $T(activity, presenterComponent.view(), presenterComponent))\n" +
+                "            .moduleEventBus(moduleEventBus)\n" +
+                "            .build()\n" +
+                "            .inject(this);", "module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
+
+        ClassName modulePresenterClass = ClassName.get(presenterPackageName, "Module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
+        ParameterizedTypeName binderType = ParameterizedTypeName.get(ClassName.get("com.mvp", "Binder"), ClassName.get(activityPackageName, "Component" + activityName + "DelegateBinder"), modulePresenterClass);
+
+        TypeSpec binderClass = TypeSpec.classBuilder(binderClassName)
+                .addModifiers(Modifier.PUBLIC)
+                .addSuperinterface(delegateBinderInterface)
+                .addMethod(MethodSpec.constructorBuilder()
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(ClassName.get(activityPackage, activityName), "activity")
+                        .addParameter(presenterComponent, "presenterComponent")
+                        .addParameter(ClassName.get("com.mvp", "ModuleEventBus"), "moduleEventBus")
+                        //.addCode(initCode)
+                        .addCode(constructCode, ClassName.get(activityPackageName, "DaggerComponent" + activityName + "DelegateBinder"), modulePresenterClass)
+                        //.addCode(castCode, binderType, binderType)
+                        //.addCode(binderConstructorCode, modulePresenterClass)
+                        .build())
+                .addField(FieldSpec.builder(ClassName.bestGuess(activityPackage + "." + delegateClassName), "delegate")
+                        .addAnnotation(Inject.class)
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("onCreate")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(ClassName.bestGuess("android.os.Bundle"), "savedInstanceState")
+                        .addCode("delegate.onCreate(savedInstanceState);\n")
+                        .returns(void.class)
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("onPostResume")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addCode("delegate.onPostResume();\n")
+                        .returns(void.class)
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("onDestroy")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addCode("delegate.onDestroy();\n")
+                        .returns(void.class)
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("onSaveInstanceState")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(ClassName.bestGuess("android.os.Bundle"), "outState")
+                        .addCode("delegate.onSaveInstanceState(outState);\n")
+                        .returns(void.class)
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("getPresenter")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addCode("return delegate.getPresenter();\n")
+                        .returns(ClassName.get(presenterClass))
+                        .build())
+                .build();
+
+        writeClass(binderClass, activityPackage);
+
+    }
+
+    private void processUiViewClasses(RoundEnvironment env) {
+
+        for (Element element : uiViewClasses) {
+            TypeMirror activityType = element.asType();
+            String packageName = extractPackage(activityType);
+
+            UIView uiView = element.getAnnotation(UIView.class);
+            TypeMirror presenter = null;
+            try {
+                uiView.presenter();
+            } catch (MirroredTypeException ex) {
+                presenter = ex.getTypeMirror();
+            }
+
+            TypeSpec.Builder builder = TypeSpec.interfaceBuilder("Component" + element.getSimpleName().toString() + "DelegateBinder");
+
+            ClassName componentClass = ClassName.get("dagger", "Component");
+
+            String packageName1 = extractPackage(presenter);
+            //builder.addAnnotation(MvpScope.class);
+            builder.addAnnotation(AnnotationSpec.builder(componentClass)
+                    .addMember("modules", CodeBlock.of("{ $T.class, $T.class }", ClassName.get(packageName1, "Module" + typeUtils.asElement(presenter).getSimpleName().toString()),  ClassName.get("com.mvp", "ModuleEventBus")))
+                    //.addMember("dependencies", "{ $T.class }", ClassName.get(extractPackage(presenter), "Component" + typeUtils.asElement(presenter).getSimpleName().toString()))
+                    .build());
+
+            ParameterizedTypeName componentPresenterType = ParameterizedTypeName.get(ClassName.get("com.mvp", "ComponentActivity"),  ClassName.bestGuess(extractPackage(activityType) + "." + element.getSimpleName().toString() + "DelegateBinder"));
+            builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+            builder.addSuperinterface(componentPresenterType);
+
+            //String activityPackageName = extractPackage(activityType);
+            //String activityName = typeUtils.asElement(activityType).getSimpleName().toString();
+            //ClassName className = ClassName.get(activityPackageName, "Component" + activityName + "DelegateBinder");
+
+            String presenterPackage = extractPackage(presenter);
+            ClassName componentPresenter = ClassName.get(presenterPackage, "Component" + typeUtils.asElement(presenter).getSimpleName().toString());
+            /*builder.addMethod(MethodSpec.methodBuilder("component")
+                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
+                    .returns(componentPresenter)
+                    .addParameter(ClassName.get(extractPackage(presenter), "Module" + typeUtils.asElement(presenter).getSimpleName().toString() + "Dependencies"), "module")
+                    .build());*/
+
+            writeClass(builder.build(), packageName);
+
+            TypeMirror viewType = allViewTypes.get(presenter.toString());
+
+            ParameterizedTypeName presenterComponent = ParameterizedTypeName.get(ClassName.get("com.mvp", "PresenterComponent"), ClassName.get(viewType), ClassName.get(presenter));
+
+            buildDelegateAndBinder(presenter, viewType, activityType, presenterComponent);
+
+        }
     }
 
     private void writeFactoryInterface() {
         TypeSpec factory = TypeSpec.interfaceBuilder("IFactory")
                 .addTypeVariable(TypeVariableName.get("T"))
-                .addModifiers(Modifier.PUBLIC)
                 .addMethod(
                         MethodSpec.methodBuilder("create")
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
@@ -114,7 +526,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .returns(ParameterizedTypeName.get(ClassName.get(OnEventListener.class), WildcardTypeName.subtypeOf(TypeName.OBJECT)))
                         .build()
                 ).build();
-        writeClass(factory);
+        writeClass(factory, "com.mvp");
     }
 
     private void writeMethodsClass() {
@@ -125,7 +537,7 @@ public class AnnotationProcessor extends AbstractProcessor {
         ParameterizedTypeName p = ParameterizedTypeName.get(hashMapClass, stringClass, iFactoryListClass);
 
         TypeSpec.Builder builder = TypeSpec.classBuilder("MvpEventListener")
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                .addModifiers(Modifier.FINAL)
                 .addField(p, "METHODS", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .addStaticBlock(CodeBlock.of("METHODS = new HashMap<String, ArrayList<IFactory<?>>>();"));
 
@@ -165,7 +577,7 @@ public class AnnotationProcessor extends AbstractProcessor {
         }
 
         TypeSpec c = builder.build();
-        writeClass(c);
+        writeClass(c, "com.mvp");
 
         allGeneratedEventListenerClasses.clear();
     }
@@ -181,7 +593,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         ProxyInfo info = new ProxyInfo(classType, viewType, allMethods);
         TypeSpec t_ = info.processMethods(typeUtils);
-        writeClass(t_);
+        //writeClass(t_, classType.toString().replaceAll("." + convertDataClassToString(classType), ""));
+        writeClass(t_, "com.mvp");
 
         for (Element childElement : childElements){
             Event eventAnnotation = childElement.getAnnotation(Event.class);
@@ -231,7 +644,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             MethodSpec onDestroyMethod = buildOnDestroyMethod();
             MethodSpec processEventMethod = processEventBuilder.build();
             TypeSpec c = buildOnEventListenerClass(element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
-            writeClass(c);
+            writeClass(c, "com.mvp");
         }
 
         for (Map.Entry<TypeMirror, List<Interceptor>> entry : interceptors.entrySet()){
@@ -243,7 +656,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             MethodSpec onDestroyMethod = buildOnDestroyMethod();
             MethodSpec processEventMethod = processEventBuilder.build();
             TypeSpec c = buildOnEventListenerClass(element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
-            writeClass(c);
+            writeClass(c, "com.mvp");
         }
 
         interceptors.clear();
@@ -264,14 +677,42 @@ public class AnnotationProcessor extends AbstractProcessor {
         }
         List<? extends Element> elements = element.getEnclosedElements();
         for (Element e : elements){
-            if (e.getKind() == ElementKind.METHOD && e.getModifiers().contains(Modifier.PUBLIC) && !e.getModifiers().contains(Modifier.FINAL) && !e.getModifiers().contains(Modifier.NATIVE)){
+            if (e.getKind() == ElementKind.METHOD){
                 ExecutableElement executableElement = (ExecutableElement) e;
-                if (!allMethods.contains(executableElement)) {
-                    allMethods.add(executableElement);
+                if (methodCanBeDecorated(e.getModifiers()) && isSupportedMethod(e.getSimpleName().toString())) {
+                    if (!allMethods.contains(executableElement)) {
+                        allMethods.add(executableElement);
+                    }
                 }
             }
         }
         return allMethods;
+    }
+
+    private boolean isSupportedMethod(String methodName) {
+        String[] unsupportedMethods = new String[]{
+                "clone",
+                "finalize"
+        };
+        for (String unsupportedMethod : unsupportedMethods) {
+            if (unsupportedMethod.equals(methodName))
+                return false;
+        }
+        return true;
+    }
+
+    private boolean methodCanBeDecorated(Set<Modifier> modifiers) {
+        Modifier[] unsupportedModifiers = new Modifier[]{
+                Modifier.PRIVATE,
+                Modifier.FINAL,
+                Modifier.NATIVE,
+
+        };
+        for (Modifier unsupportedModifier : unsupportedModifiers) {
+            if (modifiers.contains(unsupportedModifier))
+                return false;
+        }
+        return true;
     }
 
     private List<ViewEvent> combineEvents(Presenter presenter, List<TypeMirror> basePresenters) {
@@ -375,6 +816,16 @@ public class AnnotationProcessor extends AbstractProcessor {
         }
     }
 
+    private void writeClass(TypeSpec clazz, String packageName) {
+        try {
+            JavaFile.builder(packageName, clazz)
+                    .addFileComment("Generated code")
+                    .build().writeTo(processingEnv.getFiler());
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
     private TypeSpec buildOnEventListenerClass(Element e, TypeMirror dataClass, TypeName className,
                                                MethodSpec constructor, MethodSpec onEventMethod,
                                                MethodSpec processEventMethod,
@@ -395,7 +846,7 @@ public class AnnotationProcessor extends AbstractProcessor {
         ParameterizedTypeName fieldTypeService = ParameterizedTypeName.get(ClassName.get(WeakReference.class), ClassName.get(ExecutorService.class));
         ParameterizedTypeName fieldTypenextEventListener = ParameterizedTypeName.get(ClassName.get(OnEventListener.class), TypeName.get(dataClass));
         return TypeSpec.classBuilder(clazz)
-                                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                                .addModifiers(Modifier.FINAL)
                                 .addSuperinterface(ParameterizedTypeName.get(ClassName.get(OnEventListener.class), TypeName.get(dataClass)))
                                 .addField(fieldTypeEventListener, "e", Modifier.PRIVATE, Modifier.FINAL)
                                 .addField(fieldTypeHandler, "handler", Modifier.PRIVATE, Modifier.FINAL)
@@ -455,7 +906,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .build())
                                 .addType(TypeSpec.classBuilder("Factory")
                                         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                        .addSuperinterface(ParameterizedTypeName.get(ClassName.get("com.mvp.annotation.processor", "IFactory"), ClassName.get(e.asType())))
+                                        .addSuperinterface(ParameterizedTypeName.get(IFACTORY_CLASS_NAME.rawType, className))
                                         .addMethod(MethodSpec.methodBuilder("create")
                                             .addAnnotation(Override.class)
                                             .addModifiers(Modifier.PUBLIC)
@@ -629,6 +1080,9 @@ public class AnnotationProcessor extends AbstractProcessor {
     public Set<String> getSupportedAnnotationTypes() {
         Set<String> supportedAnnotations = new HashSet<>();
         supportedAnnotations.add(Presenter.class.getCanonicalName());
+        supportedAnnotations.add(UIView.class.getCanonicalName());
+        supportedAnnotations.add(Provider.class.getCanonicalName());
+        supportedAnnotations.add(Generated.class.getCanonicalName());
         return supportedAnnotations;
     }
 
@@ -636,5 +1090,115 @@ public class AnnotationProcessor extends AbstractProcessor {
     public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported();
     }
+
+    static class TypeComponentPresenter {
+        private TypeMirror presenterClass;
+        private String componentPresenterClassName;
+        private final ClassName[] moduleClasses;
+        private ClassName[] componentClasses;
+
+        TypeComponentPresenter(TypeMirror presenterClass, String componentPresenterClassName, ClassName[] moduleClasses, ClassName[] componentClasses){
+            this.presenterClass = presenterClass;
+            this.componentPresenterClassName = componentPresenterClassName;
+            this.moduleClasses = moduleClasses;
+            this.componentClasses = componentClasses;
+        }
+
+        public TypeMirror getPresenterClass() {
+            return presenterClass;
+        }
+
+        public String getComponentPresenterClassName() {
+            return componentPresenterClassName;
+        }
+
+        public ClassName[] getModuleClasses() {
+            return moduleClasses;
+        }
+
+        public ClassName[] getComponentClasses() {
+            return componentClasses;
+        }
+    }
+
+    private class AnnotationMemberModuleClasses {
+
+        private String presenterPackage;
+        private String moduleFormat;
+        private ClassName[] classes;
+
+        public AnnotationMemberModuleClasses(String presenterPackage) {
+            this.presenterPackage = presenterPackage;
+        }
+
+        public String getModuleFormat() {
+            return moduleFormat;
+        }
+
+        public ClassName[] getClasses() {
+            return classes;
+        }
+
+        public AnnotationMemberModuleClasses parse(Element element) {
+            AnnotationValue value = getAnnotationValue(element, MEMBER_NEEDS_MODULES);
+            List<Object> moduleClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
+
+            moduleFormat = "{ ";
+            classes = new ClassName[moduleClasses.size() + 2];
+
+            for (int i = 0; i < moduleClasses.size(); i++) {
+                ClassName className = ClassName.bestGuess(moduleClasses.get(i).toString().replace(".class", ""));
+                moduleFormat += "$T.class";
+                classes[i] = className;
+                moduleFormat += ", ";
+            }
+            moduleFormat += "$T.class, ";
+            moduleFormat += "$T.class";
+            classes[classes.length - 1] = ClassName.get(presenterPackage, "Module" + element.getSimpleName().toString() + "Dependencies");
+            classes[classes.length - 2] = ClassName.get("com.mvp", "ModuleEventBus");
+            moduleFormat += " }";
+            return this;
+        }
+    }
+
+    private class AnnotationMemberComponentClasses {
+
+        private String presenterPackage;
+        private String componentFormat;
+        private ClassName[] classes;
+
+        public AnnotationMemberComponentClasses(String presenterPackage) {
+            this.presenterPackage = presenterPackage;
+        }
+
+        public String getComponentFormat() {
+            return componentFormat;
+        }
+
+        public ClassName[] getClasses() {
+            return classes;
+        }
+
+        public AnnotationMemberComponentClasses parse(Element element) {
+            AnnotationValue value = getAnnotationValue(element, MEMBER_NEEDS_COMPONENTS);
+            List<Object> moduleClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
+
+            componentFormat = "{ ";
+            classes = new ClassName[moduleClasses.size()];
+
+            for (int i = 0; i < moduleClasses.size(); i++) {
+                ClassName className = ClassName.bestGuess(moduleClasses.get(i).toString().replace(".class", ""));
+                componentFormat += "$T.class";
+                classes[i] = className;
+                if (i < moduleClasses.size() - 1)
+                    componentFormat += ", ";
+            }
+            //classes[classes.length - 1] = ClassName.get("com.mvp", "ComponentEventBus");
+            //componentFormat += "$T.class";
+            componentFormat += " }";
+            return this;
+        }
+    }
+
 
 }

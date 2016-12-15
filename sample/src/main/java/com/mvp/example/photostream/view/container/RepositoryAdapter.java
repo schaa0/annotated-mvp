@@ -1,6 +1,8 @@
 package com.mvp.example.photostream.view.container;
 
 import android.net.Uri;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,6 +61,18 @@ public class RepositoryAdapter extends RecyclerView.Adapter<RepositoryAdapter.Re
 
     public Repository getItemAtPosition(int position) {
         return repositories.get(position);
+    }
+
+    public Bundle onSaveInstanceState() {
+        Bundle bundle = new Bundle();
+        bundle.putParcelableArrayList("items", new ArrayList<Parcelable>(repositories));
+        repositories.clear();
+        return bundle;
+    }
+
+    public void onRestoreInstanceState(Bundle bundle) {
+        ArrayList<Repository> items = bundle.getParcelableArrayList("items");
+        repositories.addAll(items);
     }
 
     static class RepoViewHolder extends RecyclerView.ViewHolder{

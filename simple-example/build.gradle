@@ -1,0 +1,66 @@
+apply plugin: 'com.android.application'
+apply plugin: 'weaver'
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.3"
+
+    defaultConfig {
+        applicationId "de.hda.simple_example"
+        minSdkVersion 14
+        targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    testCompile 'org.robolectric:robolectric:3.1.4'
+    testCompile 'org.mockito:mockito-core:2.1.0-beta.120'
+    testCompile 'junit:junit:4.12'
+    testCompile 'com.google.dagger:dagger:2.7'
+    androidTestCompile 'com.android.support.test.espresso:espresso-core:2.2.2'
+    compile 'com.android.support:design:24.2.1'
+    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile 'com.squareup.retrofit2:converter-gson:2.1.0'
+    compile 'com.google.code.gson:gson:2.7'
+    compile 'com.github.bumptech.glide:glide:3.7.0'
+    compile project(':app')
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.7'
+    annotationProcessor project(':mvp-annotation-processor')
+    testAnnotationProcessor project(':mvp-annotation-processor')
+    androidTestAnnotationProcessor project(':mvp-annotation-processor')
+    weaver project(':mvp-annotation-processor')
+}
+
+task addGeneratedTestSources() {
+    def file = file(project.name + ".iml")
+    doLast {
+        try {
+            def parsedXml = (new XmlParser()).parse(file)
+            def node = parsedXml.component[1].content[0]
+
+            new Node(node, 'sourceFolder', ['url': 'file://$MODULE_DIR$/build/generated/source/apt/test/debug', 'isTestSource': 'true', 'generated': 'true'])
+
+            def writer = new StringWriter()
+            new XmlNodePrinter(new PrintWriter(writer)).print(parsedXml)
+            file.text = writer.toString()
+        } catch (FileNotFoundException e) {
+            // iml not found, common on command line only builds
+        }
+    }
+}
+
+preBuild.dependsOn addGeneratedTestSources

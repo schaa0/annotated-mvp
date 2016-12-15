@@ -11,13 +11,15 @@ import com.mvp.example.photostream.view.container.SearchViewContainer;
 
 import java.util.concurrent.ExecutorService;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 @Presenter
 public class SearchViewPresenter extends MvpPresenter<ISearchView>{
 
-    private SearchViewContainer.SavedState savedState = null;
-
     public SearchViewPresenter() { }
 
+    @Inject
     public SearchViewPresenter(IMvpEventBus eventBus) {
         super(eventBus);
     }
@@ -34,17 +36,16 @@ public class SearchViewPresenter extends MvpPresenter<ISearchView>{
     @Override
     public void onViewReattached(ISearchView view) {
         view.setUp();
-        view.restoreState(savedState);
     }
 
     @Override
     public void onViewDetached(ISearchView view) {
-        savedState = view.saveCurrentState();
+
     }
 
     @BackgroundThread
     public void searchRepositories(String query){
-        dispatchEvent(query, RecyclerViewPresenter.class);
+        dispatchEvent(query).to(RecyclerViewPresenter.class);
     }
 
 }

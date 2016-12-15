@@ -1,10 +1,14 @@
 
 package com.mvp.example.photostream.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.support.annotation.NonNull;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class Repository {
+public class Repository implements Parcelable{
 
     @SerializedName("id")
     @Expose
@@ -1456,4 +1460,37 @@ public class Repository {
         this.score = score;
     }
 
+    protected Repository(Parcel in) {
+        id = in.readInt();
+        name = in.readString();
+        fullName = in.readString();
+        owner = in.readParcelable(Owner.class.getClassLoader());
+        htmlUrl = in.readString();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(name);
+        dest.writeString(fullName);
+        dest.writeParcelable(owner, flags);
+        dest.writeString(htmlUrl);
+    }
+
+    public static final Creator<Repository> CREATOR = new Creator<Repository>() {
+        @Override
+        public Repository createFromParcel(Parcel in) {
+            return new Repository(in);
+        }
+
+        @Override
+        public Repository[] newArray(int size) {
+            return new Repository[size];
+        }
+    };
 }

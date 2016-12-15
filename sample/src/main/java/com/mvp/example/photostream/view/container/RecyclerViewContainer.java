@@ -1,9 +1,12 @@
 package com.mvp.example.photostream.view.container;
 
 
+import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.widget.Toast;
+
 import com.mvp.example.photostream.model.Repository;
 import com.mvp.example.photostream.presenter.RecyclerViewPresenter;
 import com.mvp.example.photostream.view.viewcontract.IRecyclerView;
@@ -67,8 +70,23 @@ public class RecyclerViewContainer implements IRecyclerView, RepositoryAdapter.O
     }
 
     @Override
+    public void showToast(Repository repository) {
+        Toast.makeText(recyclerView.getContext(), String.valueOf(repository.getId()), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
     public void onItemClick(int position) {
         Repository repository = adapter.getItemAtPosition(position);
         presenter.showDetailView(repository);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle bundle) {
+        bundle.putBundle("items", adapter.onSaveInstanceState());
+    }
+
+    @Override
+    public void onRestoreInstanceState(Bundle bundle) {
+        adapter.onRestoreInstanceState(bundle.getBundle("items"));
     }
 }
