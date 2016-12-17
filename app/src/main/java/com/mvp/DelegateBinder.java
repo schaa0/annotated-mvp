@@ -14,4 +14,5 @@ public interface DelegateBinder<V extends MvpView, P extends MvpPresenter<V>> {
     void onDestroy();
     void onSaveInstanceState(Bundle outState);
     P getPresenter();
+    void setOnPresenterLoadedListener(OnPresenterLoadedListener<V, P> listener);
 }

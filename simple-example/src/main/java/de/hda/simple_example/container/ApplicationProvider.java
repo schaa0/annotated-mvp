@@ -11,6 +11,8 @@ import javax.inject.Singleton;
 
 import de.hda.simple_example.inject.ModuleGithubService;
 import de.hda.simple_example.inject.ModuleLocationManager;
+import de.hda.simple_example.inject.ModuleRepository;
+import de.hda.simple_example.model.Repository;
 
 @Provider
 public class ApplicationProvider extends MvpApplication {
@@ -23,6 +25,11 @@ public class ApplicationProvider extends MvpApplication {
     @ProvidesModule
     public ModuleLocationManager getModuleLocationManager(){
         return new ModuleLocationManager(getApplicationContext());
+    }
+
+    @ProvidesModule
+    public ModuleRepository getModuleRepository(Repository repository, RepositoryAdapter repositoryAdapter) {
+        return new ModuleRepository(repository, repositoryAdapter);
     }
 
     @Override

@@ -67,7 +67,6 @@ public class RepositoryAdapter extends RecyclerView.Adapter<RepositoryAdapter.Re
     public Bundle onSaveInstanceState() {
         Bundle bundle = new Bundle();
         bundle.putParcelableArrayList("items", new ArrayList<Parcelable>(repositories));
-        repositories.clear();
         return bundle;
     }
 

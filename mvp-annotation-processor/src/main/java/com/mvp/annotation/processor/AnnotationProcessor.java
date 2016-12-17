@@ -1,6 +1,5 @@
 package com.mvp.annotation.processor;
 
-import com.mvp.annotation.MvpScope;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.OnEventListener;
@@ -39,13 +38,13 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
@@ -53,7 +52,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
-import static com.mvp.annotation.processor.AnnotationUtils.getAnnotationValue;
+import static com.mvp.annotation.processor.Utils.getAnnotationValue;
 
 public class AnnotationProcessor extends AbstractProcessor {
 
@@ -335,7 +334,27 @@ public class AnnotationProcessor extends AbstractProcessor {
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = moduleClass.packageName() + "." + moduleClass.simpleName();
                 ExecutableElement executableElement = providingMethods.get(o);
-                String moduleCode = String.format(".%s(application.%s())", methodName, executableElement.getSimpleName());
+                List<? extends VariableElement> parameters = executableElement.getParameters();
+                String parameterFormat = "";
+                String[] parameterFieldNames = new String[parameters.size()];
+                for (int i = 0; i < parameters.size(); i++) {
+                    VariableElement parameter = parameters.get(i);
+                    TypeName typeName = ClassName.get(parameter.asType());
+                    String s = parameter.getSimpleName().toString();
+                    methodBuilder.addParameter(typeName, s);
+                    parameterFormat += "%s";
+                    if (i < parameters.size() - 1){
+                        parameterFormat += ", ";
+                    }
+                    parameterFieldNames[i] = parameter.getSimpleName().toString();
+                }
+                Object[] obj = new Object[parameters.size() + 2];
+                obj[0] = methodName;
+                obj[1] = executableElement.getSimpleName().toString();
+                for (int i = 0; i < parameterFieldNames.length; i++) {
+                    obj[i + 2] = parameterFieldNames[i];
+                }
+                String moduleCode = String.format(".%s(application.%s(" + parameterFormat + "))", obj);
                 methodBuilder.addCode(moduleCode);
             }
 
@@ -408,6 +427,8 @@ public class AnnotationProcessor extends AbstractProcessor {
         ClassName modulePresenterClass = ClassName.get(presenterPackageName, "Module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
         ParameterizedTypeName binderType = ParameterizedTypeName.get(ClassName.get("com.mvp", "Binder"), ClassName.get(activityPackageName, "Component" + activityName + "DelegateBinder"), modulePresenterClass);
 
+        ParameterizedTypeName onPresenterLoadedListenerInterface = ParameterizedTypeName.get(ClassName.get("com.mvp", "OnPresenterLoadedListener"), ClassName.get(viewType), ClassName.get(presenterClass));
+
         TypeSpec binderClass = TypeSpec.classBuilder(binderClassName)
                 .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(delegateBinderInterface)
@@ -416,10 +437,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .addParameter(ClassName.get(activityPackage, activityName), "activity")
                         .addParameter(presenterComponent, "presenterComponent")
                         .addParameter(ClassName.get("com.mvp", "ModuleEventBus"), "moduleEventBus")
-                        //.addCode(initCode)
                         .addCode(constructCode, ClassName.get(activityPackageName, "DaggerComponent" + activityName + "DelegateBinder"), modulePresenterClass)
-                        //.addCode(castCode, binderType, binderType)
-                        //.addCode(binderConstructorCode, modulePresenterClass)
                         .build())
                 .addField(FieldSpec.builder(ClassName.bestGuess(activityPackage + "." + delegateClassName), "delegate")
                         .addAnnotation(Inject.class)
@@ -455,6 +473,13 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .addModifiers(Modifier.PUBLIC)
                         .addCode("return delegate.getPresenter();\n")
                         .returns(ClassName.get(presenterClass))
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("setOnPresenterLoadedListener")
+                        .addModifiers(Modifier.PUBLIC)
+                        .addAnnotation(Override.class)
+                        .returns(void.class)
+                        .addCode("delegate.setOnPresenterLoadedListener(listener);\n")
+                        .addParameter(onPresenterLoadedListenerInterface, "listener")
                         .build())
                 .build();
 

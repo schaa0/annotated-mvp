@@ -28,4 +28,22 @@ public class Contract {
         }
     }
 
+    public static class GithubServiceErrorEvent {
+        private String message;
+
+        public GithubServiceErrorEvent(String message){
+            this.message = message;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if(!(obj instanceof GithubServiceErrorEvent))
+                return false;
+            return message.equals(((GithubServiceErrorEvent) obj).message);
+        }
+    }
 }

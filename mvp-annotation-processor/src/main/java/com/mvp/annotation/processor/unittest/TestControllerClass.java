@@ -1,6 +1,7 @@
 package com.mvp.annotation.processor.unittest;
 
 import com.mvp.annotation.processor.Gang;
+import com.mvp.annotation.processor.Utils;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -36,6 +37,11 @@ public class TestControllerClass extends AbsGeneratingClass {
         ClassName robolectricClass = ClassName.get("org.robolectric", "Robolectric");
         ParameterizedTypeName delegateBinder = ParameterizedTypeName.get(ClassName.get("com.mvp", "DelegateBinder"), gang.getViewClass(), gang.getPresenterClass());
         ClassName constructorClass = ClassName.get("java.lang.reflect", "Constructor");
+
+        ParameterizedTypeName onPresenterLoadedListenerInterface = ParameterizedTypeName.get(ClassName.get("com.mvp", "OnPresenterLoadedListener"), gang.getViewClass(), gang.getPresenterClass());
+
+        String presenterFieldName = Utils.findPresenterFieldInViewImplementationClass(gang.getElementActivityClass());
+
         return TypeSpec.classBuilder(className)
                 .addModifiers(Modifier.PUBLIC)
                 .addField(activityControllerClass, "controller", Modifier.PRIVATE)
@@ -66,15 +72,22 @@ public class TestControllerClass extends AbsGeneratingClass {
                         .build())
                 .addMethod(MethodSpec.methodBuilder("setupActivity")
                         .addModifiers(Modifier.PRIVATE)
-                        .addParameter(activityControllerClass, "controller")
                         .addParameter(delegateBinder, "binder")
                         .addCode("controller.create();\n" +
                                 "binder.onCreate(null);\n" +
+                                "binder.setOnPresenterLoadedListener(new $T(){\n" +
+                                        "\n" +
+                                        "    @Override\n" +
+                                        "    public void onPresenterLoaded($T presenter) {\n" +
+                                        "        controller.get()." + presenterFieldName + " = presenter;\n" +
+                                        "    }\n" +
+                                        "});\n" +
+                                "controller.get()." + presenterFieldName + " = binder.getPresenter();\n" +
                                 "controller.start();\n" +
                                 "controller.postCreate(null);\n" +
                                 "controller.resume();\n" +
                                 "binder.onPostResume();\n" +
-                                "controller.visible();")
+                                "controller.visible();", onPresenterLoadedListenerInterface, gang.getPresenterClass())
                         .returns(void.class)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("build")
@@ -84,7 +97,7 @@ public class TestControllerClass extends AbsGeneratingClass {
                                         "   Class<?> clazz = $T.forName(activity.getClass().getPackage().getName() + \".\" + activity.getClass().getSimpleName() + \"DelegateBinder\");\n" +
                                         "   $T<?> constructor = clazz.getDeclaredConstructors()[0];\n" +
                                         "   $T binder = ($T) constructor.newInstance(activity, presenterComponent, new $T(testingContext.eventBus()));\n" +
-                                        "   setupActivity(controller, binder);\n" +
+                                        "   setupActivity(binder);\n" +
                                         "   $T presenter = binder.getPresenter();\n" +
                                         "   return presenter;\n" +
                                         "}  catch (java.lang.ClassNotFoundException e) {\n" +

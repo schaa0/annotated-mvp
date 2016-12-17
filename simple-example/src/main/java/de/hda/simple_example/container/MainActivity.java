@@ -1,5 +1,6 @@
 package de.hda.simple_example.container;
 
+import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.view.AbsSavedState;
@@ -27,6 +28,7 @@ import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.ModuleMainPresenter;
 import de.hda.simple_example.business.ModuleMainPresenterDependencies;
+import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.inject.ModuleGithubService;
 import de.hda.simple_example.inject.ModuleLocationManager;
 import de.hda.simple_example.model.Repository;
@@ -107,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
     }
 
     @Override
-    public void showError(IOException e) {
+    public void showError(Contract.GithubServiceErrorEvent e) {
         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
     }
 
@@ -162,12 +164,14 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
     }
 
     @Override
-    public void showToast(Repository repository) {
-        Toast.makeText(this, String.valueOf(repository.getId()), Toast.LENGTH_SHORT).show();
+    public void showDetailView(Repository repository) {
+        Intent intent = new Intent(this, ExampleActivity.class);
+        intent.putExtra("repository", repository);
+        startActivity(intent);
     }
 
     @Override
-    public void showToast(Location location) {
+    public void showDetailView(Location location) {
         Toast.makeText(this, String.format("Longitude: %d, Latitude: %d", location.getLongitude(), location.getLatitude()), Toast.LENGTH_SHORT).show();
     }
 

@@ -26,6 +26,12 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
     private boolean onViewsInitializedCalled;
     private boolean firstDelivery = true;
 
+    protected OnPresenterLoadedListener<V, P> onPresenterLoadedListener;
+
+    public void setOnPresenterLoadedListener(OnPresenterLoadedListener<V, P> onPresenterLoadedListener) {
+        this.onPresenterLoadedListener = onPresenterLoadedListener;
+    }
+
     public MvpActivityDelegate(IMvpEventBus eventBus, PresenterComponent<V, P> component, V view, Context context, LoaderManager loaderManager){
         this.eventBus = eventBus;
         this.component = component;
@@ -84,6 +90,9 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
                 presenter.onViewAttached(view);
             else
                 presenter.onViewReattached(view);
+            if (onPresenterLoadedListener != null){
+                onPresenterLoadedListener.onPresenterLoaded(presenter);
+            }
         }
     }
 

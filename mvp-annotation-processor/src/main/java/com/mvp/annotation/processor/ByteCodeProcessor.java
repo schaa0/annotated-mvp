@@ -1,5 +1,6 @@
 package com.mvp.annotation.processor;
 
+import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.ProvidesComponent;
@@ -56,8 +57,10 @@ public class ByteCodeProcessor extends WeaverProcessor {
     private static final String BUNDLE_CLASS = "android.os.Bundle";
 
     private static final String POINT_CUT = "org.aspectj.lang.JoinPoint";
+
     private static final String STATEMENT_DELEGATE_ONCREATE =
             "$s." + FIELD_VIEW_DELEGATE + ".onCreate($$);";
+
     private static final String STATEMENT_DELEGATE_ONSTOP =
             "$s." + FIELD_VIEW_DELEGATE + ".onStop();";
 
@@ -79,12 +82,13 @@ public class ByteCodeProcessor extends WeaverProcessor {
     private static final String STATEMENT_NEW_DELEGATE =
             "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder($s, $s." + FIELD_COMPONENT + ", ((%s) $s.getApplication()).eventBus());";
     private static final String STATEMENT_MAKE_COMPONENT =
-            "$s." + FIELD_COMPONENT + " = ((%s) $s.getApplication()).getProvider().%s($s, $s);";
+            "$s." + FIELD_COMPONENT + " = ((%s) $s.getApplication()).getProvider().%s($s, $s%s);";
     private ClassPool pool;
 
     private String applicationClassName;
 
     HashMap<String, CtMethod> componentProviderMethods = new HashMap<>();
+    HashMap<String, String> moduleParamClassToFieldName = new HashMap<>();
 
     @Override
     public synchronized void init(WeaveEnvironment env) {
@@ -141,6 +145,13 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
                 if (ctClass.hasAnnotation(UIView.class)) {
                     log("Start weaving " + ctClass.getSimpleName());
+
+                    CtField[] fields = ctClass.getDeclaredFields();
+                    for (CtField field : fields) {
+                        if (field.hasAnnotation(ModuleParam.class)){
+                            moduleParamClassToFieldName.put(field.getType().getName(), field.getName());
+                        }
+                    }
 
                     String presenterClassName = getPresenterClassName(ctClass);
                     String presenterFieldName = getPresenterFieldName(ctClass);
@@ -208,7 +219,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
         MemberValue presenter = visible.getAnnotation(UIView.class.getCanonicalName()).getMemberValue("presenter");
         MyMemberValueVisitor visitor = new MyMemberValueVisitor();
         presenter.accept(visitor);
-        return visitor.getPresenterClassName();
+        return visitor.getClassName();
     }
 
     private boolean isComponentProvider(CtClass ctClass){
@@ -272,14 +283,28 @@ public class ByteCodeProcessor extends WeaverProcessor {
         CtMethod onDestroy = findBestMethod(ctClass, "onDestroy");
         CtMethod onSaveInstanceState = findBestMethod(ctClass, "onSaveInstanceState", BUNDLE_CLASS);
         CtMethod ctMethod = componentProviderMethods.get(componentPresenterInterfaceName);
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT, applicationClassName, ctMethod.getName()));
+        CtClass[] parameterTypes = ctMethod.getParameterTypes();
+        StringBuilder sb = new StringBuilder();
+        if (parameterTypes.length > 2) {
+            sb.append(", ");
+            for (int i = 2; i < parameterTypes.length; i++) {
+                CtClass parameterType = parameterTypes[i];
+                String fieldName = moduleParamClassToFieldName.get(parameterType.getName());
+                sb.append(fieldName);
+                if (i < parameterTypes.length - 1) {
+                    sb.append(", ");
+                }
+            }
+        }
+        String parameters = sb.toString();
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT, applicationClassName, ctMethod.getName(), parameters));
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE, ctClass.getName(), applicationClassName));
         atTheEnd(classInjector, onCreate, STATEMENT_DELEGATE_ONCREATE);
         //atTheBeginning(classInjector, onStop, STATEMENT_DELEGATE_ONSTOP);
         atTheEnd(classInjector, onPostResume, STATEMENT_DELEGATE_ONPOSTRESUME);
         atTheEnd(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
         atTheBeginning(classInjector, onDestroy, STATEMENT_DELEGATE_ONDESTROY);
-        atTheEnd(classInjector, onStart, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
+        afterSuper(classInjector, onStart, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
     }
 
     private void injectDelegateLifeCycleIntoFragment(CtClass ctClass, ClassInjector classInjector)
@@ -398,6 +423,31 @@ public class ByteCodeProcessor extends WeaverProcessor {
         }
     }
 
+    private void afterSuper(ClassInjector classInjector, CtMethod method,
+                                String statement) throws Exception {
+        if (method.getName().contains(ASPECTJ_GEN_METHOD)) {
+            String methodName =
+                    method.getName().substring(0, method.getName().indexOf(ASPECTJ_GEN_METHOD));
+            statement = statement.replaceAll("\\$s", "\\ajc\\$this");
+            classInjector.insertMethod(method.getName(),
+                    ctClassToString(method.getParameterTypes()))
+                    .ifExists()
+                    .afterACallTo(methodName, statement).inject().inject();
+        } else {
+            statement = statement.replaceAll("\\$s", "this");
+            classInjector.insertMethod(method.getName(),
+                    ctClassToString(method.getParameterTypes()))
+                    .ifExistsButNotOverride()
+                    .override("{" +
+                            "super." + method.getName() + "($$);" +
+                            statement +
+                            "}").inject()
+                    .ifExists()
+                    .afterSuper(statement).inject()
+                    .inject();
+        }
+    }
+
     private void beforeSuper(ClassInjector classInjector, CtMethod method, String statement)
             throws Exception {
         if (method.getName().contains(ASPECTJ_GEN_METHOD)) {
@@ -470,7 +520,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
     }
 
     private static class MyMemberValueVisitor implements MemberValueVisitor {
-        private String presenterClassName;
+        private String className;
 
         @Override
         public void visitAnnotationMemberValue(AnnotationMemberValue node) {
@@ -534,12 +584,12 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
         @Override
         public void visitClassMemberValue(ClassMemberValue node) {
-            presenterClassName = node.getValue();
-            System.out.println("PRESENTERCLASS: " + presenterClassName);
+            className = node.getValue();
+            System.out.println("PRESENTERCLASS: " + className);
         }
 
-        public String getPresenterClassName() {
-            return presenterClassName;
+        public String getClassName() {
+            return className;
         }
     }
 }

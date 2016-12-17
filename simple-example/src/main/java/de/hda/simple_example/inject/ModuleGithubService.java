@@ -9,6 +9,7 @@ import dagger.Provides;
 import de.hda.simple_example.business.GithubService;
 import de.hda.simple_example.container.IView;
 import de.hda.simple_example.container.MainActivity;
+import de.hda.simple_example.model.Repository;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -24,5 +25,4 @@ public class ModuleGithubService {
                 .baseUrl(githubApiEndpoint)
                 .build().create(GithubService.class);
     }
-
 }

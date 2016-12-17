@@ -22,7 +22,8 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
-import static com.mvp.annotation.processor.AnnotationUtils.getAnnotationValue;
+import static com.mvp.annotation.processor.Utils.getAnnotationValue;
+import static com.mvp.annotation.processor.Utils.getShortestPackageName;
 
 /**
  * Created by Andy on 14.12.2016.
@@ -48,7 +49,7 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
 
         Set<? extends Element> viewElements = roundEnvironment.getElementsAnnotatedWith(InjectUIView.class);
 
-        String packageName = getShortestPackageName(viewElements);
+        String packageName = getShortestPackageName(elementUtils, viewElements);
 
         if (packageName == null)
             return true;
@@ -66,9 +67,10 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
                 DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
                 TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
                 ClassName uiViewClassName = ClassName.bestGuess(uiViewType.toString());
-                Gang gang = new Gang(activityClass, presenterClassName, uiViewClassName);
+                Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
                 new TestControllerClass(filer, getPackageName(viewElement), gang).generate();
-                new PresenterBuilderClass(filer, getPackageName(viewElement), gang).generate();
+                new PresenterBuilderClass(filer, elementUtils, typeUtils, getPackageName(viewElement), gang, packageName).generate();
+                new TestablePresenterModuleClass(filer, elementUtils, getPackageName(presenterElement), gang).generate();
             }
         }
 
@@ -79,18 +81,6 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
 
     private String getPackageName(Element viewElement) {
         return elementUtils.getPackageOf(viewElement).getQualifiedName().toString();
-    }
-
-    private String getShortestPackageName(Set<? extends Element> viewElements) {
-        String shortest = null;
-        for (Element viewElement : viewElements) {
-            String s = elementUtils.getPackageOf(viewElement).getQualifiedName().toString();
-            if (shortest == null)
-                shortest = s;
-            else if (s.length() < shortest.length())
-                shortest = s;
-        }
-        return shortest;
     }
 
     private TypeMirror findViewTypeOfPresenter(DeclaredType presenterType, TypeMirror currentPresenterType) {

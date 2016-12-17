@@ -1,17 +1,12 @@
 package de.hda.simple_example.business;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.ActivityCompat;
 
-import com.mvp.IMvpEventBus;
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Event;
@@ -36,7 +31,7 @@ import retrofit2.Response;
 
 @Presenter(
         viewEvents = {
-                @ViewEvent(eventType = IOException.class, viewMethodName = "showError"),
+                @ViewEvent(eventType = Contract.GithubServiceErrorEvent.class, viewMethodName = "showError"),
                 @ViewEvent(eventType = Contract.LoadingStartedEvent.class, viewMethodName = "showProgressBar"),
                 @ViewEvent(eventType = Contract.LoadingFinishedEvent.class, viewMethodName = "hideProgressBar")
         },
@@ -114,7 +109,7 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
                 result = true;
                 dispatchEvent(new Contract.RepositoriesLoadedEvent(response.body(), page)).toAny();
             }else
-                dispatchEvent(new IOException(response.errorBody().toString())).toAny();
+                dispatchEvent(new Contract.GithubServiceErrorEvent(response.errorBody().string())).toAny();
         } catch (IOException e) {
             e.printStackTrace();
             dispatchEvent(e).toAny();
@@ -149,7 +144,7 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
     }
 
     public void showDetailView(Repository repository) {
-        getView().showToast(repository);
+        getView().showDetailView(repository);
     }
 
     @VisibleForTesting
@@ -164,7 +159,7 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
 
     @Override
     public void onLocationChanged(Location location) {
-        getView().showToast(location);
+
     }
 
     @Override
