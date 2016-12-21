@@ -79,16 +79,25 @@ public class ByteCodeProcessor extends WeaverProcessor {
     private static final String ASPECTJ_GEN_METHOD = "_aroundBody";
     private static final String STATEMENT_GET_PRESENTER =
             "$s.%s = (%s) $s." + FIELD_VIEW_DELEGATE + ".getPresenter();";
+
     private static final String STATEMENT_NEW_DELEGATE =
-            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder($s, $s." + FIELD_COMPONENT + ", ((%s) $s.getApplication()).eventBus());";
-    private static final String STATEMENT_MAKE_COMPONENT =
-            "$s." + FIELD_COMPONENT + " = ((%s) $s.getApplication()).getProvider().%s($s, $s%s);";
+            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder($s, $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).eventBus());";
+
+    private static final String STATEMENT_NEW_DELEGATE_IN_FRAGMENT =
+            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder( (android.support.v7.app.AppCompatActivity) $s.getActivity(), $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).eventBus());";
+
+    private static final String STATEMENT_MAKE_COMPONENT_IN_ACTIVITY =
+            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s($s, $s%s);";
+
+    private static final String STATEMENT_MAKE_COMPONENT_IN_FRAGMENT =
+            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s((android.support.v7.app.AppCompatActivity) $s.getActivity(), $s%s);";
+
     private ClassPool pool;
 
     private String applicationClassName;
 
     HashMap<String, CtMethod> componentProviderMethods = new HashMap<>();
-    HashMap<String, String> moduleParamClassToFieldName = new HashMap<>();
+    HashMap<String, String> moduleParamClassToMethodName = new HashMap<>();
 
     @Override
     public synchronized void init(WeaveEnvironment env) {
@@ -127,6 +136,9 @@ public class ByteCodeProcessor extends WeaverProcessor {
             }
         }
 
+        CtClass activityClass = pool.getCtClass("android.support.v7.app.AppCompatActivity");
+        CtClass fragmentClass = pool.getCtClass("android.support.v4.app.Fragment");
+
         for (int i = 0; i < classes.size(); i++) {
 
             CtClass ctClass = classes.get(i);
@@ -143,13 +155,13 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
             }else {
 
-                if (ctClass.hasAnnotation(UIView.class)) {
+                if (ctClass.hasAnnotation(UIView.class) && ctClass.subclassOf(activityClass)) {
                     log("Start weaving " + ctClass.getSimpleName());
 
-                    CtField[] fields = ctClass.getDeclaredFields();
-                    for (CtField field : fields) {
-                        if (field.hasAnnotation(ModuleParam.class)){
-                            moduleParamClassToFieldName.put(field.getType().getName(), field.getName());
+                    CtMethod[] methods1 = ctClass.getDeclaredMethods();
+                    for (CtMethod method : methods1) {
+                        if (method.hasAnnotation(ModuleParam.class)){
+                            moduleParamClassToMethodName.put(method.getReturnType().getName(), method.getName());
                         }
                     }
 
@@ -163,17 +175,24 @@ public class ByteCodeProcessor extends WeaverProcessor {
                     injectComponentField(ctClass, classInjector);
                     injectDelegateLifeCycleIntoActivity(ctClass, classInjector, presenterClassName, presenterFieldName, componentPresenterInterfaceName);
                     writeClass(ctClass);
-                } else if (ctClass.hasAnnotation(UIView.class)) {
+                } else if (ctClass.hasAnnotation(UIView.class) && ctClass.subclassOf(fragmentClass)) {
                     log("Start weaving " + ctClass.getSimpleName());
+
+                    CtMethod[] methods1 = ctClass.getDeclaredMethods();
+                    for (CtMethod method: methods1) {
+                        if (method.hasAnnotation(ModuleParam.class)){
+                            moduleParamClassToMethodName.put(method.getReturnType().getName(), method.getName());
+                        }
+                    }
+
                     ClassInjector classInjector = instrumentation.startWeaving(ctClass);
                     injectDelegateField(ctClass, classInjector);
-                    injectDelegateLifeCycleIntoFragment(ctClass, classInjector);
-                    writeClass(ctClass);
-                } else if (ctClass.hasAnnotation(UIView.class)) {
-                    log("Start weaving " + ctClass.getSimpleName());
-                    ClassInjector classInjector = instrumentation.startWeaving(ctClass);
-                    injectDelegateField(ctClass, classInjector);
-                    injectDelegateLifeCycleIntoCustomView(ctClass, classInjector);
+                    injectComponentField(ctClass, classInjector);
+                    String presenterClassName = getPresenterClassName(ctClass);
+                    String presenterFieldName = getPresenterFieldName(ctClass);
+
+                    String componentPresenterInterfaceName = getComponentPresenterInterfaceName(presenterClassName);
+                    injectDelegateLifeCycleIntoFragment(ctClass, classInjector, presenterClassName, presenterFieldName, componentPresenterInterfaceName);
                     writeClass(ctClass);
                 }
             }
@@ -289,16 +308,16 @@ public class ByteCodeProcessor extends WeaverProcessor {
             sb.append(", ");
             for (int i = 2; i < parameterTypes.length; i++) {
                 CtClass parameterType = parameterTypes[i];
-                String fieldName = moduleParamClassToFieldName.get(parameterType.getName());
-                sb.append(fieldName);
+                String methodName = moduleParamClassToMethodName.get(parameterType.getName());
+                sb.append("$s.").append(methodName).append("()");
                 if (i < parameterTypes.length - 1) {
                     sb.append(", ");
                 }
             }
         }
         String parameters = sb.toString();
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT, applicationClassName, ctMethod.getName(), parameters));
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE, ctClass.getName(), applicationClassName));
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_ACTIVITY, applicationClassName, "", ctMethod.getName(), parameters));
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE, ctClass.getName(), applicationClassName, ""));
         atTheEnd(classInjector, onCreate, STATEMENT_DELEGATE_ONCREATE);
         //atTheBeginning(classInjector, onStop, STATEMENT_DELEGATE_ONSTOP);
         atTheEnd(classInjector, onPostResume, STATEMENT_DELEGATE_ONPOSTRESUME);
@@ -307,14 +326,36 @@ public class ByteCodeProcessor extends WeaverProcessor {
         afterSuper(classInjector, onStart, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
     }
 
-    private void injectDelegateLifeCycleIntoFragment(CtClass ctClass, ClassInjector classInjector)
+    private void injectDelegateLifeCycleIntoFragment(CtClass ctClass, ClassInjector classInjector, String presenterClassName, String presenterFieldName, String componentPresenterInterfaceName)
             throws Exception {
+        CtMethod onCreate = findBestMethod(ctClass, "onCreate", BUNDLE_CLASS);
         CtMethod onActivityCreated = findBestMethod(ctClass, "onActivityCreated", BUNDLE_CLASS);
         CtMethod onResume = findBestMethod(ctClass, "onResume");
         CtMethod onPause = findBestMethod(ctClass, "onPause");
-        atTheEnd(classInjector, onActivityCreated, STATEMENT_DELEGATE_ONCREATE);
-        atTheEnd(classInjector, onResume, STATEMENT_CALL_ATTACH);
-        beforeSuper(classInjector, onPause, STATEMENT_CALL_DETACH);
+        CtMethod onDestroyView = findBestMethod(ctClass, "onDestroyView");
+        CtMethod onSaveInstanceState = findBestMethod(ctClass, "onSaveInstanceState", BUNDLE_CLASS);
+
+        CtMethod ctMethod = componentProviderMethods.get(componentPresenterInterfaceName);
+        CtClass[] parameterTypes = ctMethod.getParameterTypes();
+        StringBuilder sb = new StringBuilder();
+        if (parameterTypes.length > 2) {
+            sb.append(", ");
+            for (int i = 2; i < parameterTypes.length; i++) {
+                CtClass parameterType = parameterTypes[i];
+                String methodName = moduleParamClassToMethodName.get(parameterType.getName());
+                sb.append("$s.").append(methodName).append("()");
+                if (i < parameterTypes.length - 1) {
+                    sb.append(", ");
+                }
+            }
+        }
+        String parameters = sb.toString();
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_FRAGMENT, applicationClassName, "getActivity().", ctMethod.getName(), parameters));
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE_IN_FRAGMENT, ctClass.getName(), applicationClassName, ".getActivity()"));
+        afterSuper(classInjector, onResume, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
+        afterSuper(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
+        beforeSuper(classInjector, onDestroyView, STATEMENT_DELEGATE_ONDESTROY);
+        afterSuper(classInjector, onActivityCreated, STATEMENT_DELEGATE_ONCREATE);
     }
 
     private void injectDelegateLifeCycleIntoCustomView(CtClass ctClass,ClassInjector classInjector)

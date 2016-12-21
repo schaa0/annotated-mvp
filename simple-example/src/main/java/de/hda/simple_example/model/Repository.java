@@ -10,6 +10,16 @@ import com.google.gson.annotations.SerializedName;
 
 public class Repository implements Parcelable{
 
+    public static final Repository NULL = new Repository(){
+        {
+            this.setId(0);
+            this.setName("");
+            this.setFullName("");
+            this.setOwner(Owner.NULL);
+            this.setHtmlUrl("");
+        }
+    };
+
     @SerializedName("id")
     @Expose
     private Integer id;

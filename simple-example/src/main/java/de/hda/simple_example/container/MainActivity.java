@@ -1,49 +1,43 @@
 package de.hda.simple_example.container;
 
-import android.content.Intent;
-import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.view.AbsSavedState;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
-import com.mvp.ModuleEventBus;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
-import java.io.IOException;
-import java.util.List;
 
-import de.hda.simple_example.business.ComponentMainPresenter;
-import de.hda.simple_example.business.DaggerComponentMainPresenter;
+import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.R;
-import de.hda.simple_example.business.ModuleMainPresenter;
-import de.hda.simple_example.business.ModuleMainPresenterDependencies;
 import de.hda.simple_example.event.Contract;
-import de.hda.simple_example.inject.ModuleGithubService;
-import de.hda.simple_example.inject.ModuleLocationManager;
-import de.hda.simple_example.model.Repository;
 
-@UIView(presenter = MainPresenter.class)
-public class MainActivity extends AppCompatActivity implements IView, RepositoryAdapter.OnItemClickListener {
+@UIView(presenter = ActivityPresenter.class)
+public class MainActivity extends AppCompatActivity implements IView {
 
     @Presenter
-    MainPresenter presenter;
+    ActivityPresenter presenter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.layout_main);
         this.savedInstanceState = savedInstanceState;
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+
+        if (savedInstanceState == null){
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.container, MainFragment.newInstance(), MainFragment.TAG)
+                    .replace(R.id.container_detail, DetailFragment.newInstance(), DetailFragment.TAG)
+                    .commit();
+        }
+
     }
 
     @Override
@@ -79,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
             @Override
             public boolean onQueryTextSubmit(String query) {
                 if (query.trim().length() > 0) {
-                    presenter.searchRepositories(query);
+                    presenter.sendEventSearchRepositories(query);
                     searchView.clearFocus();
                     return true;
                 }
@@ -97,13 +91,11 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putBundle("adapter", adapter.onSaveInstanceState());
         outState.putParcelable("mykey", saveInstanceState());
     }
 
     @Override
     protected void onDestroy() {
-        recyclerView.removeOnScrollListener(scrollListener);
         savedInstanceState = null;
         super.onDestroy();
     }
@@ -111,31 +103,6 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
     @Override
     public void showError(Contract.GithubServiceErrorEvent e) {
         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void setUp() {
-        progressBar = (ProgressBar) findViewById(R.id.progressBar);
-        recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
-        lm = new LinearLayoutManager(recyclerView.getContext(), LinearLayoutManager.VERTICAL, false);
-        recyclerView.setLayoutManager(lm);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        scrollListener = new RecyclerView.OnScrollListener() {
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                if (presenter != null && !presenter.isLoading() && !presenter.reachedEndOfStream()) {
-                    if (lm.findLastVisibleItemPosition() == adapter.getItemCount() - 1) {
-                        presenter.loadMoreRepositories();
-                    }
-                }
-            }
-        };
-        recyclerView.addOnScrollListener(scrollListener);
-        adapter = new RepositoryAdapter();
-        adapter.setOnItemClickListener(this);
-        recyclerView.setAdapter(adapter);
     }
 
     @Override
@@ -153,32 +120,6 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
         return progressBar.getVisibility() == ProgressBar.VISIBLE;
     }
 
-    @Override
-    public void setRepositories(List<Repository> repositories) {
-        adapter.set(repositories);
-    }
-
-    @Override
-    public void addRepositories(List<Repository> repositories) {
-        adapter.addAll(repositories);
-    }
-
-    @Override
-    public void showDetailView(Repository repository) {
-        Intent intent = new Intent(this, ExampleActivity.class);
-        intent.putExtra("repository", repository);
-        startActivity(intent);
-    }
-
-    @Override
-    public void showDetailView(Location location) {
-        Toast.makeText(this, String.format("Longitude: %d, Latitude: %d", location.getLongitude(), location.getLatitude()), Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onItemClick(int position) {
-        presenter.showDetailView(adapter.getItemAtPosition(position));
-    }
 
     private void internalRestoreInstanceState(SavedState savedState) {
         if (savedState != null && searchView != null) {
@@ -205,16 +146,11 @@ public class MainActivity extends AppCompatActivity implements IView, Repository
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         internalRestoreInstanceState(savedInstanceState.<SavedState>getParcelable("mykey"));
-        adapter.onRestoreInstanceState(savedInstanceState.getBundle("adapter"));
     }
 
     Bundle savedInstanceState;
     MenuItem searchViewMenuItem;
-    RecyclerView recyclerView;
     ProgressBar progressBar;
-    RepositoryAdapter adapter;
-    RecyclerView.OnScrollListener scrollListener;
-    LinearLayoutManager lm;
     SearchView searchView;
     boolean isExpanded;
     boolean isFocused;

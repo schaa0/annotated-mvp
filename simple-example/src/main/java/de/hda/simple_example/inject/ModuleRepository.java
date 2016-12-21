@@ -1,5 +1,7 @@
 package de.hda.simple_example.inject;
 
+import android.support.annotation.Nullable;
+
 import dagger.Module;
 import dagger.Provides;
 import de.hda.simple_example.container.RepositoryAdapter;
@@ -15,7 +17,7 @@ public class ModuleRepository {
 
     private Repository repository;
 
-    public ModuleRepository(Repository repository, RepositoryAdapter repositoryAdapter){
+    public ModuleRepository(Repository repository){
         this.repository = repository;
     }
 

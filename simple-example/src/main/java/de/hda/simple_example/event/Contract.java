@@ -46,4 +46,24 @@ public class Contract {
             return message.equals(((GithubServiceErrorEvent) obj).message);
         }
     }
+
+    public static class SearchRepositoriesEvent {
+        private String query;
+
+        public SearchRepositoriesEvent(String query) {
+            this.query = query;
+        }
+
+        public String getQuery() {
+            return query;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof SearchRepositoriesEvent)){
+                return false;
+            }
+            return ((SearchRepositoriesEvent) obj).query.equals(query);
+        }
+    }
 }

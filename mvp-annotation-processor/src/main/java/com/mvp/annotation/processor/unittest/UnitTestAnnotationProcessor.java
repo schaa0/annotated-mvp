@@ -51,30 +51,33 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
 
         String packageName = getShortestPackageName(elementUtils, viewElements);
 
+        packageName = "com.mvp";
+
         if (packageName == null)
             return true;
+
+        new ControllerInterfaceType(filer, packageName).generate();
+        new TestingContextType(filer, packageName).generate();
+        new ViewEnumType(filer, packageName).generate();
+        new PresenterEnumType(filer, packageName).generate();
+        new TestCaseType(filer, packageName).generate();
 
         for (Element viewElement : viewElements) {
             if (viewElement.getKind() == ElementKind.FIELD){
                 VariableElement variableElement = (VariableElement) viewElement;
                 DeclaredType declaredType = (DeclaredType) variableElement.asType();
                 TypeMirror activityType = declaredType.getTypeArguments().get(0);
-                ClassName activityClass = ClassName.bestGuess(activityType.toString());
                 Object value = getAnnotationValue(typeUtils.asElement(activityType), MEMBER_PRESENTER_CLASS).getValue();
                 String presenterClassString = value.toString().replace(".class", "");
-                ClassName presenterClassName = ClassName.bestGuess(presenterClassString);
                 TypeElement presenterElement = elementUtils.getTypeElement(presenterClassString);
                 DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
                 TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
-                ClassName uiViewClassName = ClassName.bestGuess(uiViewType.toString());
                 Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
-                new TestControllerClass(filer, getPackageName(viewElement), gang).generate();
-                new PresenterBuilderClass(filer, elementUtils, typeUtils, getPackageName(viewElement), gang, packageName).generate();
-                new TestablePresenterModuleClass(filer, elementUtils, getPackageName(presenterElement), gang).generate();
+                new TestControllerType(filer, typeUtils, elementUtils, getPackageName(viewElement), gang).generate();
+                new PresenterBuilderType(filer, elementUtils, typeUtils, getPackageName(viewElement), gang, packageName).generate();
+                new TestablePresenterModuleType(filer, elementUtils, getPackageName(presenterElement), gang).generate();
             }
         }
-
-        new TestingContextClass(filer, packageName).generate();
 
         return true;
     }

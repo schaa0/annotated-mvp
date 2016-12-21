@@ -81,6 +81,10 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
         handler.post(runnable);
     }
 
+    protected void submitOnUiThread(Runnable runnable, int delay) {
+        handler.postDelayed(runnable, delay);
+    }
+
     @Override
     @BackgroundThread
     public void onInitialize() {
@@ -118,9 +122,4 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
         this.view = view;
     }
 
-    private static class UiThreadQueueHandler extends Handler {
-        UiThreadQueueHandler(Looper looper) {
-            super(looper);
-        }
-    }
 }

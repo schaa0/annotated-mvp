@@ -8,6 +8,9 @@ import com.mvp.annotation.ProvidesModule;
 import com.mvp.annotation.UIView;
 import com.mvp.annotation.ViewEvent;
 import com.mvp.annotation.Presenter;
+import com.mvp.annotation.processor.unittest.PresenterBuilderType;
+import com.mvp.annotation.processor.unittest.TestControllerType;
+import com.mvp.annotation.processor.unittest.TestablePresenterModuleType;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -56,12 +59,15 @@ import static com.mvp.annotation.processor.Utils.getAnnotationValue;
 
 public class AnnotationProcessor extends AbstractProcessor {
 
+    private static final String MEMBER_PRESENTER_CLASS = "presenter";
+
     static final ParameterizedTypeName IFACTORY_CLASS_NAME = ParameterizedTypeName.get(ClassName.get("com.mvp", "IFactory"), WildcardTypeName.subtypeOf(TypeName.OBJECT));
     public static final String CLASSNAME_DEPENDENCY_PROVIDER = "DependencyProvider";
     public static final String MEMBER_NEEDS_MODULES = "needsModules";
     public static final String MEMBER_NEEDS_COMPONENTS = "needsComponents";
     private static final String MEMBER_VIEW_IMPLEMENTATION = "viewImplementation";
     private static ClassName APP_COMPAT_ACTIVITY;
+    private static TypeMirror APP_COMPAT_ACTIVITY_TYPE;
 
     private HashMap<TypeMirror, List<Interceptor>> interceptors = new HashMap<>();
     private Types typeUtils;
@@ -73,6 +79,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     private TypeMirror applicationClassType;
     private Set<? extends Element> componentProviders;
     private Set<? extends Element> uiViewClasses;
+    private ArrayList<Gang> gangs;
 
     @Override
     public synchronized void init(ProcessingEnvironment env) {
@@ -85,6 +92,9 @@ public class AnnotationProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env) {
 
         APP_COMPAT_ACTIVITY = ClassName.get("android.support.v7.app", "AppCompatActivity");
+        APP_COMPAT_ACTIVITY_TYPE = elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType();
+
+        findGangs(env);
 
         if (componentProviders == null)
             componentProviders = env.getElementsAnnotatedWith(Provider.class);
@@ -123,18 +133,28 @@ public class AnnotationProcessor extends AbstractProcessor {
                     throw new IllegalStateException(String.format("class: %s is annotated with @Presenter, but does not derive from: %s", classType, presenterType));
                 }
 
-                String presenterPackage = extractPackage(classType);
+                ClassName viewImplementationClassName = null;
 
-                String viewPackage = extractPackage(viewType);
-                Presenter presenterAnnotation = element.getAnnotation(Presenter.class);
+                for (Gang gang : gangs) {
+                    if (gang.getElementPresenterClass().toString().equals(element.toString())) {
+                        viewImplementationClassName = ClassName.bestGuess(gang.getElementActivityClass().asType().toString());
+                        break;
+                    }
+                }
+
+                if (viewImplementationClassName == null){
+                    break;
+                }
+
+                String presenterPackage = extractPackage(classType);
 
                 AnnotationMemberModuleClasses annotationMemberModuleClasses = new AnnotationMemberModuleClasses(presenterPackage).parse(element);
                 AnnotationMemberComponentClasses annotationMemberComponentClasses = new AnnotationMemberComponentClasses(presenterPackage).parse(element);
 
-                AnnotationValue annotationValue = getAnnotationValue(element, MEMBER_VIEW_IMPLEMENTATION);
+                /*AnnotationValue annotationValue = getAnnotationValue(element, MEMBER_VIEW_IMPLEMENTATION);
                 Object object = annotationValue.getValue();
 
-                ClassName viewImplementationClassName = ClassName.bestGuess(object.toString().replace(".class", ""));
+                ClassName viewImplementationClassName = ClassName.bestGuess(object.toString().replace(".class", ""));*/
 
                 String simpleComponentPresenterClassName = "Component" + element.getSimpleName().toString();
                 TypeSpec.Builder builder = TypeSpec.interfaceBuilder(simpleComponentPresenterClassName);
@@ -153,7 +173,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                 String delegateClassName = viewImplementationClassName.packageName() + "." + viewImplementationClassName.simpleName() + "Delegate";
                 ClassName modulePresenterClass = ClassName.bestGuess("Module" + element.getSimpleName().toString());
 
-                //builder.addAnnotation(MvpScope.class);
                 builder.addAnnotation(AnnotationSpec.builder(annotationClass)
                         .addMember("modules", CodeBlock.of(moduleFormat, moduleClasses))
                         .build());
@@ -175,11 +194,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .build());
 
                 ParameterizedTypeName componentPresenterType = ParameterizedTypeName.get(ClassName.get("com.mvp", "ComponentPresenter"), ClassName.bestGuess(delegateBinderClassName), TypeName.get(viewType), TypeName.get(classType), ClassName.bestGuess(componentDelegateBinderClassName), modulePresenterClass);
-
-                /*builder.addMethod(MethodSpec.methodBuilder("presenter")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                        .returns(componentPresenterType)
-                        .build());*/
 
                 builder.addModifiers(Modifier.PUBLIC);
 
@@ -221,28 +235,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .addCode("super(activity, view, componentPresenter);")
                         .build());
 
-                /*builder.addMethod(MethodSpec.methodBuilder("provideBinder")
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(ClassName.bestGuess(delegateBinderClassName))
-                        .addAnnotation(ClassName.get("dagger", "Provides"))
-                        .addParameter(ClassName.bestGuess(delegateClassName), "delegate")
-                        .addCode("return new $T(delegate);",  ClassName.bestGuess(delegateBinderClassName))
-                        .build());
-
-                //IMvpEventBus eventBus, PresenterComponent<IView, ExamplePresenter> presenterComponent, IView view, Context context, LoaderManager loaderManager
-                builder.addMethod(MethodSpec.methodBuilder("provideDelegate")
-                        .addAnnotation(ClassName.get("dagger", "Provides"))
-                        .addParameter(ClassName.get("com.mvp", "IMvpEventBus"), "eventBus")
-                        .addParameter(presenterComponent, "presenterComponent")
-                        .addParameter(ClassName.get(viewType), "view")
-                        .addParameter(ClassName.bestGuess("android.content.Context"), "context")
-                        .addParameter(ClassName.bestGuess("android.support.v4.app.LoaderManager"), "loaderManager")
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(ClassName.bestGuess(delegateClassName))
-                        .addCode("return new $T(eventBus, presenterComponent, view, context, loaderManager);",  ClassName.bestGuess(delegateClassName))
-                        .build());
-                */
-
                 writeClass(builder.build(), presenterPackage);
 
                 processPresenter(element, classType, basePresenters, viewType);
@@ -261,6 +253,25 @@ public class AnnotationProcessor extends AbstractProcessor {
         }
 
         return true;
+    }
+
+    private void findGangs(RoundEnvironment env) {
+        gangs = new ArrayList<>();
+        Set<? extends Element> elementsAnnotatedWith = env.getElementsAnnotatedWith(UIView.class);
+        for (Element viewElement : elementsAnnotatedWith) {
+            if (viewElement.getKind() == ElementKind.CLASS){
+                TypeElement typeElement = (TypeElement) viewElement;
+                DeclaredType declaredType = (DeclaredType) typeElement.asType();
+                TypeMirror activityType = declaredType;
+                Object value = getAnnotationValue(typeUtils.asElement(activityType), MEMBER_PRESENTER_CLASS).getValue();
+                String presenterClassString = value.toString().replace(".class", "");
+                TypeElement presenterElement = elementUtils.getTypeElement(presenterClassString);
+                DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
+                TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
+                Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
+                gangs.add(gang);
+            }
+        }
     }
 
     private HashMap<String, ExecutableElement> findProvidingMethods(Set<? extends Element> componentProviders){
@@ -414,17 +425,29 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         String activityPackageName = activityPackage;
         String presenterPackageName = extractPackage(presenterClass);
-        String initCode = "this.delegate = delegate;";
-        String castCode = "$T binder = ($T) presenterComponent;\n";
-        String binderConstructorCode = "binder.component(new $T(presenterComponent)).inject(this);";
-
-        String constructCode = String.format("$T.builder()\n" +
-                "            .%s(new $T(activity, presenterComponent.view(), presenterComponent))\n" +
-                "            .moduleEventBus(moduleEventBus)\n" +
-                "            .build()\n" +
-                "            .inject(this);", "module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
 
         ClassName modulePresenterClass = ClassName.get(presenterPackageName, "Module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
+        String constructCode;
+        ClassName[] classNameParams;
+        //if (Utils.isActivity(typeUtils, elementUtils, activityType)){
+            constructCode = String.format("$T.builder()\n" +
+                    "            .%s(new $T(activity, presenterComponent.view(), presenterComponent))\n" +
+                    "            .moduleEventBus(moduleEventBus)\n" +
+                    "            .build()\n" +
+                    "            .inject(this);", "module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
+            classNameParams = new ClassName[] {ClassName.get(activityPackageName, "DaggerComponent" + activityName + "DelegateBinder"), modulePresenterClass };
+        /*}else if(Utils.isFragment(typeUtils, elementUtils, activityType)){
+            constructCode = String.format("$T.builder()\n" +
+                    "            .%s(new $T(($T) activity.getActivity(), presenterComponent.view(), presenterComponent))\n" +
+                    "            .moduleEventBus(moduleEventBus)\n" +
+                    "            .build()\n" +
+                    "            .inject(this);", "module" + typeUtils.asElement(presenterClass).getSimpleName().toString());
+            classNameParams = new ClassName[] {ClassName.get(activityPackageName, "DaggerComponent" + activityName + "DelegateBinder"), modulePresenterClass, APP_COMPAT_ACTIVITY };
+        }else{
+            return;
+        }*/
+
+
         ParameterizedTypeName binderType = ParameterizedTypeName.get(ClassName.get("com.mvp", "Binder"), ClassName.get(activityPackageName, "Component" + activityName + "DelegateBinder"), modulePresenterClass);
 
         ParameterizedTypeName onPresenterLoadedListenerInterface = ParameterizedTypeName.get(ClassName.get("com.mvp", "OnPresenterLoadedListener"), ClassName.get(viewType), ClassName.get(presenterClass));
@@ -434,10 +457,10 @@ public class AnnotationProcessor extends AbstractProcessor {
                 .addSuperinterface(delegateBinderInterface)
                 .addMethod(MethodSpec.constructorBuilder()
                         .addModifiers(Modifier.PUBLIC)
-                        .addParameter(ClassName.get(activityPackage, activityName), "activity")
+                        .addParameter(APP_COMPAT_ACTIVITY, "activity")
                         .addParameter(presenterComponent, "presenterComponent")
                         .addParameter(ClassName.get("com.mvp", "ModuleEventBus"), "moduleEventBus")
-                        .addCode(constructCode, ClassName.get(activityPackageName, "DaggerComponent" + activityName + "DelegateBinder"), modulePresenterClass)
+                        .addCode(constructCode, classNameParams)
                         .build())
                 .addField(FieldSpec.builder(ClassName.bestGuess(activityPackage + "." + delegateClassName), "delegate")
                         .addAnnotation(Inject.class)
@@ -487,6 +510,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     }
 
+
     private void processUiViewClasses(RoundEnvironment env) {
 
         for (Element element : uiViewClasses) {
@@ -506,27 +530,13 @@ public class AnnotationProcessor extends AbstractProcessor {
             ClassName componentClass = ClassName.get("dagger", "Component");
 
             String packageName1 = extractPackage(presenter);
-            //builder.addAnnotation(MvpScope.class);
             builder.addAnnotation(AnnotationSpec.builder(componentClass)
                     .addMember("modules", CodeBlock.of("{ $T.class, $T.class }", ClassName.get(packageName1, "Module" + typeUtils.asElement(presenter).getSimpleName().toString()),  ClassName.get("com.mvp", "ModuleEventBus")))
-                    //.addMember("dependencies", "{ $T.class }", ClassName.get(extractPackage(presenter), "Component" + typeUtils.asElement(presenter).getSimpleName().toString()))
                     .build());
 
             ParameterizedTypeName componentPresenterType = ParameterizedTypeName.get(ClassName.get("com.mvp", "ComponentActivity"),  ClassName.bestGuess(extractPackage(activityType) + "." + element.getSimpleName().toString() + "DelegateBinder"));
             builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
             builder.addSuperinterface(componentPresenterType);
-
-            //String activityPackageName = extractPackage(activityType);
-            //String activityName = typeUtils.asElement(activityType).getSimpleName().toString();
-            //ClassName className = ClassName.get(activityPackageName, "Component" + activityName + "DelegateBinder");
-
-            String presenterPackage = extractPackage(presenter);
-            ClassName componentPresenter = ClassName.get(presenterPackage, "Component" + typeUtils.asElement(presenter).getSimpleName().toString());
-            /*builder.addMethod(MethodSpec.methodBuilder("component")
-                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-                    .returns(componentPresenter)
-                    .addParameter(ClassName.get(extractPackage(presenter), "Module" + typeUtils.asElement(presenter).getSimpleName().toString() + "Dependencies"), "module")
-                    .build());*/
 
             writeClass(builder.build(), packageName);
 
@@ -618,7 +628,6 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         ProxyInfo info = new ProxyInfo(classType, viewType, allMethods);
         TypeSpec t_ = info.processMethods(typeUtils);
-        //writeClass(t_, classType.toString().replaceAll("." + convertDataClassToString(classType), ""));
         writeClass(t_, "com.mvp");
 
         for (Element childElement : childElements){
@@ -837,7 +846,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     .addFileComment("Generated code")
                     .build().writeTo(processingEnv.getFiler());
         } catch (IOException e1) {
-            e1.printStackTrace();
+            //e1.printStackTrace();
         }
     }
 
@@ -847,7 +856,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     .addFileComment("Generated code")
                     .build().writeTo(processingEnv.getFiler());
         } catch (IOException e1) {
-            e1.printStackTrace();
+            //e1.printStackTrace();
         }
     }
 
@@ -885,11 +894,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .addAnnotation(Override.class)
                                         .addModifiers(Modifier.PUBLIC)
                                         .addParameter(TypeName.OBJECT, "nextEventListener")
-                                        //.beginControlFlow("if(this.nextEventListener == null)")
                                         .addStatement("this.nextEventListener = (" + fieldTypenextEventListener.toString() + ")nextEventListener")
-                                        //.nextControlFlow("else")
-                                        //.addStatement("this.nextEventListener.setNext(nextEventListener)")
-                                        //.endControlFlow()
                                         .returns(TypeName.get(void.class))
                                         .build())
                                 .addMethod(MethodSpec.methodBuilder("hasNext")
@@ -1218,8 +1223,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (i < moduleClasses.size() - 1)
                     componentFormat += ", ";
             }
-            //classes[classes.length - 1] = ClassName.get("com.mvp", "ComponentEventBus");
-            //componentFormat += "$T.class";
             componentFormat += " }";
             return this;
         }

@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <application android:name=".container.ApplicationProvider" android:allowBackup="true" android:icon="@mipmap/ic_launcher"
+    <application android:name=".container.ModuleProvider" android:allowBackup="true" android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name" android:supportsRtl="true" android:theme="@style/AppTheme">
 
         <activity android:name=".container.MainActivity">
@@ -16,8 +16,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".container.ExampleActivity"/>
-
+        <activity android:name=".container.DetailActivity"/>
     </application>
 
 </manifest>

@@ -13,7 +13,9 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 /**
  * Created by Andy on 14.12.2016.
@@ -34,6 +36,14 @@ public class Utils {
             }
         }
         return value;
+    }
+
+    public static boolean isActivity(Types typeUtils, Elements elementUtils, TypeMirror activityType) {
+        return typeUtils.isAssignable(activityType, elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType());
+    }
+
+    public static boolean isFragment(Types typeUtils, Elements elementUtils, TypeMirror activityType) {
+        return typeUtils.isAssignable(activityType, elementUtils.getTypeElement("android.support.v4.app.Fragment").asType());
     }
 
     public static boolean hasProvidesAnnotation(Element element) {

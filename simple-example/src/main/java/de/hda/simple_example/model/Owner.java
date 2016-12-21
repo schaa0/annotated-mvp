@@ -10,6 +10,15 @@ import com.google.gson.annotations.SerializedName;
 
 public class Owner implements Parcelable {
 
+    public static final Owner NULL = new Owner() {
+        {
+            this.setId(0);
+            this.setLogin("");
+            this.setAvatarUrl("");
+            this.setUrl("");
+        }
+    };
+
     @SerializedName("login")
     @Expose
     private String login;

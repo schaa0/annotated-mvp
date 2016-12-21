@@ -31,14 +31,13 @@ public abstract class MvpPresenterFactory<V extends MvpView, T extends MvpPresen
                 return presenterProxy;
             }
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         } catch (InstantiationException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         }
-        throw new IllegalStateException("should not happen...");
     }
 }

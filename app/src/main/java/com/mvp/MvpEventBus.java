@@ -99,6 +99,7 @@ public class MvpEventBus implements IMvpEventBus {
                 for (Map.Entry<Class<?>, OnEventListener<?>> entry : eventListeners.entrySet()) {
                     Log.e(MvpEventBus.class.getName(), String.format("remaining listener class: ", entry.getKey().toString()));
                     Log.e(MvpEventBus.class.getName(), String.format("remaining listener: ", entry.getValue().toString()));
+                    printNodeTree("Node Tree for remaining listener class %s: ", entry.getValue());
                 }
             }
         }

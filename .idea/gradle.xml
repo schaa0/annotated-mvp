@@ -12,6 +12,7 @@
             <option value="$PROJECT_DIR$/mvp-annotation" />
             <option value="$PROJECT_DIR$/mvp-annotation-processor" />
             <option value="$PROJECT_DIR$/simple-example" />
+            <option value="$PROJECT_DIR$/weather-sample" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

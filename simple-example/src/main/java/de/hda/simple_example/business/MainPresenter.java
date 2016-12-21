@@ -5,56 +5,52 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.support.annotation.VisibleForTesting;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.ViewEvent;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import de.hda.simple_example.container.IView;
-import de.hda.simple_example.container.MainActivity;
+import de.hda.simple_example.container.IMainView;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.inject.ModuleGithubService;
 import de.hda.simple_example.inject.ModuleLocationManager;
+import de.hda.simple_example.inject.ModuleMainPresenterState;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
 import retrofit2.Call;
 import retrofit2.Response;
 
-@Presenter(
-        viewEvents = {
-                @ViewEvent(eventType = Contract.GithubServiceErrorEvent.class, viewMethodName = "showError"),
-                @ViewEvent(eventType = Contract.LoadingStartedEvent.class, viewMethodName = "showProgressBar"),
-                @ViewEvent(eventType = Contract.LoadingFinishedEvent.class, viewMethodName = "hideProgressBar")
-        },
-        needsModules = {ModuleGithubService.class, ModuleLocationManager.class},
-        viewImplementation = MainActivity.class
-)
-public class MainPresenter extends MvpPresenter<IView> implements LocationListener {
+@Presenter( needsModules = {ModuleMainPresenterState.class, ModuleGithubService.class, ModuleLocationManager.class} )
+public class MainPresenter extends MvpPresenter<IMainView> implements LocationListener {
 
+    public static final String KEY_STATE = "KEY_STATE";
+
+    private State state;
     protected GithubService service;
     private LocationManager locationManager;
     private SensorManager sensorManager;
 
-    private boolean reachedEndOfStream;
-    private boolean isLoading;
-    private int page = 1;
+    boolean isLoading;
+    String orientationTag = "port";
 
-
-    private Contract.LoadingEvent loading = new Contract.LoadingStartedEvent();
-    private Contract.LoadingFinishedEvent notLoading = new Contract.LoadingFinishedEvent();
-    private String query = "";
+    private final Contract.LoadingEvent loading = new Contract.LoadingStartedEvent();
+    private final Contract.LoadingFinishedEvent notLoading = new Contract.LoadingFinishedEvent();
 
     @Inject
-    public MainPresenter(GithubService service, @Named("location") LocationManager locationManager, SensorManager sensorManager) {
+    public MainPresenter(State state, GithubService service,
+                         @Named("location") LocationManager locationManager,
+                         SensorManager sensorManager) {
+        this.state = state;
         this.service = service;
         this.locationManager = locationManager;
         this.sensorManager = sensorManager;
@@ -66,48 +62,49 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
     }
 
     @Override
-    public void onViewAttached(IView view) {
-        view.setUp();
+    public void onViewAttached(IMainView view) {
+        orientationTag = getView().provideOrientationTag();
     }
 
     @Override
-    public void onViewReattached(IView view) {
-        view.setUp();
-        if (isLoading)
-            view.showProgressBar();
-        else
-            view.hideProgressBar();
+    public void onViewReattached(IMainView view) {
+        orientationTag = getView().provideOrientationTag();
+        internalShowDetailView(state.lastSelectedRepository);
     }
 
     @Override
-    public void onViewDetached(IView view) {
-        isLoading = view.isLoading();
+    public void onViewDetached(IMainView view) {
+
     }
 
-    @BackgroundThread
-    public void searchRepositories(String query){
+    private void searchRepositories(String query){
         if (internalSearchRepositories(query, 1)){
-            this.query = query;
-            this.page = 2;
+            this.state.query = query;
+            this.state.page = 2;
         }
     }
 
     @BackgroundThread
     public void loadMoreRepositories(){
-        if (internalSearchRepositories(query, page)){
-            page++;
+        if (internalSearchRepositories(state.query, state.page)){
+            state.page++;
         }
     }
 
-    private boolean internalSearchRepositories(String query, int page){
+    private boolean internalSearchRepositories(String query, final int page){
         boolean result = false;
         try {
             dispatchLoadingStateChangedEvent(loading);
             Call<SearchResult> repositories = service.searchRepositories(query, page);
-            Response<SearchResult> response = repositories.execute();
+            final Response<SearchResult> response = repositories.execute();
             if (response.code() == 200) {
                 result = true;
-                dispatchEvent(new Contract.RepositoriesLoadedEvent(response.body(), page)).toAny();
+                submitOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        onRepositoriesLoaded(response.body(), page == 1);
+                    }
+                });
             }else
                 dispatchEvent(new Contract.GithubServiceErrorEvent(response.errorBody().string())).toAny();
         } catch (IOException e) {
@@ -119,12 +116,10 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
         return result;
     }
 
-    @Event
-    public void onRepositoriesLoadedEvent(Contract.RepositoriesLoadedEvent e){
-        SearchResult searchResult = e.getSearchResult();
+    private void onRepositoriesLoaded(SearchResult searchResult, boolean isFirstPage) {
         List<Repository> repositories = searchResult.getRepositories();
-        reachedEndOfStream = repositories.isEmpty();
-        if (e.isFirstPage())
+        state.reachedEndOfStream = repositories.isEmpty();
+        if (isFirstPage)
             getView().setRepositories(repositories);
         else
             getView().addRepositories(repositories);
@@ -140,21 +135,7 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
     }
 
     public boolean reachedEndOfStream() {
-        return reachedEndOfStream;
-    }
-
-    public void showDetailView(Repository repository) {
-        getView().showDetailView(repository);
-    }
-
-    @VisibleForTesting
-    void setPage(int page){
-        this.page = page;
-    }
-
-    @VisibleForTesting
-    int getPage() {
-        return page;
+        return state.reachedEndOfStream;
     }
 
     @Override
@@ -177,9 +158,72 @@ public class MainPresenter extends MvpPresenter<IView> implements LocationListen
 
     }
 
-    @Event
-    public void onStringEvent(String lkhfe){
-
+    public void showDetailView(Repository repository){
+        state.lastSelectedRepository = repository;
+        internalShowDetailView(repository);
     }
 
+    private void internalShowDetailView(Repository repository) {
+        String strId = repository != Repository.NULL ? String.valueOf(repository.getId()) : "";
+        dispatchEvent(strId).toAny();
+        if (orientationTag.equals("port") || state.lastSelectedRepository != null){
+            getView().showDetailViewInActivity(state.lastSelectedRepository);
+        }
+    }
+
+    @Event(thread = Event.BACKGROUND_THREAD)
+    public void onSearchRepositoriesEvent(Contract.SearchRepositoriesEvent event){
+        searchRepositories(event.getQuery());
+    }
+
+    public static class State implements Parcelable {
+
+        public int page;
+        public String query;
+        public boolean reachedEndOfStream;
+        public Repository lastSelectedRepository;
+
+        public State(){
+            this(1, "", false, Repository.NULL);
+        }
+
+        public State(int page, String query, boolean reachedEndOfStream, Repository lastSelectedRepository){
+            this.page = page;
+            this.query = query;
+            this.reachedEndOfStream = reachedEndOfStream;
+            this.lastSelectedRepository = lastSelectedRepository;
+        }
+
+        protected State(Parcel in) {
+            page = in.readInt();
+            query = in.readString();
+            reachedEndOfStream = in.readByte() != 0;
+            lastSelectedRepository = in.readParcelable(Repository.class.getClassLoader());
+        }
+
+        public static final Creator<State> CREATOR = new Creator<State>() {
+            @Override
+            public State createFromParcel(Parcel in) {
+                return new State(in);
+            }
+
+            @Override
+            public State[] newArray(int size) {
+                return new State[size];
+            }
+        };
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeInt(page);
+            dest.writeString(query);
+            dest.writeByte((byte) (reachedEndOfStream ? 1 : 0));
+            dest.writeParcelable(lastSelectedRepository, flags);
+        }
+    }
 }

@@ -12,10 +12,10 @@ import java.lang.ref.WeakReference;
 
 public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P>   {
 
-    private static final String KEY_INSTANCE_ID = "KEY_INSTANCE_ID";
-    private final LoaderManager loaderManager;
+    public static final String KEY_INSTANCE_ID = "KEY_INSTANCE_ID";
+    private LoaderManager loaderManager;
     private IMvpEventBus eventBus;
-    private final PresenterComponent<V, P> component;
+    private PresenterComponent<V, P> component;
     private Context context;
     private V view;
 
@@ -64,6 +64,10 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
         }
         view = null;
         context = null;
+        eventBus = null;
+        component = null;
+        loaderManager = null;
+        presenter = null;
     }
 
     public P getPresenter() {

@@ -20,6 +20,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
 }
 
 dependencies {
@@ -28,7 +29,7 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     testCompile 'org.robolectric:robolectric:3.1.4'
-    testCompile "org.robolectric:shadows-support-v4:3.0"
+    testCompile "org.robolectric:shadows-support-v4:3.1.4"
     testCompile 'org.mockito:mockito-core:2.1.0-beta.120'
     testCompile 'junit:junit:4.12'
     testCompile 'com.google.dagger:dagger:2.7'
@@ -46,22 +47,37 @@ dependencies {
     weaver project(':mvp-annotation-processor')
 }
 
-task addGeneratedTestSources() {
-    def file = file(project.name + ".iml")
-    doLast {
-        try {
-            def parsedXml = (new XmlParser()).parse(file)
-            def node = parsedXml.component[1].content[0]
-
-            new Node(node, 'sourceFolder', ['url': 'file://$MODULE_DIR$/build/generated/source/apt/test/debug', 'isTestSource': 'true', 'generated': 'true'])
-
-            def writer = new StringWriter()
-            new XmlNodePrinter(new PrintWriter(writer)).print(parsedXml)
-            file.text = writer.toString()
-        } catch (FileNotFoundException e) {
-            // iml not found, common on command line only builds
-        }
+afterEvaluate {
+    android.buildTypes.all { variant ->
+        android.sourceSets.test.java.srcDirs += ("$buildDir/generated/source/apt/test/$variant.name")
     }
 }
 
-preBuild.dependsOn addGeneratedTestSources
+afterEvaluate {
+    android.buildTypes.all { variant ->
+        def u = "compile${variant.name.capitalize()}UnitTestJavaWithJavac"
+        logger.info(u)
+        def unitTestGenerateClassesTask = tasks.findByName(u)
+        logger.info(unitTestGenerateClassesTask != null ? unitTestGenerateClassesTask.name : "unitTestGenerateClassesTask is null")
+        def g = "assemble${variant.name.capitalize()}"
+        def generateClassesTask = tasks.findByName(g)
+        logger.info(g)
+        logger.info(generateClassesTask != null ? generateClassesTask.name : "generateClassesTask is null")
+        if (generateClassesTask != null && unitTestGenerateClassesTask != null)
+            generateClassesTask.dependsOn unitTestGenerateClassesTask
+    }
+}
+
+
+/*afterEvaluate {
+    android.buildTypes.all { variant ->
+        def taskName = "injectAdditionalSourceFiles${variant.name.capitalize()}"
+        task "$taskName" << {
+            def directory = "$buildDir/generated/source/apt/test/$variant.name"
+            logger.info(directory)
+            android.sourceSets.test.java.srcDirs = [file('src/test/java')]
+        }
+        def t = "generate${variant.name.capitalize()}BuildConfig"
+        tasks.findByName(t).dependsOn "$taskName"
+    }
+}*/
