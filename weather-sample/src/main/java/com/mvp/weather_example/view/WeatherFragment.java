@@ -18,18 +18,17 @@ import android.widget.TextView;
 
 import com.mvp.weather_example.R;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+
 
 public abstract class WeatherFragment extends Fragment implements IWeatherView{
 
-    TextView temperatureTextView;
-    TextView humidityTextView;
-    ImageView imageView;
-    ProgressBar progressBar;
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
+    @BindView(R.id.temperatureTextView) TextView temperatureTextView;
+    @BindView(R.id.humidityTextView) TextView humidityTextView;
+    @BindView(R.id.imageView) ImageView imageView;
+    @BindView(R.id.progressBar) ProgressBar progressBar;
 
     @Nullable
     @Override
@@ -40,23 +39,10 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        temperatureTextView = (TextView) getView().findViewById(R.id.temperatureTextView);
-        humidityTextView = (TextView) getView().findViewById(R.id.humidityTextView);
-        imageView = (ImageView) getView().findViewById(R.id.imageView);
-        imageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onWeatherIconClicked();
-            }
-        });
-        progressBar = (ProgressBar) getView().findViewById(R.id.progressBar);
+        ButterKnife.bind(this, getView());
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
-
+    @OnClick(R.id.imageView)
     protected abstract void onWeatherIconClicked();
 
     @Override
@@ -88,7 +74,7 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
     @Override
     public void showForecastWeather(String forecastString) {
         Intent intent = new Intent(getActivity(), ThreeHourForecastActivity.class);
-        intent.putExtra("forecast", forecastString);
+        intent.putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecastString);
         startActivity(intent);
     }
 
@@ -102,14 +88,4 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
         progressBar.setVisibility(View.GONE);
     }
 
-
-    @Override
-    public void onStop() {
-        super.onStop();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
 }

@@ -48,6 +48,8 @@ dependencies {
     annotationProcessor project(':mvp-annotation-processor')
     weaver project(':mvp-annotation-processor')
     compile 'com.android.support.test:runner:0.5'
+    compile 'com.jakewharton:butterknife:8.4.0'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.4.0'
 }
 
 afterEvaluate {

@@ -19,11 +19,13 @@ import com.mvp.weather_example.presenter.ThreeHourForecastPresenter;
 @UIView(presenter = ThreeHourForecastPresenter.class)
 public class ThreeHourForecastActivity extends AppCompatActivity implements IThreeHourForecastView, DialogInterface.OnClickListener{
 
+    public static final String KEY_FORECAST = "forecast";
+
     @Presenter ThreeHourForecastPresenter presenter;
 
     @ModuleParam
     public String forecastWeather() {
-        return getIntent().getStringExtra("forecast");
+        return getIntent().getStringExtra(KEY_FORECAST);
     }
 
     @Override
