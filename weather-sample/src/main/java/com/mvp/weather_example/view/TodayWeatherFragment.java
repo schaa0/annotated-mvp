@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
+import com.mvp.weather_example.presenter.WeatherPresenter;
 
 /**
  * Created by Andy on 22.12.2016.
@@ -16,13 +17,12 @@ public class TodayWeatherFragment extends WeatherFragment {
     @Presenter TodayWeatherPresenter presenter;
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        presenter.onPermissionsResult(requestCode, permissions, grantResults);
+    protected void onWeatherIconClicked() {
+        presenter.loadForecastWeatherDataForToday();
     }
 
     @Override
-    protected void onWeatherIconClicked() {
-        presenter.loadForecastWeatherDataForToday();
+    protected WeatherPresenter getPresenter() {
+        return presenter;
     }
 }

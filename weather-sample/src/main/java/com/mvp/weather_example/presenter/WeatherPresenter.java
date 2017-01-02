@@ -15,6 +15,8 @@ import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.BackgroundThread;
+import com.mvp.annotation.Event;
+import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.List;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
@@ -67,6 +69,10 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
 
     @Override
     public void onViewAttached(IWeatherView view) {
+        loadWeatherIfAllPermissionsGranted(view);
+    }
+
+    private void loadWeatherIfAllPermissionsGranted(IWeatherView view) {
         if (!requestPermissionsIfNeeded(view)) {
             String bestProvider = getBestProvider();
             //noinspection MissingPermission
@@ -76,9 +82,9 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
         }
     }
 
-    @Override
-    public void onDestroyed() {
-        super.onDestroyed();
+    @Event
+    public void onEventPermissionsResult(PermissionEvent permission) {
+        onPermissionsResult(permission.getRequestCode(), permission.getPermissions(), permission.getGrantResults());
     }
 
     private void loadWeather(Location location) {
@@ -183,9 +189,13 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
 
     @Override
     public void onViewReattached(IWeatherView view) {
-        if (lastTemperature != null && lastHumidity != null)
+        if (lastTemperature != null && lastHumidity != null) {
             view.showWeather(lastTemperature, lastHumidity);
-        view.showIcon(icon);
+            view.showIcon(icon);
+        }
+        else {
+            loadWeatherIfAllPermissionsGranted(view);
+        }
     }
 
     @Override
@@ -235,10 +245,10 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
     }
 
     public void onPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
-        if (requestCode == REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+        if (requestCode == REQUEST_CODE_PERM_ACCESS_FINE_LOCATION && grantResults[0] == PackageManager.PERMISSION_GRANTED){
             if (getView().isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION))
                 loadWeather(lastLocation());
-        }else if (requestCode == REQUEST_CODE_PERM_ACCESS_FINE_LOCATION && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+        }else if (requestCode == REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION && grantResults[0] == PackageManager.PERMISSION_GRANTED){
             if (getView().isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION))
                 loadWeather(lastLocation());
         }

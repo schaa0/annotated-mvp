@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
 import com.mvp.weather_example.presenter.TomorrowWeatherPresenter;
+import com.mvp.weather_example.presenter.WeatherPresenter;
 
 @UIView(presenter = TomorrowWeatherPresenter.class)
 public class TomorrowWeatherFragment extends WeatherFragment {
@@ -12,13 +13,12 @@ public class TomorrowWeatherFragment extends WeatherFragment {
     @Presenter TomorrowWeatherPresenter presenter;
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        presenter.onPermissionsResult(requestCode, permissions, grantResults);
+    protected void onWeatherIconClicked() {
+        presenter.loadForecastWeatherDataForTomorrow();
     }
 
     @Override
-    protected void onWeatherIconClicked() {
-        presenter.loadForecastWeatherDataForTomorrow();
+    protected WeatherPresenter getPresenter() {
+        return presenter;
     }
 }

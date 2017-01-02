@@ -135,7 +135,7 @@ public class UnitTestTodayWeatherPresenter {
         verifyZeroInteractions(locationManager);
         presenter.onPermissionsResult(REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION, new String[]{PERM_ACCESS_COARSE_LOCATION}, new int[]{PackageManager.PERMISSION_DENIED});
         verifyZeroInteractions(locationManager);
-        presenter.onPermissionsResult(WeatherPresenter.REQUEST_CODE_PERM_ACCESS_FINE_LOCATION, new String[]{PERM_ACCESS_FINE_LOCATION}, new int[]{PackageManager.PERMISSION_DENIED});
+        presenter.onPermissionsResult(TodayWeatherPresenter.REQUEST_CODE_PERM_ACCESS_FINE_LOCATION, new String[]{PERM_ACCESS_FINE_LOCATION}, new int[]{PackageManager.PERMISSION_DENIED});
         verifyZeroInteractions(locationManager);
     }
 

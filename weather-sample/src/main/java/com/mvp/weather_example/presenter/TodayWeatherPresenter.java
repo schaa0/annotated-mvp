@@ -4,8 +4,10 @@ import android.location.Location;
 import android.location.LocationManager;
 
 import com.mvp.annotation.BackgroundThread;
+import com.mvp.annotation.Event;
 import com.mvp.annotation.Presenter;
 import com.mvp.weather_example.di.ComponentWeather;
+import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 import com.mvp.weather_example.service.DateProvider;

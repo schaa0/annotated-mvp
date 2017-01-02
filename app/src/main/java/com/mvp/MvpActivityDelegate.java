@@ -90,13 +90,13 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
             loadFinishedCalled = true;
             this.presenter = presenter;
             presenter.setView(view);
+            if (onPresenterLoadedListener != null){
+                onPresenterLoadedListener.onPresenterLoaded(presenter);
+            }
             if (firstDelivery)
                 presenter.onViewAttached(view);
             else
                 presenter.onViewReattached(view);
-            if (onPresenterLoadedListener != null){
-                onPresenterLoadedListener.onPresenterLoaded(presenter);
-            }
         }
     }
 

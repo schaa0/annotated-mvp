@@ -8,10 +8,6 @@ import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
 public interface WeatherService {
 
     String API_KEY = "52e258b9d648c55104d57055ee214f5a";

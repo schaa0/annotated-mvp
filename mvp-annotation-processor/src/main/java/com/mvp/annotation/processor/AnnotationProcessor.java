@@ -82,6 +82,8 @@ public class AnnotationProcessor extends AbstractProcessor {
     private Set<? extends Element> uiViewClasses;
     private ArrayList<Gang> gangs;
 
+    private Map<String, String> presenterFieldNames = new HashMap<>();
+
     private boolean alreadyProcessed = false;
 
     @Override
@@ -97,7 +99,8 @@ public class AnnotationProcessor extends AbstractProcessor {
         APP_COMPAT_ACTIVITY = ClassName.get("android.support.v7.app", "AppCompatActivity");
         APP_COMPAT_ACTIVITY_TYPE = elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType();
 
-        findGangs(env);
+        if (gangs == null)
+            findGangs(env);
 
         if (componentProviders == null)
             componentProviders = env.getElementsAnnotatedWith(Provider.class);
@@ -130,7 +133,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 }
 
                 TypeMirror viewType = findViewTypeOfPresenter(presenterType, classType);
-                List<TypeMirror> basePresenters = findBasePresenters(classType);
+                List<TypeMirror> basePresenters = findBasePresenters(classType, classType);
 
                 if (viewType == null){
                     throw new IllegalStateException(String.format("class: %s is annotated with @Presenter, but does not derive from: %s", classType, presenterType));
@@ -262,11 +265,45 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         if (env.processingOver()){
             generateDependencyProvider(env);
+            generateOnPresenterLoadedListeners();
         }
 
         alreadyProcessed = true;
 
         return true;
+    }
+
+    private void generateOnPresenterLoadedListeners() {
+
+        for (Gang gang : gangs) {
+            ClassName onPresenterLoadedListener = ClassName.get("com.mvp", "OnPresenterLoadedListener");
+            ClassName delegateBinder = ClassName.get("com.mvp", "DelegateBinder");
+            ParameterizedTypeName interfaceName = ParameterizedTypeName.get(onPresenterLoadedListener, gang.getViewClass(), gang.getPresenterClass());
+            ParameterizedTypeName delegate = ParameterizedTypeName.get(delegateBinder, gang.getViewClass(), gang.getPresenterClass());
+            ClassName activityClass = gang.getActivityClass();
+            String presenterFieldName = presenterFieldNames.get(gang.getElementActivityClass().asType().toString());
+            TypeSpec.Builder builder = TypeSpec.classBuilder(activityClass.simpleName() + "Listener")
+                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                    .addSuperinterface(interfaceName)
+                    .addField(activityClass, "instance", Modifier.FINAL)
+                    .addField(delegate, "binder", Modifier.FINAL)
+                    .addMethod(MethodSpec.constructorBuilder()
+                            .addModifiers(Modifier.PUBLIC)
+                            .addParameter(activityClass, "instance")
+                            .addParameter(delegate, "binder")
+                            .addStatement("this.instance = instance")
+                            .addStatement("this.binder = binder")
+                            .build())
+                    .addMethod(MethodSpec.methodBuilder("onPresenterLoaded")
+                            .addAnnotation(Override.class)
+                            .addParameter(gang.getPresenterClass(), "presenter")
+                            .addModifiers(Modifier.PUBLIC)
+                            .addStatement("instance." + presenterFieldName + " = presenter")
+                            .addStatement("binder.setOnPresenterLoadedListener(null)")
+                            .returns(void.class)
+                            .build());
+            writeClass(builder.build(), extractPackage(gang.getElementActivityClass().asType()));
+        }
     }
 
     private void generateCustomEventListenerClasses(RoundEnvironment env) {
@@ -335,8 +372,22 @@ public class AnnotationProcessor extends AbstractProcessor {
                 TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
                 Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
                 gangs.add(gang);
+                presenterFieldNames.put(activityType.toString(), findPresenterFieldName(gang.getElementActivityClass()));
             }
         }
+    }
+
+    private String findPresenterFieldName(Element element) {
+        List<? extends Element> enclosedElements = element.getEnclosedElements();
+        for (Element enclosedElement : enclosedElements) {
+            if (enclosedElement.getKind() == ElementKind.FIELD){
+                if (enclosedElement.getAnnotation(Presenter.class) != null){
+                    VariableElement variableElement = (VariableElement) enclosedElement;
+                    return variableElement.getSimpleName().toString();
+                }
+            }
+        }
+        return null;
     }
 
     private HashMap<String, ExecutableElement> findProvidingMethods(Set<? extends Element> componentProviders){
@@ -695,7 +746,7 @@ public class AnnotationProcessor extends AbstractProcessor {
         MvpViewInterfaceInfo viewInterfaceInfo = new MvpViewInterfaceInfo(enclosedElements);
         TypeName className = ClassName.get(classType);
         Presenter presenter = element.getAnnotation(Presenter.class);
-        List<Element> childElements = combineEnclosingElements(element, basePresenters);
+        List<Element> childElements = combineEnclosedElements(element, basePresenters);
         List<ExecutableElement> allMethods = combineAllDeclaredMethods(element);
 
         ProxyInfo info = new ProxyInfo(classType, viewType, allMethods);
@@ -864,12 +915,13 @@ public class AnnotationProcessor extends AbstractProcessor {
         viewEvents.addAll(Arrays.asList(presenterViewEvents));
         for (TypeMirror basePresenter : basePresenters) {
             Presenter annotation = typeUtils.asElement(basePresenter).getAnnotation(Presenter.class);
-            viewEvents.addAll(Arrays.asList(annotation.viewEvents()));
+            if (annotation != null)
+                viewEvents.addAll(Arrays.asList(annotation.viewEvents()));
         }
         return viewEvents;
     }
 
-    private List<Element> combineEnclosingElements(Element element, List<TypeMirror> basePresenters) {
+    private List<Element> combineEnclosedElements(Element element, List<TypeMirror> basePresenters) {
         List<Element> childElements = new ArrayList<>(element.getEnclosedElements());
         for (TypeMirror basePresenter : basePresenters) {
             List<? extends Element> t = typeUtils.asElement(basePresenter).getEnclosedElements();
@@ -883,15 +935,16 @@ public class AnnotationProcessor extends AbstractProcessor {
         return typeElement.getAnnotation(Presenter.class) != null || typeUtils.isAssignable(typeElement.asType(), typeMirror);
     }
 
-    private List<TypeMirror> findBasePresenters(TypeMirror presenterType){
+    private List<TypeMirror> findBasePresenters(TypeMirror presenterType, TypeMirror type){
+        TypeMirror basePresenter = typeUtils.erasure(elementUtils.getTypeElement("com.mvp.MvpPresenter").asType());
         List<TypeMirror> basePresenterTypes = new ArrayList<>();
         List<? extends TypeMirror> typeMirrors = typeUtils.directSupertypes(presenterType);
         for (TypeMirror typeMirror : typeMirrors) {
-            basePresenterTypes.addAll(findBasePresenters(typeMirror));
-            Presenter annotation = typeUtils.asElement(typeMirror).getAnnotation(Presenter.class);
-            if (annotation != null){
-                basePresenterTypes.add(typeMirror);
-            }
+            basePresenterTypes.addAll(findBasePresenters(typeMirror, type));
+        }
+        TypeMirror erasure = typeUtils.erasure(presenterType);
+        if (typeUtils.isAssignable(erasure, basePresenter) && !typeUtils.isSameType(erasure, basePresenter) && !typeUtils.isSameType(erasure, type)){
+            basePresenterTypes.add(presenterType);
         }
         return basePresenterTypes;
     }

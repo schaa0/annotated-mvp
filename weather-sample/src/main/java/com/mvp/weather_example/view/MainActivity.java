@@ -1,5 +1,7 @@
 package com.mvp.weather_example.view;
 
+import android.content.Intent;
+import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -12,7 +14,14 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.mvp.EventBus;
 import com.mvp.weather_example.R;
+import com.mvp.weather_example.di.ComponentActivity;
+import com.mvp.weather_example.di.DaggerComponentActivity;
+import com.mvp.weather_example.di.ModuleProvider;
+import com.mvp.weather_example.event.PermissionEvent;
+
+import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -22,11 +31,18 @@ public class MainActivity extends AppCompatActivity {
     SectionsPagerAdapter mSectionsPagerAdapter;
     @BindView(R.id.container) ViewPager mViewPager;
 
+    @Inject
+    EventBus eventBus;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
+        ComponentActivity componentActivity = DaggerComponentActivity.builder().componentEventBus(((ModuleProvider) getApplication()).componentEventBus()).build();
+        componentActivity.inject(this);
+        eventBus.register(this);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -40,34 +56,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (permissions.length > 0 && grantResults.length > 0) {
+            eventBus.dispatchEvent(new PermissionEvent(requestCode, permissions, grantResults)).toAny();
         }
-
-        return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
-    public class SectionsPagerAdapter extends FragmentPagerAdapter {
+    public static class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public static final int PAGE_COUNT = 2;
 
@@ -103,5 +100,11 @@ public class MainActivity extends AppCompatActivity {
                     throw new IllegalArgumentException(String.format("invalid position : %d", position));
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        eventBus.unregister(this);
+        super.onDestroy();
     }
 }

@@ -92,6 +92,10 @@ public class ByteCodeProcessor extends WeaverProcessor {
     private static final String STATEMENT_MAKE_COMPONENT_IN_FRAGMENT =
             "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s((android.support.v7.app.AppCompatActivity) $s.getActivity(), $s%s);";
 
+
+    private static final String STATEMENT_SET_ONPRESENTERLOADED_LISTENER =
+            "$s." + FIELD_VIEW_DELEGATE + ".setOnPresenterLoadedListener(new %sListener ($s, $s." + FIELD_VIEW_DELEGATE + "));";
+
     private ClassPool pool;
 
     private String applicationClassName;
@@ -319,6 +323,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_ACTIVITY, applicationClassName, "", ctMethod.getName(), parameters));
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE, ctClass.getName(), applicationClassName, ""));
         atTheEnd(classInjector, onCreate, STATEMENT_DELEGATE_ONCREATE);
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_SET_ONPRESENTERLOADED_LISTENER, ctClass.getName()));
         //atTheBeginning(classInjector, onStop, STATEMENT_DELEGATE_ONSTOP);
         atTheEnd(classInjector, onPostResume, STATEMENT_DELEGATE_ONPOSTRESUME);
         atTheEnd(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
@@ -352,6 +357,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
         String parameters = sb.toString();
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_FRAGMENT, applicationClassName, "getActivity().", ctMethod.getName(), parameters));
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE_IN_FRAGMENT, ctClass.getName(), applicationClassName, ".getActivity()"));
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_SET_ONPRESENTERLOADED_LISTENER, ctClass.getName()));
         afterSuper(classInjector, onResume, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
         afterSuper(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
         beforeSuper(classInjector, onDestroy, STATEMENT_DELEGATE_ONDESTROY);

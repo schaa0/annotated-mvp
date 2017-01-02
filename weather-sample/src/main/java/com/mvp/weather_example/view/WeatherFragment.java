@@ -4,7 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -17,6 +19,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.mvp.weather_example.R;
+import com.mvp.weather_example.presenter.WeatherPresenter;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -63,8 +66,14 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
 
     @Override
     public void requestPermission(String permission, int requestCode) {
-        ActivityCompat.requestPermissions(getActivity(), new String[]{permission}, requestCode);
+        if (Build.VERSION.SDK_INT >= 23) {
+            ActivityCompat.requestPermissions(getActivity(), new String[]{permission}, requestCode);
+        }else{
+            getPresenter().onPermissionsResult(requestCode, new String[]{permission}, new int[] {PackageManager.PERMISSION_GRANTED});
+        }
     }
+
+    protected abstract WeatherPresenter getPresenter();
 
     @Override
     public void showIcon(Bitmap icon) {

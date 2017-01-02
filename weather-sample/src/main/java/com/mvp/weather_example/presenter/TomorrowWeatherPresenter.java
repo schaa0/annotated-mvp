@@ -18,10 +18,6 @@ import javax.inject.Inject;
 
 import retrofit2.Call;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
 @Presenter(needsComponents = { ComponentWeather.class })
 public class TomorrowWeatherPresenter extends WeatherPresenter {
 
