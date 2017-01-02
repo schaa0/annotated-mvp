@@ -1,5 +1,9 @@
 package com.mvp;
 
+import android.util.Log;
+
+import javax.inject.Singleton;
+
 import dagger.Module;
 import dagger.Provides;
 
@@ -10,13 +14,13 @@ import dagger.Provides;
 @Module
 public class ModuleEventBus {
 
-    private IMvpEventBus eventBus = new MvpEventBus();
+    protected MvpEventBus eventBus;
 
     public ModuleEventBus() {
-
+        this(new MvpEventBus());
     }
 
-    public ModuleEventBus(IMvpEventBus eventBus) {
+    public ModuleEventBus(MvpEventBus eventBus) {
         this.eventBus = eventBus;
     }
 
@@ -25,4 +29,7 @@ public class ModuleEventBus {
         return eventBus;
     }
 
+    public void destroy() {
+        eventBus.destroy();
+    }
 }

@@ -7,5 +7,6 @@ public interface OnEventListener<T> {
     boolean hasNext();
     OnEventListener<?> getNext();
     void clearNext();
+    boolean shouldConsumeEvent(T data);
     Class<T> getDataClass();
 }

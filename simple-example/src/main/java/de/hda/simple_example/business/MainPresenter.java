@@ -1,12 +1,8 @@
 package de.hda.simple_example.business;
 
-import android.hardware.SensorManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.BackgroundThread;
@@ -14,31 +10,29 @@ import com.mvp.annotation.Event;
 import com.mvp.annotation.Presenter;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.List;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import de.hda.simple_example.container.IMainView;
 import de.hda.simple_example.event.Contract;
-import de.hda.simple_example.inject.ModuleGithubService;
-import de.hda.simple_example.inject.ModuleLocationManager;
-import de.hda.simple_example.inject.ModuleMainPresenterState;
+import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
 import retrofit2.Call;
 import retrofit2.Response;
 
-@Presenter( needsModules = {ModuleMainPresenterState.class, ModuleGithubService.class, ModuleLocationManager.class} )
-public class MainPresenter extends MvpPresenter<IMainView> implements LocationListener {
+@Presenter(
+        needsModules = {ModuleMainPresenterState.class},
+        needsComponents = {ComponentApplication.class}
+)
+public class MainPresenter extends MvpPresenter<IMainView> {
 
     public static final String KEY_STATE = "KEY_STATE";
 
     private State state;
-    protected GithubService service;
-    private LocationManager locationManager;
-    private SensorManager sensorManager;
+    protected GithubService githubService;
 
     boolean isLoading;
     String orientationTag = "port";
@@ -46,14 +40,17 @@ public class MainPresenter extends MvpPresenter<IMainView> implements LocationLi
     private final Contract.LoadingEvent loading = new Contract.LoadingStartedEvent();
     private final Contract.LoadingFinishedEvent notLoading = new Contract.LoadingFinishedEvent();
 
+    protected MainPresenter() {}
+
     @Inject
-    public MainPresenter(State state, GithubService service,
-                         @Named("location") LocationManager locationManager,
-                         SensorManager sensorManager) {
+    public MainPresenter(State state, GithubService githubService) {
+        Log.e(MainPresenter.class.getName(), String.valueOf(githubService.hashCode()));
         this.state = state;
-        this.service = service;
-        this.locationManager = locationManager;
-        this.sensorManager = sensorManager;
+        this.githubService = githubService;
+    }
+
+    public Repository getLastSelectedRepository(){
+        return state.lastSelectedRepository;
     }
 
     @Override
@@ -69,7 +66,8 @@ public class MainPresenter extends MvpPresenter<IMainView> implements LocationLi
     @Override
     public void onViewReattached(IMainView view) {
         orientationTag = getView().provideOrientationTag();
-        internalShowDetailView(state.lastSelectedRepository);
+        if (orientationTag.equals("sw600dp|port"))
+            internalShowDetailView();
     }
 
     @Override
@@ -95,7 +93,7 @@ public class MainPresenter extends MvpPresenter<IMainView> implements LocationLi
         boolean result = false;
         try {
             dispatchLoadingStateChangedEvent(loading);
-            Call<SearchResult> repositories = service.searchRepositories(query, page);
+            Call<SearchResult> repositories = githubService.searchRepositories(query, page);
             final Response<SearchResult> response = repositories.execute();
             if (response.code() == 200) {
                 result = true;
@@ -138,37 +136,22 @@ public class MainPresenter extends MvpPresenter<IMainView> implements LocationLi
         return state.reachedEndOfStream;
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
     public void showDetailView(Repository repository){
         state.lastSelectedRepository = repository;
-        internalShowDetailView(repository);
+        internalShowDetailView();
     }
 
-    private void internalShowDetailView(Repository repository) {
+    private void internalShowDetailView() {
+        final Repository repository = state.lastSelectedRepository;
         String strId = repository != Repository.NULL ? String.valueOf(repository.getId()) : "";
         dispatchEvent(strId).toAny();
-        if (orientationTag.equals("port") || state.lastSelectedRepository != null){
+        if (shouldShowDetailViewInAnotherActivity()){
             getView().showDetailViewInActivity(state.lastSelectedRepository);
         }
+    }
+
+    private boolean shouldShowDetailViewInAnotherActivity() {
+        return orientationTag.contains("port") && state.lastSelectedRepository != null;
     }
 
     @Event(thread = Event.BACKGROUND_THREAD)

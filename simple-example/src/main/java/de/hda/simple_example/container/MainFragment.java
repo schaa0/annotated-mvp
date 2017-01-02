@@ -111,7 +111,7 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
 
     @Override
     public String provideOrientationTag() {
-        return getView().findViewById(R.id.root).getTag().toString();
+        return getView().findViewById(R.id.orientation).getTag().toString();
     }
 
     @Override

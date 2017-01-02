@@ -86,14 +86,37 @@ public class TestControllerType extends AbsGeneratingType {
                     .build());
         }
 
-        if (isFragment()) {
-            ClassName bundle = ClassName.get("android.os", "Bundle");
-            builder.addField(bundle, "bundle", Modifier.PRIVATE);
+        ClassName bundle = ClassName.get("android.os", "Bundle");
+        builder.addField(bundle, "bundle", Modifier.PRIVATE);
 
-            builder.addMethod(MethodSpec.methodBuilder("withSavedInstanceState")
-                    .addParameter(bundle, "bundle")
-                    .addModifiers(Modifier.PUBLIC)
-                    .addCode("this.bundle = bundle;\n")
+        builder.addMethod(MethodSpec.methodBuilder("withSavedInstanceState")
+                .addParameter(bundle, "bundle")
+                .addCode("this.bundle = bundle;\n")
+                .addCode("return this;\n")
+                .returns(testControllerClass)
+                .build());
+
+        builder.addMethod(MethodSpec.methodBuilder("setPresenterToView")
+                .addParameter(gang.getPresenterClass(), "presenter")
+                .addCode("           $T view = controller.get();\n" +
+                        "            try {\n" +
+                        "                java.lang.reflect.Field f = view.getClass().getDeclaredField(\"" + presenterFieldName + "\");\n" +
+                        "                f.setAccessible(true);\n" +
+                        "                f.set(view, presenter);\n" +
+                        "            } catch (java.lang.NoSuchFieldException e) {\n" +
+                        "                e.printStackTrace();\n" +
+                        "            } catch (java.lang.IllegalAccessException e) {\n" +
+                        "                e.printStackTrace();\n" +
+                        "            }", gang.getActivityClass())
+                .returns(void.class)
+                .build());
+
+        if (isActivity()) {
+            ClassName intent = ClassName.get("android.content", "Intent");
+            builder.addField(intent, "intent", Modifier.PRIVATE);
+            builder.addMethod(MethodSpec.methodBuilder("withIntent")
+                    .addParameter(intent, "intent")
+                    .addCode("this.intent = intent;\n")
                     .addCode("return this;\n")
                     .returns(testControllerClass)
                     .build());
@@ -102,7 +125,6 @@ public class TestControllerType extends AbsGeneratingType {
         if (isFragment()) {
             ParameterizedTypeName activityController = ParameterizedTypeName.get(ClassName.get("org.robolectric.util", "ActivityController"), WildcardTypeName.subtypeOf(ClassName.bestGuess("android.support.v4.app.FragmentActivity")));
             MethodSpec.Builder activityControllerMethod = MethodSpec.methodBuilder("activityController")
-                    .addModifiers(Modifier.PUBLIC)
                     .addCode("$T activityController = null;\n" +
                             "            try {\n" +
                             "                java.lang.reflect.Field f = controller.getClass().getDeclaredField(\"activityController\");\n" +
@@ -118,8 +140,7 @@ public class TestControllerType extends AbsGeneratingType {
             builder.addMethod(activityControllerMethod.build());
         }
 
-        MethodSpec.Builder buildMethod = MethodSpec.methodBuilder("build")
-                .addModifiers(Modifier.PUBLIC);
+        MethodSpec.Builder buildMethod = MethodSpec.methodBuilder("build");
 
         if (isFragment()) {
             ClassName appCompatActivity = ClassName.bestGuess("android.support.v7.app.AppCompatActivity");
@@ -133,8 +154,7 @@ public class TestControllerType extends AbsGeneratingType {
                                 "   $T<?> constructor = clazz.getDeclaredConstructors()[0];\n" +
                                 "   $T binder = ($T) constructor.newInstance(activity, presenterComponent, new $T(testingContext.eventBus()));\n" +
                                 "   setupActivity(binder);\n" +
-                                "   $T presenter = binder.getPresenter();\n" +
-                                "   return presenter;\n" +
+                                "   return binder.getPresenter();\n" +
                                 "}  catch (java.lang.ClassNotFoundException e) {\n" +
                                 "       e.printStackTrace();\n" +
                                 "}  catch (java.lang.IllegalAccessException e) {\n" +
@@ -145,32 +165,32 @@ public class TestControllerType extends AbsGeneratingType {
                                 "       e.printStackTrace();\n" +
                                 "}\n" +
                                 "throw new java.lang.IllegalStateException(\"presenter could not be instantiated!\");",
-                        clazzClass, constructorClass, delegateBinder, delegateBinder, moduleEventBusClass, gang.getPresenterClass())
+                        clazzClass, constructorClass, delegateBinder, delegateBinder, moduleEventBusClass)
                 .returns(gang.getPresenterClass());
-
-        String createParams = isFragment() ? "container, bundle" : "";
-        String onCreateParams = isFragment() ? "bundle" : "null";
 
         ClassName mvpActivityDelegate = ClassName.get("com.mvp", "MvpActivityDelegate");
 
-        if (isFragment()) {
-            MethodSpec.Builder methodInitialize = MethodSpec.methodBuilder("initialize")
-                    .addModifiers(Modifier.PUBLIC)
-                    .returns(void.class);
-            methodInitialize.beginControlFlow("if (this.bundle != null)");
-            methodInitialize.addCode("this.bundle.putInt($T.KEY_INSTANCE_ID, this.hashCode());", mvpActivityDelegate);
+        MethodSpec.Builder methodInitialize = MethodSpec.methodBuilder("initialize")
+                .returns(void.class);
+        methodInitialize.beginControlFlow("if (this.bundle != null)");
+        methodInitialize.addCode("this.bundle.putInt($T.KEY_INSTANCE_ID, this.hashCode());", mvpActivityDelegate);
+        methodInitialize.endControlFlow();
+
+        if (isActivity()){
+            methodInitialize.beginControlFlow("if (intent != null)");
+            methodInitialize.addCode("controller.withIntent(intent);\n");
             methodInitialize.endControlFlow();
-            methodInitialize.addCode("controller.create(container, bundle);\n");
-            builder.addMethod(methodInitialize.build());
         }
 
-        MethodSpec.Builder methodSetupActivity = MethodSpec.methodBuilder("setupActivity");
-        /*if (isFragment()){
-            methodSetupActivity.beginControlFlow("if (this.bundle != null)");
-            methodSetupActivity.addCode("this.bundle.putInt($T.KEY_INSTANCE_ID, this.hashCode());", mvpActivityDelegate);
-            methodSetupActivity.endControlFlow();
-        }*/
+        if (isFragment()) {
+            methodInitialize.addCode("controller.create(container, bundle);\n");
+        }else {
+            methodInitialize.addCode("controller.create(bundle);\n");
+        }
 
+        builder.addMethod(methodInitialize.build());
+
+        MethodSpec.Builder methodSetupActivity = MethodSpec.methodBuilder("setupActivity");
 
         return builder
                 .addModifiers(Modifier.PUBLIC)
@@ -180,48 +200,42 @@ public class TestControllerType extends AbsGeneratingType {
                 .addMethod(constructorBuilder
                         .build())
                 .addMethod(MethodSpec.methodBuilder("with")
-                        .addModifiers(Modifier.PUBLIC)
                         .addParameter(componentPresenterClass, "presenterComponent")
                         .addCode("this.presenterComponent = presenterComponent;\n")
                         .addCode("return this;\n")
                         .returns(testControllerClass)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("with")
-                        .addModifiers(Modifier.PUBLIC)
                         .addParameter(testingContextClass, "testingContext")
                         .addCode("this.testingContext = testingContext;\n")
                         .addCode("return this;\n")
                         .returns(testControllerClass)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("activity")
-                        .addModifiers(Modifier.PUBLIC)
                         .addCode("return controller.get();\n")
                         .returns(gang.getActivityClass())
                         .build())
                 .addMethod(methodSetupActivity
                         .addModifiers(Modifier.PRIVATE)
                         .addParameter(delegateBinder, "binder")
-                        .addCode(String.format((isFragment()?"":"controller.create(" + createParams + ");\n") +
-                                "binder.onCreate("+ onCreateParams + ");\n" +
+                        .addCode(String.format("binder.onCreate(bundle);\n" +
                                 "binder.setOnPresenterLoadedListener(new $T(){\n" +
                                         "\n" +
                                         "    @Override\n" +
                                         "    public void onPresenterLoaded($T presenter) {\n" +
-                                        "        controller.get()." + presenterFieldName + " = presenter;\n" +
+                                        "        setPresenterToView(presenter);\n" +
                                         "    }\n" +
                                         "});\n" +
-                                "controller.get()." + presenterFieldName + " = binder.getPresenter();\n" +
                                 "controller.start();\n" +
                                 "%s" +
                                 "controller.resume();\n" +
                                 "binder.onPostResume();\n" +
-                                "controller.visible();", isActivity() ? "controller.postCreate(null);\n" : ""), onPresenterLoadedListenerInterface, gang.getPresenterClass())
+                                "controller.visible();", isActivity() ? "controller.postCreate(bundle);\n" : ""), onPresenterLoadedListenerInterface, gang.getPresenterClass())
                         .returns(void.class)
                         .build())
                 .addMethod(buildMethod
                         .build())
                 .addMethod(MethodSpec.methodBuilder("controller")
-                        .addModifiers(Modifier.PUBLIC)
                         .addCode("return controller;\n")
                         .returns(activityControllerClass)
                         .build());

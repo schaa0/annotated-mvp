@@ -81,10 +81,10 @@ public class ByteCodeProcessor extends WeaverProcessor {
             "$s.%s = (%s) $s." + FIELD_VIEW_DELEGATE + ".getPresenter();";
 
     private static final String STATEMENT_NEW_DELEGATE =
-            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder($s, $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).eventBus());";
+            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder($s, $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).mvpEventBus());";
 
     private static final String STATEMENT_NEW_DELEGATE_IN_FRAGMENT =
-            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder( (android.support.v7.app.AppCompatActivity) $s.getActivity(), $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).eventBus());";
+            "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder( (android.support.v7.app.AppCompatActivity) $s.getActivity(), $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).mvpEventBus());";
 
     private static final String STATEMENT_MAKE_COMPONENT_IN_ACTIVITY =
             "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s($s, $s%s);";
@@ -332,7 +332,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
         CtMethod onActivityCreated = findBestMethod(ctClass, "onActivityCreated", BUNDLE_CLASS);
         CtMethod onResume = findBestMethod(ctClass, "onResume");
         CtMethod onPause = findBestMethod(ctClass, "onPause");
-        CtMethod onDestroyView = findBestMethod(ctClass, "onDestroyView");
+        CtMethod onDestroy = findBestMethod(ctClass, "onDestroy");
         CtMethod onSaveInstanceState = findBestMethod(ctClass, "onSaveInstanceState", BUNDLE_CLASS);
 
         CtMethod ctMethod = componentProviderMethods.get(componentPresenterInterfaceName);
@@ -354,7 +354,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE_IN_FRAGMENT, ctClass.getName(), applicationClassName, ".getActivity()"));
         afterSuper(classInjector, onResume, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
         afterSuper(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
-        beforeSuper(classInjector, onDestroyView, STATEMENT_DELEGATE_ONDESTROY);
+        beforeSuper(classInjector, onDestroy, STATEMENT_DELEGATE_ONDESTROY);
         afterSuper(classInjector, onActivityCreated, STATEMENT_DELEGATE_ONCREATE);
     }
 

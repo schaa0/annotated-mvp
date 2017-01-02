@@ -3,36 +3,36 @@ package de.hda.simple_example.business;
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.ViewEvent;
 
 import javax.inject.Inject;
 
 import de.hda.simple_example.container.IView;
-import de.hda.simple_example.container.MainActivity;
 import de.hda.simple_example.event.Contract;
+import de.hda.simple_example.di.ComponentApplication;
 
-/**
- * Created by Andy on 18.12.2016.
- */
-
-@Presenter
+@Presenter(needsComponents = {ComponentApplication.class} )
 public class ActivityPresenter extends MvpPresenter<IView> {
 
     private boolean isLoading;
+    private Settings settings;
+    boolean shouldSetLastQueryFromCache = false;
+
+    protected ActivityPresenter() {}
 
     @Inject
-    public ActivityPresenter(){
-
+    public ActivityPresenter(Settings settings){
+        this.settings = settings;
     }
 
     @Override
     public void onViewAttached(IView view) {
-
+        shouldSetLastQueryFromCache = true;
     }
 
     @Override
     public void onViewReattached(IView view) {
         showOrHideProgressBar();
+        shouldSetLastQueryFromCache = false;
     }
 
     private void showOrHideProgressBar() {
@@ -47,7 +47,11 @@ public class ActivityPresenter extends MvpPresenter<IView> {
 
     }
 
-    @Event
+    public boolean isLoading() {
+        return isLoading;
+    }
+
+    @Event(condition = "#.isLoading() == !this.isLoading()")
     public void onLoadingStateChanged(Contract.LoadingEvent loadingEvent){
         isLoading = loadingEvent instanceof Contract.LoadingStartedEvent;
         showOrHideProgressBar();
@@ -59,6 +63,15 @@ public class ActivityPresenter extends MvpPresenter<IView> {
     }
 
     public void sendEventSearchRepositories(String query) {
+        settings.setLastQuery(query);
         dispatchEvent(new Contract.SearchRepositoriesEvent(query)).toAny();
+    }
+
+    public void onSearchViewInitialized() {
+        if (shouldSetLastQueryFromCache) {
+            String lastQuery = settings.getLastQuery();
+            if (!lastQuery.isEmpty())
+                getView().setLastQuery(lastQuery);
+        }
     }
 }

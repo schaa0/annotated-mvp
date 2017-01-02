@@ -22,6 +22,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementKindVisitor6;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -38,7 +39,6 @@ public class PresenterBuilderType extends AbsGeneratingType {
     private final Gang gang;
     private String shortestPackageName;
 
-    //private List<String> moduleFieldNames = new ArrayList<>();
     public PresenterBuilderType(Filer filer, Elements elementUtils, Types typeUtil, String packageName, Gang gang, String shortestPackageName) {
         super(filer, packageName);
         this.elementUtils = elementUtils;
@@ -52,10 +52,13 @@ public class PresenterBuilderType extends AbsGeneratingType {
     protected TypeSpec.Builder build() {
 
         List<ClassName> modules = findModules(gang.getElementPresenterClass());
+        List<ClassName> components = findComponents(gang.getElementPresenterClass());
+
+        //HashMap<String, Component> instancesFromComponents = extractProvidedClasses(components);
 
         HashMap<String, Module> instancesFromModules = extractProvidedClasses(modules);
 
-        ClassName activityControllerClassName = ClassName.get(getPackageName(), gang.getActivityClass() + "Controller");
+        ClassName activityControllerClassName = ClassName.get(getPackageName(), gang.getActivityClass().simpleName() + "Controller");
         ClassName presenterBuilderClass = ClassName.get(getPackageName(), gang.getPresenterClass().simpleName() + "Builder");
         ClassName bindingResultClassName = presenterBuilderClass.nestedClass("BindingResult");
 
@@ -80,23 +83,32 @@ public class PresenterBuilderType extends AbsGeneratingType {
                     .returns(ParameterizedTypeName.get(ClassName.bestGuess("java.lang.Class"), gang.getViewClass()))
                     .build());
 
-        if (isFragment()) {
-            ClassName bundle = ClassName.get("android.os", "Bundle");
-            builder.addField(bundle, "bundle", Modifier.PRIVATE);
+        ClassName bundle = ClassName.get("android.os", "Bundle");
+        builder.addField(bundle, "bundle", Modifier.PRIVATE);
 
-            builder.addMethod(MethodSpec.methodBuilder("withSavedInstanceState")
-                    .addParameter(bundle, "bundle")
-                    .addModifiers(Modifier.PUBLIC)
-                    .addCode("this.bundle = bundle;\n")
-                    .addCode("return this;\n")
-                    .returns(presenterBuilderClass)
-                    .build());
+        builder.addMethod(MethodSpec.methodBuilder("withSavedInstanceState")
+                .addParameter(bundle, "bundle")
+                .addModifiers(Modifier.PUBLIC)
+                .addCode("this.bundle = bundle;\n")
+                .addCode("return this;\n")
+                .returns(presenterBuilderClass)
+                .build());
+
+        if (isActivity()) {
+            ClassName intent = ClassName.get("android.content", "Intent");
+            builder.addField(intent, "intent", Modifier.PRIVATE);
+            builder.addMethod(MethodSpec.methodBuilder("withIntent")
+                .addParameter(intent, "intent")
+                .addModifiers(Modifier.PUBLIC)
+                .addCode("this.intent = intent;\n")
+                .addCode("return this;\n")
+                .returns(presenterBuilderClass)
+                .build());
         }
 
 
         for (ClassName module : modules) {
             String parameterName = toParameterName(module);
-            //moduleFieldNames.add(parameterName);
             builder.addField(module, parameterName, Modifier.PRIVATE)
                     .addMethod(MethodSpec.methodBuilder("with")
                         .addModifiers(Modifier.PUBLIC)
@@ -105,6 +117,18 @@ public class PresenterBuilderType extends AbsGeneratingType {
                         .addCode(String.format("this.%s = %s;\n", parameterName, parameterName))
                         .addCode("return this;\n")
                         .build());
+        }
+
+        for (ClassName component : components){
+            String parameterName = toParameterName(component);
+            builder.addField(component, parameterName, Modifier.PRIVATE)
+                    .addMethod(MethodSpec.methodBuilder("with")
+                            .addModifiers(Modifier.PUBLIC)
+                            .addParameter(component, parameterName)
+                            .returns(presenterBuilderClass)
+                            .addCode(String.format("this.%s = %s;\n", parameterName, parameterName))
+                            .addCode("return this;\n")
+                            .build());
         }
 
         for (Map.Entry<String, Module> instancesFromModule : instancesFromModules.entrySet()) {
@@ -163,7 +187,7 @@ public class PresenterBuilderType extends AbsGeneratingType {
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
                 .addCode("this.view = controller.activity();\n" +
-                        "return this;")
+                        "return this;\n")
                 .returns(presenterBuilderClass)
                 .build());
 
@@ -234,11 +258,9 @@ public class PresenterBuilderType extends AbsGeneratingType {
                 List<String> fieldNames = theModule.getFieldNames();
                 for (int i = 0; i < fieldNames.size(); i++) {
                     String fieldName = fieldNames.get(i);
-                    if (isFragment()){
-                        String methodName = m.get(containingInstanceClasses.get(i).getClassType().toString());
-                        if (methodName != null)
-                            methodBuilder.addCode(String.format("this.%s = controller.activity().%s();\n", fieldName, methodName));
-                    }
+                    String methodName = m.get(containingInstanceClasses.get(i).getClassType().toString());
+                    if (methodName != null)
+                        methodBuilder.addCode(String.format("this.%s = controller.activity().%s();\n", fieldName, methodName));
                     ifStatement += fieldName + " != null";
                     parameterList += fieldName;
                     if (i < fieldNames.size() - 1) {
@@ -271,6 +293,7 @@ public class PresenterBuilderType extends AbsGeneratingType {
         if (isFragment()){
             builder.addField(int.class, "container", Modifier.PRIVATE);
             builder.addMethod(MethodSpec.methodBuilder("in")
+                    .addModifiers(Modifier.PUBLIC)
                     .addParameter(int.class, "container")
                     .addCode("this.container = container;\n")
                     .addCode("return this;\n")
@@ -321,13 +344,17 @@ public class PresenterBuilderType extends AbsGeneratingType {
         ParameterizedTypeName presenterComponent = ParameterizedTypeName.get(ClassName.get("com.mvp", "PresenterComponent"), gang.getViewClass(), gang.getPresenterClass());
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("build");
 
+        methodBuilder.addCode("this.controller.withSavedInstanceState(bundle);\n");
+
         if (isFragment()){
             methodBuilder.addCode("this.controller.in(container);\n");
-            methodBuilder.addCode("this.controller.withSavedInstanceState(bundle);\n");
-            /*String container = isFragment() ? ".in(container)" : "";
-            String savedState = isFragment() ? ".withSavedInstanceState(bundle)" : "";*/
-            methodBuilder.addCode("this.controller.initialize();\n");
+        }else{
+            methodBuilder.beginControlFlow("if (intent != null)");
+            methodBuilder.addCode("this.controller.withIntent(intent);\n");
+            methodBuilder.endControlFlow();
         }
+
+        methodBuilder.addCode("this.controller.initialize();\n");
 
         methodBuilder
                 .addModifiers(Modifier.PUBLIC)
@@ -360,6 +387,11 @@ public class PresenterBuilderType extends AbsGeneratingType {
         for (ClassName module : modules) {
             String methodName = Character.toLowerCase(module.simpleName().charAt(0)) + module.simpleName().substring(1);
             methodBuilder.addCode("." + methodName + "(" + "create" + module.simpleName() +"())\n");
+        }
+
+        for (ClassName component : components) {
+            String methodName = Character.toLowerCase(component.simpleName().charAt(0)) + component.simpleName().substring(1);
+            methodBuilder.addCode("." + methodName + "(this." + methodName + ")\n");
         }
 
         ClassName moduleEventBusClass = ClassName.get("com.mvp", "ModuleEventBus");
@@ -457,6 +489,18 @@ public class PresenterBuilderType extends AbsGeneratingType {
         return classNames;
     }
 
+    private List<ClassName> findComponents(Element presenterElement) {
+        List<ClassName> classNames = new ArrayList<>();
+        AnnotationValue value = getAnnotationValue(presenterElement, "needsComponents");
+        List<Object> componentClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
+        for (Object componentClass : componentClasses) {
+            String c = componentClass.toString().replace(".class", "");
+            ClassName className = ClassName.bestGuess(c);
+            classNames.add(className);
+        }
+        return classNames;
+    }
+
     private static class ModuleMethod {
         private final ClassName classType;
         private final ExecutableElement executableElement;
@@ -500,6 +544,25 @@ public class PresenterBuilderType extends AbsGeneratingType {
 
         public ArrayList<ModuleMethod> getModuleMethods() {
             return moduleMethods;
+        }
+    }
+
+    private static class Component {
+
+        private ArrayList<Module> modules;
+        private ClassName componentClassName;
+
+        public Component(ArrayList<Module> modules, ClassName componentClassName) {
+            this.modules = modules;
+            this.componentClassName = componentClassName;
+        }
+
+        public ArrayList<Module> getModules() {
+            return modules;
+        }
+
+        public ClassName getComponentClassName() {
+            return componentClassName;
         }
     }
 

@@ -9,6 +9,8 @@ import android.support.v7.app.AppCompatActivity;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.inject.Named;
+
 import dagger.Module;
 import dagger.Provides;
 
@@ -44,6 +46,7 @@ public abstract class MvpModule<V extends MvpView> {
     }
 
     @Provides
+    @Named("presenterContext")
     public Context getApplicationContext(){
         return activity.getApplicationContext();
     }

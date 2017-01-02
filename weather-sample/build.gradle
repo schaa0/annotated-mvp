@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'weaver'
 
 android {
     compileSdkVersion 25
@@ -11,7 +12,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "com.mvp.weather_example.MyRunner"
 
     }
     buildTypes {
@@ -20,14 +21,52 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+    testCompile 'org.robolectric:robolectric:3.1.4'
+    testCompile 'org.robolectric:shadows-support-v4:3.1.4'
+    testCompile 'org.mockito:mockito-core:2.1.0-beta.120'
+    testCompile 'com.google.dagger:dagger:2.7'
+    testCompile 'junit:junit:4.12'
+    testAnnotationProcessor project(':mvp-annotation-processor')
+    androidTestAnnotationProcessor project(':mvp-annotation-processor')
     compile 'com.android.support:appcompat-v7:25.0.0'
     compile 'com.android.support:design:25.0.0'
-    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:cardview-v7:25.0.0'
+    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile 'com.squareup.retrofit2:converter-gson:2.1.0'
+    compile 'com.google.code.gson:gson:2.7'
+    compile 'com.github.bumptech.glide:glide:3.7.0'
+    compile project(':app')
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.7'
+    annotationProcessor project(':mvp-annotation-processor')
+    weaver project(':mvp-annotation-processor')
+    compile 'com.android.support.test:runner:0.5'
+}
+
+afterEvaluate {
+    android.buildTypes.all { variant ->
+        android.sourceSets.test.java.srcDirs += ("$buildDir/generated/source/apt/test/$variant.name")
+    }
+}
+
+afterEvaluate {
+    android.buildTypes.all { variant ->
+        def u = "compile${variant.name.capitalize()}UnitTestJavaWithJavac"
+        logger.info(u)
+        def unitTestGenerateClassesTask = tasks.findByName(u)
+        logger.info(unitTestGenerateClassesTask != null ? unitTestGenerateClassesTask.name : "unitTestGenerateClassesTask is null")
+        def g = "assemble${variant.name.capitalize()}"
+        def generateClassesTask = tasks.findByName(g)
+        logger.info(g)
+        logger.info(generateClassesTask != null ? generateClassesTask.name : "generateClassesTask is null")
+        if (generateClassesTask != null && unitTestGenerateClassesTask != null)
+            generateClassesTask.dependsOn unitTestGenerateClassesTask
+    }
 }

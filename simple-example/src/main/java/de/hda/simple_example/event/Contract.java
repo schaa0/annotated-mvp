@@ -4,11 +4,25 @@ import de.hda.simple_example.model.SearchResult;
 
 public class Contract {
 
-    public static abstract class LoadingEvent { }
+    public static abstract class LoadingEvent {
+        public abstract boolean isLoading();
+    }
 
-    public static class LoadingStartedEvent extends LoadingEvent{ }
+    public static class LoadingStartedEvent extends LoadingEvent{
 
-    public static class LoadingFinishedEvent extends LoadingEvent{ }
+        @Override
+        public boolean isLoading() {
+            return true;
+        }
+    }
+
+    public static class LoadingFinishedEvent extends LoadingEvent{
+
+        @Override
+        public boolean isLoading() {
+            return false;
+        }
+    }
 
     public static class RepositoriesLoadedEvent {
         private final SearchResult searchResult;
@@ -66,4 +80,5 @@ public class Contract {
             return ((SearchRepositoriesEvent) obj).query.equals(query);
         }
     }
+
 }

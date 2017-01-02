@@ -1,22 +1,38 @@
 package com.mvp;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.VisibleForTesting;
 import android.util.Log;
 
 import com.mvp.annotation.OnEventListener;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.inject.Singleton;
 
-public class MvpEventBus implements IMvpEventBus {
+public class MvpEventBus implements IMvpEventBus, EventBus {
 
     private static final boolean DEBUG = true;
 
     private HashMap<Class<?>, OnEventListener<?>> eventListeners = new HashMap<>();
 
-    public MvpEventBus() {}
+    private HashMap<Integer, ArrayList<OnEventListener<?>>> registeredCustomEventListeners = new HashMap<>();
+    private Handler handler;
+    private ExecutorService executorService;
+
+    public MvpEventBus(Handler handler, ExecutorService executorService){
+        this.handler = handler;
+        this.executorService = executorService;
+    }
+
+    public MvpEventBus() {
+        this(new Handler(Looper.getMainLooper()), Executors.newSingleThreadExecutor());
+    }
 
     @Override
     public synchronized <V, T extends OnEventListener<V>>  boolean addEventListener(T eventListener) {
@@ -127,18 +143,53 @@ public class MvpEventBus implements IMvpEventBus {
     }
 
     @Override
-    public synchronized <V> void dispatchEvent(V data, Class<? extends IMvpPresenter<?>>... targets) {
+    public synchronized <V> void dispatchEvent(V data, Class<?>... targets) {
         if (targets.length == 0) targets = null;
         Class<?> clazz = data.getClass();
         Log.d(getClass().getName(), clazz.toString());
         OnEventListener<V> eventListener = (OnEventListener<V>) eventListeners.get(clazz);
+        while(eventListener != null && !eventListener.shouldConsumeEvent(data)){
+            eventListener = (OnEventListener<V>) eventListener.getNext();
+        }
         if (eventListener != null)
             eventListener.onEvent(data, targets);
         while (!(clazz = clazz.getSuperclass()).equals(Object.class)){
             eventListener = (OnEventListener<V>) eventListeners.get(clazz);
+            while(eventListener != null && !eventListener.shouldConsumeEvent(data)){
+                eventListener = (OnEventListener<V>) eventListener.getNext();
+            }
             if (eventListener != null)
                 eventListener.onEvent(data, targets);
         }
     }
 
+    @Override
+    public void register(Object o) {
+        int key = o.hashCode();
+        ArrayList<OnEventListener<?>> eventListeners = Events.bind(o, this, this.handler, this.executorService);
+        registeredCustomEventListeners.put(key, eventListeners);
+    }
+
+    @Override
+    public void unregister(Object o) {
+        int key = o.hashCode();
+        ArrayList<OnEventListener<?>> onEventListeners = registeredCustomEventListeners.get(key);
+        for (OnEventListener<?> onEventListener : onEventListeners) {
+            removeEventListener(onEventListener);
+        }
+        onEventListeners.clear();
+        registeredCustomEventListeners.remove(key);
+    }
+
+    @Override
+    public <V> IDispatcher<V> dispatchEvent(V data) {
+        Dispatcher<V> dispatcher = new Dispatcher<>(this);
+        dispatcher.dispatchEvent(data);
+        return dispatcher;
+    }
+
+    public void destroy() {
+        this.handler.removeCallbacksAndMessages(null);
+        this.executorService.shutdown();
+    }
 }

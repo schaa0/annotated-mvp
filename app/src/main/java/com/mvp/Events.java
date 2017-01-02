@@ -56,4 +56,31 @@ class Events {
         }
     }
 
+    static <V extends MvpView, T extends MvpPresenter<V>> ArrayList<OnEventListener<?>> bind(Object obj, EventBus eventBus, Handler handler, ExecutorService executorService){
+        synchronized (Events.class) {
+            IMvpEventBus mvpEventBus = (IMvpEventBus) eventBus;
+            long begin = System.currentTimeMillis();
+            String className = obj.getClass().getName();
+            if (className.contains("$MockitoMock$")){
+                className = obj.getClass().getSuperclass().getName();
+            }
+            try {
+                ArrayList<OnEventListener<?>> onEventListeners =
+                        (ArrayList<OnEventListener<?>>) m.invoke(null, className, obj, handler, executorService);
+                for (OnEventListener<?> eventListener : onEventListeners) {
+                    mvpEventBus.addEventListener(eventListener);
+                }
+                return onEventListeners;
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+            long end = System.currentTimeMillis();
+            Log.e(Events.class.getName(), String.format("adding event listeners for presenter: %s took %d ms", className, end - begin));
+            return new ArrayList<>();
+        }
+    }
+
+
 }

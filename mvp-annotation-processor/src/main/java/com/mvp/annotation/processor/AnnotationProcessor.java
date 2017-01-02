@@ -1,5 +1,7 @@
 package com.mvp.annotation.processor;
 
+import com.mvp.annotation.DelegateScope;
+import com.mvp.annotation.PresenterScope;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.OnEventListener;
@@ -8,9 +10,6 @@ import com.mvp.annotation.ProvidesModule;
 import com.mvp.annotation.UIView;
 import com.mvp.annotation.ViewEvent;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.processor.unittest.PresenterBuilderType;
-import com.mvp.annotation.processor.unittest.TestControllerType;
-import com.mvp.annotation.processor.unittest.TestablePresenterModuleType;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -18,6 +17,7 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -40,6 +40,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -80,6 +81,8 @@ public class AnnotationProcessor extends AbstractProcessor {
     private Set<? extends Element> componentProviders;
     private Set<? extends Element> uiViewClasses;
     private ArrayList<Gang> gangs;
+
+    private boolean alreadyProcessed = false;
 
     @Override
     public synchronized void init(ProcessingEnvironment env) {
@@ -159,6 +162,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                 String simpleComponentPresenterClassName = "Component" + element.getSimpleName().toString();
                 TypeSpec.Builder builder = TypeSpec.interfaceBuilder(simpleComponentPresenterClassName);
 
+                builder.addAnnotation(PresenterScope.class);
+
                 String moduleFormat = annotationMemberModuleClasses.getModuleFormat();
                 ClassName[] moduleClasses = annotationMemberModuleClasses.getClasses();
 
@@ -175,6 +180,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                 builder.addAnnotation(AnnotationSpec.builder(annotationClass)
                         .addMember("modules", CodeBlock.of(moduleFormat, moduleClasses))
+                        .addMember("dependencies", componentFormat, componentClasses)
                         .build());
 
                 builder.addMethod(MethodSpec.methodBuilder("view")
@@ -184,6 +190,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .build());
 
                 builder.addMethod(MethodSpec.methodBuilder("context")
+                        .addAnnotation(AnnotationSpec.builder(Named.class)
+                            .addMember("value", "\"presenterContext\"")
+                            .build())
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .returns(ClassName.bestGuess("android.content.Context"))
                         .build());
@@ -244,6 +253,9 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
 
+        if (!alreadyProcessed)
+            generateCustomEventListenerClasses(env);
+
         writeFactoryInterface();
         writeMethodsClass();
         processUiViewClasses(env);
@@ -252,7 +264,60 @@ public class AnnotationProcessor extends AbstractProcessor {
             generateDependencyProvider(env);
         }
 
+        alreadyProcessed = true;
+
         return true;
+    }
+
+    private void generateCustomEventListenerClasses(RoundEnvironment env) {
+        Map<String, Map<TypeMirror, List<Interceptor>>> customInterceptors = new HashMap<>();
+        Set<? extends Element> elementsAnnotatedWith = env.getElementsAnnotatedWith(Event.class);
+        for (Element element : elementsAnnotatedWith) {
+            if (element.getKind() == ElementKind.METHOD){
+                ExecutableElement method = (ExecutableElement) element;
+                TypeElement declaringType = elementUtils.getTypeElement(method.getEnclosingElement().asType().toString());
+
+                if (!isPresenter(declaringType)){
+                    if (!customInterceptors.containsKey(declaringType.asType().toString())){
+                        customInterceptors.put(declaringType.asType().toString(), new HashMap<TypeMirror, List<Interceptor>>());
+                        allGeneratedEventListenerClasses.put(declaringType.asType().toString(), new ArrayList<String>());
+                    }
+                    Event eventAnnotation = method.getAnnotation(Event.class);
+                    String methodName = method.getSimpleName().toString();
+                    TypeMirror parameterType = method.getParameters().get(0).asType();
+                    TypeMirror returnType = method.getReturnType();
+                    //allGeneratedEventListenerClasses.get(declaringType.asType().toString()).add(convertDataClassToString(parameterType));
+                    Map<TypeMirror, List<Interceptor>> typeMirrorListMap = customInterceptors.get(declaringType.asType().toString());
+                    if (!typeMirrorListMap.containsKey(parameterType)){
+                        typeMirrorListMap.put(parameterType, new ArrayList<Interceptor>());
+                    }
+                    List<Interceptor> interceptorList = typeMirrorListMap.get(parameterType);
+                    Interceptor o = new Interceptor(methodName, parameterType, returnType, eventAnnotation.thread(), eventAnnotation.condition());
+                    if (!interceptorList.contains(o)){
+                        interceptorList.add(o);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<String, Map<TypeMirror, List<Interceptor>>> e : customInterceptors.entrySet()) {
+            Element element = elementUtils.getTypeElement(e.getKey());
+            TypeName className = ClassName.get(element.asType());
+            Map<TypeMirror, List<Interceptor>> value = e.getValue();
+            for (Map.Entry<TypeMirror, List<Interceptor>> entry : value.entrySet()) {
+                List<Interceptor> ceptors = entry.getValue();
+                TypeMirror dataClass = entry.getKey();
+                MethodSpec constructor = buildConstructor(className);
+                MethodSpec.Builder processEventBuilder = createProcessEventBuilder(dataClass);
+                MethodSpec onEventMethod = buildOnEventMethod(dataClass, null, processEventBuilder, ceptors, true);
+                MethodSpec onDestroyMethod = buildOnDestroyMethod();
+                MethodSpec processEventMethod = processEventBuilder.build();
+                TypeSpec c = buildOnEventListenerClass(ceptors.get(0), element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
+                writeClass(c, "com.mvp");
+            }
+        }
+
+        customInterceptors.clear();
     }
 
     private void findGangs(RoundEnvironment env) {
@@ -301,7 +366,8 @@ public class AnnotationProcessor extends AbstractProcessor {
         for (Element enclosedElement : enclosedElements) {
             if (enclosedElement.getKind() == ElementKind.METHOD){
                 ProvidesModule providesModule = enclosedElement.getAnnotation(ProvidesModule.class);
-                if (providesModule != null){
+                ProvidesComponent providesComponent = enclosedElement.getAnnotation(ProvidesComponent.class);
+                if (providesModule != null || providesComponent != null){
                     ExecutableElement executableElement = (ExecutableElement) enclosedElement;
                     providingMethods.put(executableElement.getReturnType().toString(), executableElement);
                 }
@@ -373,7 +439,9 @@ public class AnnotationProcessor extends AbstractProcessor {
             for (ClassName componentClass : componentClasses) {
                 String simpleName = componentClass.simpleName();
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
-                String componentCodeFormat = String.format(".%s(new $T)", methodName);
+                String o = componentClass.packageName() + "." + componentClass.simpleName();
+                ExecutableElement executableElement = providingMethods.get(o);
+                String componentCodeFormat = String.format(".%s(application.%s())", methodName, executableElement.getSimpleName().toString());
                 methodBuilder.addCode(componentCodeFormat, componentClass);
             }
 
@@ -409,7 +477,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                         .addParameter(ClassName.get("com.mvp", "IMvpEventBus"), "eventBus")
                         .addParameter(presenterComponent, "presenterComponent")
                         .addParameter(ClassName.get(viewType), "view")
-                        .addParameter(ClassName.bestGuess("android.content.Context"), "context")
+                        .addParameter(ParameterSpec.builder(ClassName.bestGuess("android.content.Context"), "context")
+                            .addAnnotation(AnnotationSpec.builder(Named.class)
+                                .addMember("value", "\"presenterContext\"")
+                                .build())
+                            .build())
                         .addParameter(ClassName.bestGuess("android.support.v4.app.LoaderManager"), "loaderManager")
                         .addCode("super(eventBus, presenterComponent, view, context, loaderManager);")
                         .build())
@@ -526,7 +598,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
 
             TypeSpec.Builder builder = TypeSpec.interfaceBuilder("Component" + element.getSimpleName().toString() + "DelegateBinder");
-
+            builder.addAnnotation(DelegateScope.class);
             ClassName componentClass = ClassName.get("dagger", "Component");
 
             String packageName1 = extractPackage(presenter);
@@ -628,23 +700,13 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         ProxyInfo info = new ProxyInfo(classType, viewType, allMethods);
         TypeSpec t_ = info.processMethods(typeUtils);
-        writeClass(t_, "com.mvp");
+        writeClass(t_, extractPackage(element.asType()));
 
         for (Element childElement : childElements){
             Event eventAnnotation = childElement.getAnnotation(Event.class);
             if (childElement.getKind() == ElementKind.METHOD && eventAnnotation != null){
                 ExecutableElement method = (ExecutableElement) childElement;
-                String methodName = method.getSimpleName().toString();
-                TypeMirror parameterType = method.getParameters().get(0).asType();
-                TypeMirror returnType = method.getReturnType();
-                if (!interceptors.containsKey(parameterType)){
-                    interceptors.put(parameterType, new ArrayList<Interceptor>());
-                }
-                List<Interceptor> interceptorList = interceptors.get(parameterType);
-                Interceptor o = new Interceptor(methodName, parameterType, returnType, eventAnnotation.thread());
-                if (!interceptorList.contains(o)){
-                    interceptorList.add(o);
-                }
+                addInterceptors(eventAnnotation, method);
             }
         }
 
@@ -677,7 +739,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             MethodSpec onEventMethod = buildOnEventMethod(dataClass, viewMethodName, processEventBuilder, ceptors, declaredParameterAvailable);
             MethodSpec onDestroyMethod = buildOnDestroyMethod();
             MethodSpec processEventMethod = processEventBuilder.build();
-            TypeSpec c = buildOnEventListenerClass(element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
+            TypeSpec c = buildOnEventListenerClass(null, element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
             writeClass(c, "com.mvp");
         }
 
@@ -689,12 +751,26 @@ public class AnnotationProcessor extends AbstractProcessor {
             MethodSpec onEventMethod = buildOnEventMethod(dataClass, null, processEventBuilder, ceptors, true);
             MethodSpec onDestroyMethod = buildOnDestroyMethod();
             MethodSpec processEventMethod = processEventBuilder.build();
-            TypeSpec c = buildOnEventListenerClass(element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
+            TypeSpec c = buildOnEventListenerClass(ceptors.get(0), element, dataClass, className, constructor, onEventMethod, processEventMethod, onDestroyMethod, convertDataClassToString(dataClass));
             writeClass(c, "com.mvp");
         }
 
         interceptors.clear();
 
+    }
+
+    private void addInterceptors(Event eventAnnotation, ExecutableElement method) {
+        String methodName = method.getSimpleName().toString();
+        TypeMirror parameterType = method.getParameters().get(0).asType();
+        TypeMirror returnType = method.getReturnType();
+        if (!interceptors.containsKey(parameterType)){
+            interceptors.put(parameterType, new ArrayList<Interceptor>());
+        }
+        List<Interceptor> interceptorList = interceptors.get(parameterType);
+        Interceptor o = new Interceptor(methodName, parameterType, returnType, eventAnnotation.thread(), eventAnnotation.condition());
+        if (!interceptorList.contains(o)){
+            interceptorList.add(o);
+        }
     }
 
     private List<ExecutableElement> combineAllDeclaredMethods(Element element) {
@@ -705,7 +781,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                 continue;
             List<ExecutableElement> recursiveResult = combineAllDeclaredMethods(typeUtils.asElement(type));
             for (ExecutableElement executableElement : recursiveResult) {
-                if (!allMethods.contains(executableElement))
+                boolean alreadyAdded = isAlreadyAdded(allMethods, executableElement);
+                if (!alreadyAdded && !allMethods.contains(executableElement))
                     allMethods.add(executableElement);
             }
         }
@@ -713,7 +790,8 @@ public class AnnotationProcessor extends AbstractProcessor {
         for (Element e : elements){
             if (e.getKind() == ElementKind.METHOD){
                 ExecutableElement executableElement = (ExecutableElement) e;
-                if (methodCanBeDecorated(e.getModifiers()) && isSupportedMethod(e.getSimpleName().toString())) {
+                boolean alreadyAdded = isAlreadyAdded(allMethods, executableElement);
+                if (!alreadyAdded && methodCanBeDecorated(e.getModifiers()) && isSupportedMethod(e.getSimpleName().toString())) {
                     if (!allMethods.contains(executableElement)) {
                         allMethods.add(executableElement);
                     }
@@ -721,6 +799,37 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
         return allMethods;
+    }
+
+    private boolean isAlreadyAdded(List<ExecutableElement> allMethods, ExecutableElement executableElement) {
+        boolean alreadyAdded = false;
+        List<? extends VariableElement> parameters = executableElement.getParameters();
+        for (ExecutableElement m : allMethods) {
+            List<? extends VariableElement> parameters1 = m.getParameters();
+            if (isSameMethodName(executableElement, m) && parameters.size() == parameters1.size()){
+                boolean equalParams = areParamsEqual(parameters, parameters1);
+                if (equalParams) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+        }
+        return alreadyAdded;
+    }
+
+    private boolean areParamsEqual(List<? extends VariableElement> parameters, List<? extends VariableElement> parameters1) {
+        boolean equalParams = true;
+        for (int i = 0; i < parameters.size(); i++) {
+            if (!parameters.get(i).asType().toString().equals(parameters1.get(i).asType().toString())){
+                equalParams = false;
+                break;
+            }
+        }
+        return equalParams;
+    }
+
+    private boolean isSameMethodName(ExecutableElement executableElement, ExecutableElement m) {
+        return m.getSimpleName().toString().equals(executableElement.getSimpleName().toString());
     }
 
     private boolean isSupportedMethod(String methodName) {
@@ -767,6 +876,11 @@ public class AnnotationProcessor extends AbstractProcessor {
             childElements.addAll(t);
         }
         return childElements;
+    }
+
+    private boolean isPresenter(TypeElement typeElement){
+        TypeMirror typeMirror = elementUtils.getTypeElement("com.mvp.MvpPresenter").asType();
+        return typeElement.getAnnotation(Presenter.class) != null || typeUtils.isAssignable(typeElement.asType(), typeMirror);
     }
 
     private List<TypeMirror> findBasePresenters(TypeMirror presenterType){
@@ -860,7 +974,7 @@ public class AnnotationProcessor extends AbstractProcessor {
         }
     }
 
-    private TypeSpec buildOnEventListenerClass(Element e, TypeMirror dataClass, TypeName className,
+    private TypeSpec buildOnEventListenerClass(Interceptor interceptor, Element e, TypeMirror dataClass, TypeName className,
                                                MethodSpec constructor, MethodSpec onEventMethod,
                                                MethodSpec processEventMethod,
                                                MethodSpec onDestroyMethod, String strDataClass) {
@@ -874,6 +988,8 @@ public class AnnotationProcessor extends AbstractProcessor {
         if (!listOfClasses.contains(clazz)) {
             listOfClasses.add(clazz);
         }
+
+        String shouldConsumeEventCode = interceptor == null || interceptor.getEventCondition().equals("") ? "return true" : "return " + new EventConditionParser(elementUtils, typeUtils).parse((TypeElement)e, interceptor.getEventCondition(), dataClass);
 
         ParameterizedTypeName fieldTypeEventListener = ParameterizedTypeName.get(ClassName.get(WeakReference.class), className);
         ParameterizedTypeName fieldTypeHandler = ParameterizedTypeName.get(ClassName.get(WeakReference.class), ClassName.get("android.os", "Handler"));
@@ -914,6 +1030,13 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .addModifiers(Modifier.PUBLIC)
                                         .addStatement("this.nextEventListener = null")
                                         .returns(void.class)
+                                        .build())
+                                .addMethod(MethodSpec.methodBuilder("shouldConsumeEvent")
+                                        .addParameter(ClassName.get(dataClass), "data")
+                                        .addAnnotation(Override.class)
+                                        .addModifiers(Modifier.PUBLIC)
+                                        .addStatement(shouldConsumeEventCode)
+                                        .returns(boolean.class)
                                         .build())
                                 .addMethod(MethodSpec.methodBuilder("getDataClass")
                                         .addModifiers(Modifier.PUBLIC)
@@ -975,7 +1098,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         List<Interceptor> usedInterceptors = new ArrayList<>();
 
-        builder.beginControlFlow("if (target == null || isTarget(target))");
+        builder.beginControlFlow("if (shouldConsumeEvent(data) && (target == null || isTarget(target)))");
 
         if (interceptors != null && !interceptors.isEmpty()) {
 
@@ -1036,10 +1159,10 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
 
-        if (interceptors != null && !interceptors.isEmpty()) {
+        /*if (interceptors != null && !interceptors.isEmpty()) {
             interceptors.removeAll(usedInterceptors);
             usedInterceptors.clear();
-        }
+        }*/
 
         finalStatement = String.format(finalStatement, addCallNextEventListenerStatement());
         finalStatement = finalStatement.replace("%s", "");
@@ -1211,16 +1334,16 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         public AnnotationMemberComponentClasses parse(Element element) {
             AnnotationValue value = getAnnotationValue(element, MEMBER_NEEDS_COMPONENTS);
-            List<Object> moduleClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
+            List<Object> componentClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
 
             componentFormat = "{ ";
-            classes = new ClassName[moduleClasses.size()];
+            classes = new ClassName[componentClasses.size()];
 
-            for (int i = 0; i < moduleClasses.size(); i++) {
-                ClassName className = ClassName.bestGuess(moduleClasses.get(i).toString().replace(".class", ""));
+            for (int i = 0; i < componentClasses.size(); i++) {
+                ClassName className = ClassName.bestGuess(componentClasses.get(i).toString().replace(".class", ""));
                 componentFormat += "$T.class";
                 classes[i] = className;
-                if (i < moduleClasses.size() - 1)
+                if (i < componentClasses.size() - 1)
                     componentFormat += ", ";
             }
             componentFormat += " }";

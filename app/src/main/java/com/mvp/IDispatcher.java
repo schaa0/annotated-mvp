@@ -1,7 +1,6 @@
 package com.mvp;
 
 public interface IDispatcher<P> {
-    void to(Class<? extends IMvpPresenter<?>>... targets);
+    void to(Class<?>... targets);
     void toAny();
-    IDispatcher<P> dispatchEvent(P data);
 }

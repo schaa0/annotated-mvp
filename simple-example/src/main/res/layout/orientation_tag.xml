@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.ViewStubCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/orientation"
+    android:layout_width="0dp"
+    android:layout_height="0dp"
+    android:tag="@string/orientation">
+
+</android.support.v7.widget.ViewStubCompat>

@@ -25,18 +25,20 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     private V view;
 
     @Inject
-    protected IMvpEventBus eventBus;
+    IMvpEventBus eventBus;
 
     @Inject
-    protected Handler handler;
+    Handler handler;
 
     @Inject
-    protected ExecutorService executorService;
+    ExecutorService executorService;
 
     Map<String, Future<?>> tasks = Collections.synchronizedMap(new HashMap<String, Future<?>>());
     private boolean destroyed;
 
-    private List<OnEventListener<?>> registeredEventListeners = new ArrayList<>();
+    List<OnEventListener<?>> registeredEventListeners = new ArrayList<>();
+
+    public MvpPresenter() { }
 
     private void unregisterEventListeners() {
         for (OnEventListener<?> eventListener : registeredEventListeners){
@@ -56,8 +58,6 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
         dispatcher.dispatchEvent(data);
         return dispatcher;
     }
-
-    public MvpPresenter() { }
 
     public V getView() {
         return view;
@@ -103,7 +103,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
         }
     }
 
-    protected void submit(final String taskId, final Runnable runnable){
+    public void submit(final String taskId, final Runnable runnable){
         tryCancelTask(taskId);
         tasks.put(taskId, executorService.submit(new Runnable() {
             @Override

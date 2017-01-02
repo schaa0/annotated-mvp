@@ -84,4 +84,15 @@ public class Utils {
         }
         return null;
     }
+
+    public static String extractPackage(TypeMirror classType) {
+        return classType.toString().replaceAll("." + convertDataClassToString(classType), "");
+    }
+
+    public static String convertDataClassToString(TypeMirror dataClass) {
+        String s = dataClass.toString();
+        int index = s.lastIndexOf(".");
+        return s.substring(index + 1);
+    }
+
 }

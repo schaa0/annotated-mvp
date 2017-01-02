@@ -24,7 +24,7 @@ public abstract class MvpPresenterFactory<V extends MvpView, T extends MvpPresen
                 Events.bind(presenterImpl, eventBus, new Handler(Looper.myLooper()), Executors.newSingleThreadExecutor());
                 return presenterImpl;
             }else {
-                Class<?> clazz = Class.forName("com.mvp." + simpleName + "Proxy");
+                Class<?> clazz = Class.forName(presenterImpl.getClass().getName() + "Proxy");
                 Constructor<?> constructor = clazz.getDeclaredConstructors()[0];
                 T presenterProxy = (T) constructor.newInstance(presenterImpl);
                 presenterProxy.onInitialize();

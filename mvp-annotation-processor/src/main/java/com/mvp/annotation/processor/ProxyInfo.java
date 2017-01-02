@@ -36,6 +36,7 @@ import javax.lang.model.util.Types;
 
 public class ProxyInfo {
 
+    public static final String FORMAT_MISSING_PARAMETERLESS_CONSTRUCTOR = "%s must declare a protected or public constructor!";
     private final TypeMirror presenterClass;
     private final TypeMirror viewClass;
     private final List<ExecutableElement> initialMethods;
@@ -50,24 +51,21 @@ public class ProxyInfo {
         List<MethodSpec> writtenMethods = new ArrayList<>();
         DeclaredType declaredType = (DeclaredType) presenterClass;
         List<? extends Element> elements = declaredType.asElement().getEnclosedElements();
-        String constructorParams = "";
+        boolean hasParameterLessConstructor = false;
         for (Element element : elements){
             if (element.getKind() == ElementKind.CONSTRUCTOR){
                 ExecutableElement e = (ExecutableElement) element;
                 List<? extends VariableElement> params = e.getParameters();
                 if (params.isEmpty()) {
-                    constructorParams = "";
+                    hasParameterLessConstructor = true;
                     break;
-                }else if(!constructorParams.equals("")){
-                    continue;
-                }
-                for (int i = 0; i < params.size(); i++) {
-                    constructorParams += "null";
-                    if (i < params.size() - 1)
-                        constructorParams += ", ";
                 }
             }
         }
+
+        if (!hasParameterLessConstructor)
+            throw new IllegalStateException(String.format(FORMAT_MISSING_PARAMETERLESS_CONSTRUCTOR, presenterClass.toString()));
+
         TypeSpec.Builder builder = TypeSpec.classBuilder(convertDataClassToString(presenterClass) + "Proxy");
         builder.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         builder.superclass(ClassName.get(presenterClass));
@@ -75,8 +73,8 @@ public class ProxyInfo {
         builder.addMethod(MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(ClassName.get(presenterClass), "presenterImpl")
-                .addStatement("super(" + constructorParams + ")")
-                .addCode(CodeBlock.of("this.presenterImpl = presenterImpl;"))
+                .addCode("super();\n")
+                .addCode("this.presenterImpl = presenterImpl;\n")
                 .build());
         for (ExecutableElement initialMethod : initialMethods) {
             boolean paramsShouldBeFinal = initialMethod.getAnnotation(Event.class) != null || initialMethod.getAnnotation(BackgroundThread.class) != null || initialMethod.getAnnotation(UiThread.class) != null;
@@ -84,6 +82,10 @@ public class ProxyInfo {
             MethodSpec method = methodBuilder.build();
 
             String statement;
+
+            if (methodIsProtectedAndDeclaredInLibraryPackage(initialMethod)){
+                continue;
+            }
 
             if (methodIsPackageProtected(initialMethod.getModifiers())){
 
@@ -164,6 +166,20 @@ public class ProxyInfo {
         }
 
         return builder.build();
+    }
+
+    private boolean methodIsProtectedAndDeclaredInLibraryPackage(ExecutableElement initialMethod) {
+        TypeElement typeElement = (TypeElement) initialMethod.getEnclosingElement();
+        for (Modifier modifier : initialMethod.getModifiers()) {
+            if (modifier.equals(Modifier.PROTECTED)){
+                String packageName = Utils.extractPackage(typeElement.asType());
+                ClassName presenterClassName = ClassName.bestGuess(presenterClass.toString());
+                if (!packageName.equals(presenterClassName.packageName())){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean methodIsPackageProtected(Set<Modifier> modifiers) {

@@ -15,4 +15,5 @@ public interface IView extends MvpView{
     void showProgressBar();
     void hideProgressBar();
     boolean isLoading();
+    void setLastQuery(String lastQuery);
 }

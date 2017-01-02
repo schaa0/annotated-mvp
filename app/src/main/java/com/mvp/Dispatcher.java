@@ -10,14 +10,13 @@ public class Dispatcher<P> implements IDispatcher<P> {
         this.eventBus = eventBus;
     }
 
-    @Override
     public IDispatcher<P> dispatchEvent(P data){
         this.data = data;
         return this;
     }
 
     @Override
-    public void to(Class<? extends IMvpPresenter<?>>... targets){
+    public void to(Class<?>... targets){
         this.eventBus.dispatchEvent(data, targets);
     }
 

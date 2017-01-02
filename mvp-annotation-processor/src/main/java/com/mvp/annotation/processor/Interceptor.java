@@ -9,12 +9,14 @@ public class Interceptor {
     private final TypeMirror parameterType;
     private final TypeMirror returnType;
     private final String threadType;
+    private String eventCondition;
 
-    public Interceptor(String methodName, TypeMirror parameterType, TypeMirror returnType, String threadType){
+    public Interceptor(String methodName, TypeMirror parameterType, TypeMirror returnType, String threadType, String eventCondition){
         this.methodName = methodName;
         this.parameterType = parameterType;
         this.returnType = returnType;
         this.threadType = threadType;
+        this.eventCondition = eventCondition;
     }
 
     public String getMethodName() {
@@ -31,6 +33,10 @@ public class Interceptor {
 
     public String getThreadType() {
         return threadType;
+    }
+
+    public String getEventCondition() {
+        return eventCondition;
     }
 
     @Override

@@ -38,7 +38,7 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private boolean isInLandscape() {
-        return findViewById(R.id.container).getTag().toString().equals("land");
+        return findViewById(R.id.orientation).getTag().toString().equals("sw600dp|land");
     }
 
 }

@@ -1,6 +1,7 @@
 package de.hda.simple_example.container;
 
 import android.os.Bundle;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.AbsSavedState;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -10,19 +11,22 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
-
 import de.hda.simple_example.business.ActivityPresenter;
-import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.R;
+import de.hda.simple_example.business.CustomService;
 import de.hda.simple_example.event.Contract;
+import de.hda.simple_example.di.DaggerComponentCustomService;
+
 
 @UIView(presenter = ActivityPresenter.class)
 public class MainActivity extends AppCompatActivity implements IView {
 
     @Presenter
     ActivityPresenter presenter;
+    private CustomService customService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,13 +35,27 @@ public class MainActivity extends AppCompatActivity implements IView {
         this.savedInstanceState = savedInstanceState;
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
+        customService = DaggerComponentCustomService.builder()
+                .componentApplication(((ModuleProvider) getApplication()).componentApplication())
+                .build()
+                .customService();
+        customService.onCreate();
+
         if (savedInstanceState == null){
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.container, MainFragment.newInstance(), MainFragment.TAG)
-                    .replace(R.id.container_detail, DetailFragment.newInstance(), DetailFragment.TAG)
-                    .commit();
+            FragmentTransaction ft = getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.container, MainFragment.newInstance(), MainFragment.TAG);
+            if (findViewById(R.id.container_detail) != null)
+                ft.replace(R.id.container_detail, DetailFragment.newInstance(), DetailFragment.TAG);
+            ft.commit();
         }
 
+    }
+
+    @Override
+    protected void onStart() {
+        supportInvalidateOptionsMenu();
+        super.onStart();
     }
 
     @Override
@@ -85,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                 return false;
             }
         });
+        presenter.onSearchViewInitialized();
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -97,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Override
     protected void onDestroy() {
         savedInstanceState = null;
+        customService.onDestroy();
         super.onDestroy();
     }
 
@@ -118,6 +138,12 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Override
     public boolean isLoading() {
         return progressBar.getVisibility() == ProgressBar.VISIBLE;
+    }
+
+    @Override
+    public void setLastQuery(String lastQuery) {
+        MenuItemCompat.expandActionView(searchViewMenuItem);
+        this.searchView.setQuery(lastQuery, false);
     }
 
 
@@ -147,6 +173,13 @@ public class MainActivity extends AppCompatActivity implements IView {
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         internalRestoreInstanceState(savedInstanceState.<SavedState>getParcelable("mykey"));
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+    }
+
 
     Bundle savedInstanceState;
     MenuItem searchViewMenuItem;

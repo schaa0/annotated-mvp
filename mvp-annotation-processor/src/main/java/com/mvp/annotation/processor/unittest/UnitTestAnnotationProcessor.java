@@ -49,9 +49,9 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
 
         Set<? extends Element> viewElements = roundEnvironment.getElementsAnnotatedWith(InjectUIView.class);
 
-        String packageName = getShortestPackageName(elementUtils, viewElements);
+        //String packageName = getShortestPackageName(elementUtils, viewElements);
 
-        packageName = "com.mvp";
+        String packageName = "com.mvp";
 
         if (packageName == null)
             return true;
@@ -73,8 +73,8 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
                 DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
                 TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
                 Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
-                new TestControllerType(filer, typeUtils, elementUtils, getPackageName(viewElement), gang).generate();
-                new PresenterBuilderType(filer, elementUtils, typeUtils, getPackageName(viewElement), gang, packageName).generate();
+                new TestControllerType(filer, typeUtils, elementUtils, packageName, gang).generate();
+                new PresenterBuilderType(filer, elementUtils, typeUtils, packageName, gang, packageName).generate();
                 new TestablePresenterModuleType(filer, elementUtils, getPackageName(presenterElement), gang).generate();
             }
         }
