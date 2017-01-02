@@ -143,7 +143,7 @@ public class UnitTestTodayWeatherPresenter {
     public void mustNotRequestWeatherIfThereIsNoLastKnownLocation() {
         when(view.isPermissionGranted(PERM_ACCESS_COARSE_LOCATION)).thenReturn(true);
         when(view.isPermissionGranted(PERM_ACCESS_FINE_LOCATION)).thenReturn(true);
-        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("");
+        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("gps");
         when(locationManager.getLastKnownLocation(anyString())).thenReturn(null);
         presenter.onViewAttached(view);
         verifyZeroInteractions(weatherService);
@@ -153,7 +153,7 @@ public class UnitTestTodayWeatherPresenter {
     public void shouldRequestWeatherIfPermissionIsGrantedAndLocationIsPresent() {
         when(view.isPermissionGranted(PERM_ACCESS_COARSE_LOCATION)).thenReturn(true);
         when(view.isPermissionGranted(PERM_ACCESS_FINE_LOCATION)).thenReturn(true);
-        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("");
+        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("gps");
         Location location = createLocation(1.0, 1.0);
 
         when(weatherService.getCurrentWeather(1.0, 1.0, "metric", WeatherService.API_KEY))
@@ -188,7 +188,7 @@ public class UnitTestTodayWeatherPresenter {
         reset(locationManager, view);
         when(view.isPermissionGranted(PERM_ACCESS_COARSE_LOCATION)).thenReturn(true);
         when(view.isPermissionGranted(PERM_ACCESS_FINE_LOCATION)).thenReturn(true);
-        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("");
+        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("gps");
         when(locationManager.getLastKnownLocation(anyString())).thenReturn(null);
         presenter.loadForecastWeatherDataForToday();
         verifyZeroInteractions(weatherService, view);
@@ -200,7 +200,7 @@ public class UnitTestTodayWeatherPresenter {
         reset(locationManager, view);
         when(view.isPermissionGranted(PERM_ACCESS_COARSE_LOCATION)).thenReturn(true);
         when(view.isPermissionGranted(PERM_ACCESS_FINE_LOCATION)).thenReturn(true);
-        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("");
+        when(locationManager.getBestProvider(any(Criteria.class), anyBoolean())).thenReturn("gps");
         double longitude = 1.0;
         double latitude = 1.0;
         when(locationManager.getLastKnownLocation(anyString())).thenReturn(createLocation(longitude, latitude));

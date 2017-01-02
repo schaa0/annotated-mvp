@@ -44,6 +44,8 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
 
     public static final int REQUEST_CODE_PERM_ACCESS_FINE_LOCATION = 45;
     public static final int REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION = 23;
+    public static final int MIN_LOCATION_UPDATE_INTERVAL = 60000;
+    public static final int MIN_DISTANCE_IN_METERS = 100;
 
     protected LocationManager locationManager;
     protected WeatherService weatherService;
@@ -53,6 +55,7 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
     protected String lastTemperature;
     protected String lastHumidity;
     private Bitmap icon;
+    private String currentProvider;
 
     protected WeatherPresenter() { }
 
@@ -76,10 +79,14 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
         if (!requestPermissionsIfNeeded(view)) {
             String bestProvider = getBestProvider();
             //noinspection MissingPermission
-            locationManager.requestLocationUpdates(bestProvider, 0, 0, this);
+            requestLocationUpdates(bestProvider);
             Location lastKnownLocation = getLastKnownLocation(bestProvider);
             loadWeather(lastKnownLocation);
         }
+    }
+
+    private void requestLocationUpdates(String bestProvider) {
+        locationManager.requestLocationUpdates(bestProvider, MIN_LOCATION_UPDATE_INTERVAL, MIN_DISTANCE_IN_METERS, this);
     }
 
     @Event
@@ -158,7 +165,11 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
     public abstract void loadWeather(double longitude, double latitude);
 
     private String getBestProvider() {
-        return locationManager.getBestProvider(new Criteria(), false);
+        Criteria criteria = new Criteria();
+        criteria.setCostAllowed(false);
+        criteria.setAccuracy(Criteria.ACCURACY_LOW);
+        currentProvider = locationManager.getBestProvider(criteria, false);
+        return currentProvider;
     }
 
     private Location getLastKnownLocation(String bestProvider) {
@@ -190,6 +201,9 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
     @Override
     public void onViewReattached(IWeatherView view) {
         if (lastTemperature != null && lastHumidity != null) {
+            String bestProvider = getBestProvider();
+            //noinspection MissingPermission
+            requestLocationUpdates(bestProvider);
             view.showWeather(lastTemperature, lastHumidity);
             view.showIcon(icon);
         }
@@ -239,7 +253,8 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
             @Override
             public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
                 WeatherPresenter.this.icon = resource;
-                getView().showIcon(resource);
+                if (getView() != null)
+                    getView().showIcon(resource);
             }
         });
     }
@@ -261,12 +276,16 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
 
     @Override
     public void onProviderEnabled(String s) {
-
+        if (currentProvider.equals(s)){
+            requestLocationUpdates(s);
+            loadWeather(getLastKnownLocation(s));
+        }
     }
 
     @Override
     public void onProviderDisabled(String s) {
-
+        if (currentProvider.equals(s))
+            locationManager.removeUpdates(this);
     }
 
     @Override
