@@ -1,16 +1,13 @@
 package com.mvp.weather_example.view;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,10 +25,39 @@ import butterknife.OnClick;
 
 public abstract class WeatherFragment extends Fragment implements IWeatherView{
 
-    @BindView(R.id.temperatureTextView) TextView temperatureTextView;
+    public @BindView(R.id.temperatureTextView) TextView temperatureTextView;
     @BindView(R.id.humidityTextView) TextView humidityTextView;
     @BindView(R.id.imageView) ImageView imageView;
     @BindView(R.id.progressBar) ProgressBar progressBar;
+
+    FragmentLifecycleCallback lifecycleCallback = null;
+
+    public void setLifecycleCallback(FragmentLifecycleCallback lifecycleCallback)
+    {
+        this.lifecycleCallback = lifecycleCallback;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        if (this.lifecycleCallback != null)
+            this.lifecycleCallback.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public void onStart()
+    {
+        super.onStart();
+        if (this.lifecycleCallback != null) this.lifecycleCallback.onStart();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        if (this.lifecycleCallback != null) this.lifecycleCallback.onResume();
+    }
 
     @Nullable
     @Override
@@ -43,6 +69,7 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         ButterKnife.bind(this, getView());
+        if (this.lifecycleCallback != null) this.lifecycleCallback.onActivityCreated(savedInstanceState);
     }
 
     @OnClick(R.id.imageView)

@@ -9,8 +9,8 @@ import dagger.Component;
  * Created by Andy on 02.01.2017.
  */
 
-@Component(dependencies = {ComponentEventBus.class})
-@PerActivity
+@Component(dependencies = {ComponentEventBus.class}, modules = {ModuleFragmentFactory.class})
+@ActivityScope
 public interface ComponentActivity {
     void inject(MainActivity activity);
 }

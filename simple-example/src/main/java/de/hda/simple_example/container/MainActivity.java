@@ -35,10 +35,14 @@ public class MainActivity extends AppCompatActivity implements IView {
         this.savedInstanceState = savedInstanceState;
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
+        ApplicationProvider provider = (ApplicationProvider) getApplication();
         customService = DaggerComponentCustomService.builder()
-                .componentApplication(((ModuleProvider) getApplication()).componentApplication())
-                .build()
-                .customService();
+                                .componentApplication(provider.componentApplication(
+                                        provider.moduleGithubService(),
+                                        provider.moduleApplication(),
+                                        provider.componentEventBus()
+                                )).build().customService();
+
         customService.onCreate();
 
         if (savedInstanceState == null){
@@ -56,6 +60,8 @@ public class MainActivity extends AppCompatActivity implements IView {
     protected void onStart() {
         supportInvalidateOptionsMenu();
         super.onStart();
+        if (presenter != null)
+            presenter.onSearchViewInitialized();
     }
 
     @Override
@@ -103,7 +109,8 @@ public class MainActivity extends AppCompatActivity implements IView {
                 return false;
             }
         });
-        presenter.onSearchViewInitialized();
+        if (presenter != null)
+            presenter.onSearchViewInitialized();
         return super.onCreateOptionsMenu(menu);
     }
 

@@ -36,6 +36,7 @@ import javassist.bytecode.annotation.MemberValue;
 import javassist.bytecode.annotation.MemberValueVisitor;
 import javassist.bytecode.annotation.ShortMemberValue;
 import javassist.bytecode.annotation.StringMemberValue;
+import weaver.common.Scope;
 import weaver.common.WeaveEnvironment;
 import weaver.instrumentation.injection.ClassInjector;
 import weaver.processor.WeaverProcessor;

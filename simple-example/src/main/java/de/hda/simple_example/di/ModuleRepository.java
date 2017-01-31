@@ -18,4 +18,8 @@ public class ModuleRepository {
         return repository;
     }
 
+    @Provides
+    public String aString(){
+        return "";
+    }
 }

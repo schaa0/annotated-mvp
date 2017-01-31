@@ -1,6 +1,9 @@
 package com.mvp.annotation.processor.unittest;
 
+import com.mvp.annotation.ApplicationClass;
 import com.mvp.annotation.InjectUIView;
+import com.mvp.annotation.Stub;
+import com.mvp.annotation.processor.ApplicationDelegate;
 import com.mvp.annotation.processor.Gang;
 import com.squareup.javapoet.ClassName;
 
@@ -23,7 +26,6 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 import static com.mvp.annotation.processor.Utils.getAnnotationValue;
-import static com.mvp.annotation.processor.Utils.getShortestPackageName;
 
 /**
  * Created by Andy on 14.12.2016.
@@ -32,9 +34,11 @@ import static com.mvp.annotation.processor.Utils.getShortestPackageName;
 public class UnitTestAnnotationProcessor extends AbstractProcessor {
 
     private static final String MEMBER_PRESENTER_CLASS = "presenter";
+    private static final String MEMBER_APPLICATION_CLASS = "value";
     private Types typeUtils;
     private Elements elementUtils;
     private Filer filer;
+    private TypeElement provider;
 
     @Override
     public synchronized void init(ProcessingEnvironment env) {
@@ -48,15 +52,27 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
 
         Set<? extends Element> viewElements = roundEnvironment.getElementsAnnotatedWith(InjectUIView.class);
-
-        //String packageName = getShortestPackageName(elementUtils, viewElements);
+        if (provider == null)
+        {
+            Set<? extends Element> elements = roundEnvironment.getElementsAnnotatedWith(ApplicationClass.class);
+            if (elements.size() > 0)
+            {
+                Element testClass = elements.iterator().next();
+                Object value = getAnnotationValue(testClass, MEMBER_APPLICATION_CLASS).getValue();
+                String applicationClassString = value.toString().replace(".class", "");
+                provider = elementUtils.getTypeElement(ClassName.bestGuess(applicationClassString).toString());
+                String packageName = ClassName.bestGuess(provider.asType().toString()).packageName();
+                ApplicationDelegate applicationDelegate = new ApplicationDelegate(processingEnv.getFiler(), packageName, typeUtils, elementUtils, (TypeElement) provider);
+                applicationDelegate.generate();
+            }
+        }
 
         String packageName = "com.mvp";
 
         if (packageName == null)
             return true;
 
-        new ControllerInterfaceType(filer, packageName).generate();
+        new AbstractControllerClassType(filer, packageName).generate();
         new TestingContextType(filer, packageName).generate();
         new ViewEnumType(filer, packageName).generate();
         new PresenterEnumType(filer, packageName).generate();
@@ -67,14 +83,14 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
                 VariableElement variableElement = (VariableElement) viewElement;
                 DeclaredType declaredType = (DeclaredType) variableElement.asType();
                 TypeMirror activityType = declaredType.getTypeArguments().get(0);
-                Object value = getAnnotationValue(typeUtils.asElement(activityType), MEMBER_PRESENTER_CLASS).getValue();
-                String presenterClassString = value.toString().replace(".class", "");
+                Object v = getAnnotationValue(typeUtils.asElement(activityType), MEMBER_PRESENTER_CLASS).getValue();
+                String presenterClassString = v.toString().replace(".class", "");
                 TypeElement presenterElement = elementUtils.getTypeElement(presenterClassString);
                 DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
                 TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
                 Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
                 new TestControllerType(filer, typeUtils, elementUtils, packageName, gang).generate();
-                new PresenterBuilderType(filer, elementUtils, typeUtils, packageName, gang, packageName).generate();
+                new PresenterBuilderType(filer, elementUtils, typeUtils, packageName, gang, packageName, provider).generate();
                 new TestablePresenterModuleType(filer, elementUtils, getPackageName(presenterElement), gang).generate();
             }
         }
@@ -123,6 +139,9 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
     public Set<String> getSupportedAnnotationTypes() {
         Set<String> supportedAnnotations = new HashSet<>();
         supportedAnnotations.add(InjectUIView.class.getCanonicalName());
+        supportedAnnotations.add(ApplicationClass.class.getCanonicalName());
+        supportedAnnotations.add("org.mockito.Mock");
+        supportedAnnotations.add(Stub.class.getCanonicalName());
         return supportedAnnotations;
     }
 

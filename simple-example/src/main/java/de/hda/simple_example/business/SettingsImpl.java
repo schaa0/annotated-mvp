@@ -2,12 +2,9 @@ package de.hda.simple_example.business;
 
 import android.content.SharedPreferences;
 
-/**
- * Created by Andy on 28.12.2016.
- */
-
 public class SettingsImpl implements Settings {
 
+    private static final String LAST_QUERY_KEY = "lastQuery";
     private final SharedPreferences sharedPreferences;
 
     public SettingsImpl(SharedPreferences sharedPreferences){
@@ -16,7 +13,7 @@ public class SettingsImpl implements Settings {
 
     @Override
     public void setLastQuery(String query) {
-        sharedPreferences.edit().putString("lastQuery", query).apply();
+        sharedPreferences.edit().putString(LAST_QUERY_KEY, query).apply();
     }
 
     @Override

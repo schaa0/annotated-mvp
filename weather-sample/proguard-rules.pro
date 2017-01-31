@@ -15,3 +15,36 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-dontwarn okio.**
+-dontwarn retrofit2.**
+
+-keepattributes SourceFile,LineNumberTable,Signature,*Annotation*
+
+-keep class com.google.gson.** { *; }
+-keep class sun.misc.Unsafe { *; }
+
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+-keep class com.mvp.weather_example.model.** { *; }
+
+-keep class com.squareup.okhttp.** { *; }
+-keep interface com.squareup.okhttp.** { *; }
+
+-keep class retrofit.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit.http.* <methods>;
+}
+
+-keep class com.mvp.MvpEventListener {
+    public static final ** get(...);
+ }
+
+-repackageclasses
+
+-keepnames class * extends com.mvp.MvpPresenter
+-keepnames class * implements com.mvp.IMvpPresenter
+-keep class **Proxy extends com.mvp.MvpPresenter {
+    *** <init>(...);
+}

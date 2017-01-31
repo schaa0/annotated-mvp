@@ -6,7 +6,6 @@ import com.mvp.annotation.Provider;
 import com.mvp.annotation.Event;
 import com.mvp.annotation.OnEventListener;
 import com.mvp.annotation.ProvidesComponent;
-import com.mvp.annotation.ProvidesModule;
 import com.mvp.annotation.UIView;
 import com.mvp.annotation.ViewEvent;
 import com.mvp.annotation.Presenter;
@@ -78,7 +77,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     private HashMap<String, TypeMirror> allViewTypes = new HashMap<>();
     private List<TypeComponentPresenter> allComponentPresenters = new ArrayList<>();
     private TypeMirror applicationClassType;
-    private Set<? extends Element> componentProviders;
+    private Element componentProvider;
     private Set<? extends Element> uiViewClasses;
     private ArrayList<Gang> gangs;
 
@@ -102,13 +101,13 @@ public class AnnotationProcessor extends AbstractProcessor {
         if (gangs == null)
             findGangs(env);
 
-        if (componentProviders == null)
-            componentProviders = env.getElementsAnnotatedWith(Provider.class);
+        if (componentProvider == null)
+        {
+            componentProvider = env.getElementsAnnotatedWith(Provider.class).iterator().next();
+        }
 
         if (uiViewClasses == null)
             uiViewClasses = env.getElementsAnnotatedWith(UIView.class);
-
-        Element componentProvider = componentProviders.iterator().next();
 
         applicationClassType = componentProvider.asType();
 
@@ -273,6 +272,18 @@ public class AnnotationProcessor extends AbstractProcessor {
         return true;
     }
 
+    private void generateCustomApplication(HashMap<String, ExecutableElement> providingMethods)
+    {
+        TypeSpec.Builder builder = TypeSpec.classBuilder("Custom" + this.componentProvider.getSimpleName().toString());
+        builder.addModifiers(Modifier.PUBLIC);
+        for (Map.Entry<String, ExecutableElement> entry : providingMethods.entrySet())
+        {
+            TypeMirror returnType = entry.getValue().getReturnType();
+            ClassName module = ClassName.bestGuess(returnType.toString());
+            builder.addField(module, Utils.toParameterName(module), Modifier.PRIVATE);
+        }
+    }
+
     private void generateOnPresenterLoadedListeners() {
 
         for (Gang gang : gangs) {
@@ -390,46 +401,9 @@ public class AnnotationProcessor extends AbstractProcessor {
         return null;
     }
 
-    private HashMap<String, ExecutableElement> findProvidingMethods(Set<? extends Element> componentProviders){
-        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
-        for (Element element : componentProviders){
-            if (element.getKind() == ElementKind.CLASS){
-                TypeElement typeElement = (TypeElement) element;
-                for (Map.Entry<String, ExecutableElement> e : findProvidingMethodsInternal(typeElement, providingMethods).entrySet()) {
-                    if (!providingMethods.containsKey(e.getKey()))
-                        providingMethods.put(e.getKey(), e.getValue());
-                }
-                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-                while (!typeElement.toString().equals(Object.class.getName())) {
-                    for (Map.Entry<String, ExecutableElement> e : findProvidingMethodsInternal(typeElement, providingMethods).entrySet()) {
-                        if (!providingMethods.containsKey(e.getKey()))
-                            providingMethods.put(e.getKey(), e.getValue());
-                    }
-                    typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
-                }
-            }
-        }
-        return providingMethods;
-    }
-
-    private HashMap<String, ExecutableElement> findProvidingMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
-        List<? extends Element> enclosedElements = element.getEnclosedElements();
-        for (Element enclosedElement : enclosedElements) {
-            if (enclosedElement.getKind() == ElementKind.METHOD){
-                ProvidesModule providesModule = enclosedElement.getAnnotation(ProvidesModule.class);
-                ProvidesComponent providesComponent = enclosedElement.getAnnotation(ProvidesComponent.class);
-                if (providesModule != null || providesComponent != null){
-                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
-                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
-                }
-            }
-        }
-        return providingMethods;
-    }
-
     private void generateDependencyProvider(RoundEnvironment env) {
 
-        HashMap<String, ExecutableElement> providingMethods = findProvidingMethods(this.componentProviders);
+        HashMap<String, ExecutableElement> providingMethods = Utils.findProvidingMethods(typeUtils, this.componentProvider);
 
         TypeName applicationClassTypeName = ClassName.get(applicationClassType);
         TypeSpec.Builder builder = TypeSpec.classBuilder(CLASSNAME_DEPENDENCY_PROVIDER)
@@ -492,7 +466,18 @@ public class AnnotationProcessor extends AbstractProcessor {
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = componentClass.packageName() + "." + componentClass.simpleName();
                 ExecutableElement executableElement = providingMethods.get(o);
-                String componentCodeFormat = String.format(".%s(application.%s())", methodName, executableElement.getSimpleName().toString());
+                StringBuilder params = new StringBuilder();
+                List<? extends VariableElement> parameters = executableElement.getParameters();
+                for (int position = 0; position < parameters.size(); position++)
+                {
+                    VariableElement variable = parameters.get(position);
+                    TypeMirror type = variable.asType();
+                    ExecutableElement moduleMethod = providingMethods.get(type.toString());
+                    params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
+                    if (position < parameters.size() - 1)
+                        params.append(", ");
+                }
+                String componentCodeFormat = String.format(".%s(application.%s(%s))", methodName, executableElement.getSimpleName().toString(), params.toString());
                 methodBuilder.addCode(componentCodeFormat, componentClass);
             }
 

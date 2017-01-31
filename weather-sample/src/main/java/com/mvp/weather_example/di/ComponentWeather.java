@@ -4,9 +4,11 @@ import android.location.LocationManager;
 
 import com.mvp.ComponentEventBus;
 import com.mvp.ModuleEventBus;
-import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
+import com.mvp.weather_example.service.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
+
+import javax.inject.Named;
 
 import dagger.Component;
 
@@ -20,5 +22,8 @@ public interface ComponentWeather {
     LocationManager locationManager();
     WeatherService weatherService();
     ImageRequestManager imageRequestManager();
-    DateProvider dateProvider();
+    @Named("Today")
+    WeatherResponseFilter todayWeatherParser();
+    @Named("Tomorrow")
+    WeatherResponseFilter tomorrowWeatherParser();
 }

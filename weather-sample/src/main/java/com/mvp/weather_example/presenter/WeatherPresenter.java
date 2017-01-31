@@ -3,13 +3,11 @@ package com.mvp.weather_example.presenter;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
@@ -18,20 +16,13 @@ import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Event;
 import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.model.Weather;
-import com.mvp.weather_example.model.forecast.threehours.List;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
-import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
+import com.mvp.weather_example.service.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.view.IWeatherView;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Locale;
-import java.util.TimeZone;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -50,7 +41,7 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
     protected LocationManager locationManager;
     protected WeatherService weatherService;
     protected ImageRequestManager requestManager;
-    protected DateProvider dateProvider;
+    protected WeatherResponseFilter weatherParser;
 
     protected String lastTemperature;
     protected String lastHumidity;
@@ -59,11 +50,11 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
 
     protected WeatherPresenter() { }
 
-    public WeatherPresenter(LocationManager locationManager, WeatherService weatherService, ImageRequestManager requestManager, DateProvider dateProvider){
+    public WeatherPresenter(LocationManager locationManager, WeatherService weatherService, ImageRequestManager requestManager, WeatherResponseFilter weatherParser){
         this.locationManager = locationManager;
         this.weatherService = weatherService;
         this.requestManager = requestManager;
-        this.dateProvider = dateProvider;
+        this.weatherParser = weatherParser;
     }
 
     private Location lastLocation(){
@@ -116,32 +107,12 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
         });
     }
 
-    protected void internalShowForecastWeather(Call<ThreeHoursForecastWeather> call, Calendar currentDate) {
+    protected void internalShowForecastWeather(Call<ThreeHoursForecastWeather> call) {
         try {
             dispatchRequestStarted();
             Response<ThreeHoursForecastWeather> execute = call.execute();
             ThreeHoursForecastWeather body = execute.body();
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            dateFormat.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
-            StringBuilder sb = new StringBuilder();
-            boolean foundAnEntry = false;
-            for (List list : body.getList()) {
-                String strDate = list.getDtTxt();
-                try {
-                    Calendar parsedDate = Calendar.getInstance(Locale.GERMANY);
-                    parsedDate.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
-                    parsedDate.setTime(dateFormat.parse(strDate));
-                    if (isCorrectDay(currentDate, parsedDate) && parsedDateDoesntRepresentThePast(currentDate, parsedDate)){
-                        foundAnEntry = true;
-                        sb.append(dateFormat.format(parsedDate.getTime())).append(": ").append(list.getMain().getTemp()).append("°C").append("\n");
-                    }else if(foundAnEntry)
-                        break;
-
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-            }
-            final String forecastWeather = sb.toString();
+            final String forecastWeather = weatherParser.parse(body);
             submitOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -154,12 +125,6 @@ public abstract class WeatherPresenter extends MvpPresenter<IWeatherView> implem
         }
 
     }
-
-    private boolean parsedDateDoesntRepresentThePast(Calendar currentDate, Calendar parsedDate) {
-        return currentDate.compareTo(parsedDate) < 0;
-    }
-
-    protected abstract boolean isCorrectDay(Calendar currentDate, Calendar parsedDate);
 
     @BackgroundThread
     public abstract void loadWeather(double longitude, double latitude);

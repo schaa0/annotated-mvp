@@ -4,11 +4,12 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
 
-/**
- * Created by Andy on 23.12.2016.
- */
+import javax.inject.Inject;
 
 public class DateProvider {
+
+    @Inject
+    public DateProvider() { }
 
     public Calendar getCurrentDate(){
         Calendar instance = Calendar.getInstance();

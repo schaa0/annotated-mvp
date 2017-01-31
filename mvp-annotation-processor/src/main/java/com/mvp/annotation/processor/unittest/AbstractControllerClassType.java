@@ -13,9 +13,9 @@ import javax.lang.model.element.Modifier;
  * Created by Andy on 19.12.2016.
  */
 
-public class ControllerInterfaceType extends AbsGeneratingType {
+public class AbstractControllerClassType extends AbsGeneratingType {
 
-    public ControllerInterfaceType(Filer filer, String packageName) {
+    public AbstractControllerClassType(Filer filer, String packageName) {
         super(filer, packageName);
     }
 
@@ -26,35 +26,36 @@ public class ControllerInterfaceType extends AbsGeneratingType {
         TypeVariableName b = TypeVariableName.get("B");
         TypeVariableName v = TypeVariableName.get("V", viewTypeParam);
         ParameterizedTypeName classTypeName = ParameterizedTypeName.get(ClassName.bestGuess("java.lang.Class"), v);
-        return TypeSpec.interfaceBuilder("Controller")
-                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+        return TypeSpec.classBuilder("Controller")
+                .addField(v, "view", Modifier.PROTECTED)
+                .addModifiers(Modifier.ABSTRACT)
                 .addTypeVariable(t)
                 .addTypeVariable(v)
                 .addTypeVariable(b)
                 .addMethod(MethodSpec.methodBuilder("withView")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .addParameter(v, "view")
                         .returns(t)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("withViewImplementation")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .returns(t)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("with")
                         .addParameter(ClassName.get(getPackageName(), "TestingContext"), "testingContext")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .returns(t)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("getViewClass")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .returns(classTypeName)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("withMockPresenter")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .returns(t)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("build")
-                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addModifiers(Modifier.PROTECTED, Modifier.ABSTRACT)
                         .returns(b)
                         .build());
     }

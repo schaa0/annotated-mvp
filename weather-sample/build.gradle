@@ -15,10 +15,30 @@ android {
         testInstrumentationRunner "com.mvp.weather_example.MyRunner"
 
     }
+
+    compileOptions {
+ //       sourceCompatibility JavaVersion.VERSION_1_8
+//        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
     buildTypes {
-        release {
+        debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        String sharedTestDir = 'src/sharedTest/java'
+        test {
+            java.srcDir sharedTestDir
+        }
+        androidTest {
+            java.srcDir sharedTestDir
         }
     }
 
@@ -34,6 +54,7 @@ dependencies {
     testCompile 'org.mockito:mockito-core:2.1.0-beta.120'
     testCompile 'com.google.dagger:dagger:2.7'
     testCompile 'junit:junit:4.12'
+    androidTestCompile 'com.linkedin.dexmaker:dexmaker-mockito:2.2.0'
     testAnnotationProcessor project(':mvp-annotation-processor')
     androidTestAnnotationProcessor project(':mvp-annotation-processor')
     compile 'com.android.support:appcompat-v7:25.0.0'
@@ -47,27 +68,29 @@ dependencies {
     annotationProcessor 'com.google.dagger:dagger-compiler:2.7'
     annotationProcessor project(':mvp-annotation-processor')
     weaver project(':mvp-annotation-processor')
-    compile 'com.android.support.test:runner:0.5'
+    androidTestCompile 'com.android.support.test:runner:0.5', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
     compile 'com.jakewharton:butterknife:8.4.0'
     annotationProcessor 'com.jakewharton:butterknife-compiler:8.4.0'
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
 }
 
 afterEvaluate {
     android.buildTypes.all { variant ->
         android.sourceSets.test.java.srcDirs += ("$buildDir/generated/source/apt/test/$variant.name")
+        android.sourceSets.androidTest.java.srcDirs += ("$buildDir/generated/source/apt/androidTest/$variant.name")
     }
 }
 
 afterEvaluate {
     android.buildTypes.all { variant ->
         def u = "compile${variant.name.capitalize()}UnitTestJavaWithJavac"
-        logger.info(u)
         def unitTestGenerateClassesTask = tasks.findByName(u)
-        logger.info(unitTestGenerateClassesTask != null ? unitTestGenerateClassesTask.name : "unitTestGenerateClassesTask is null")
         def g = "assemble${variant.name.capitalize()}"
         def generateClassesTask = tasks.findByName(g)
-        logger.info(g)
-        logger.info(generateClassesTask != null ? generateClassesTask.name : "generateClassesTask is null")
         if (generateClassesTask != null && unitTestGenerateClassesTask != null)
             generateClassesTask.dependsOn unitTestGenerateClassesTask
     }

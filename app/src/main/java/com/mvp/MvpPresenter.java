@@ -1,5 +1,6 @@
 package com.mvp;
 
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.VisibleForTesting;
@@ -71,7 +72,8 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
                 entry.getValue().cancel(true);
             unregisterEventListeners();
             tasks.clear();
-            executorService.shutdown();
+            if (executorService != AsyncTask.THREAD_POOL_EXECUTOR)
+                executorService.shutdown();
             this.view = null;
             handler.removeCallbacksAndMessages(null);
         }
@@ -110,7 +112,8 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
             public void run() {
                 runnable.run();
                 if (tasks.containsKey(taskId)) {
-                    tasks.get(taskId).cancel(true);
+                    Future<?> future = tasks.get(taskId);
+                    future.cancel(false);
                     tasks.remove(taskId);
                 }
             }

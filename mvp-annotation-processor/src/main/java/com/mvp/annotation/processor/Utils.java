@@ -1,7 +1,17 @@
 package com.mvp.annotation.processor;
 
 import com.mvp.annotation.Presenter;
+import com.mvp.annotation.ProvidesComponent;
+import com.mvp.annotation.ProvidesModule;
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
 
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,9 +21,12 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
@@ -38,6 +51,11 @@ public class Utils {
         return value;
     }
 
+    public static String toParameterName(ClassName module)
+    {
+        return Character.toLowerCase(module.simpleName().charAt(0)) + module.simpleName().substring(1);
+    }
+
     public static boolean isActivity(Types typeUtils, Elements elementUtils, TypeMirror activityType) {
         return typeUtils.isAssignable(activityType, elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType());
     }
@@ -52,6 +70,17 @@ public class Utils {
         for (AnnotationMirror mirror : mirrors){
             Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = mirror.getElementValues();
             if (mirror.getAnnotationType().asElement().asType().toString().equals("dagger.Provides")){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasInjectAnnotation(Element element) {
+        List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
+        for (AnnotationMirror mirror : mirrors){
+            Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = mirror.getElementValues();
+            if (mirror.getAnnotationType().asElement().asType().toString().equals("javax.inject.Inject")){
                 return true;
             }
         }
@@ -95,4 +124,192 @@ public class Utils {
         return s.substring(index + 1);
     }
 
+    public static HashMap<String, ExecutableElement> findProvidingMethodsOfModules(Types typeUtils, Element componentProvider){
+        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
+        if (componentProvider.getKind() == ElementKind.CLASS){
+            TypeElement typeElement = (TypeElement) componentProvider;
+            for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
+                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+            }
+            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            while (!typeElement.toString().equals(Object.class.getName())) {
+                for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
+                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+                }
+                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            }
+        }
+        return providingMethods;
+    }
+
+    public static HashMap<String, ExecutableElement> findProvidingMethodsOfComponents(Types typeUtils, Element componentProvider){
+        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
+        if (componentProvider.getKind() == ElementKind.CLASS){
+            TypeElement typeElement = (TypeElement) componentProvider;
+            for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
+                if (!providingMethods.containsKey(e.getKey()))
+                    providingMethods.put(e.getKey(), e.getValue());
+            }
+            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            while (!typeElement.toString().equals(Object.class.getName())) {
+                for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
+                    if (!providingMethods.containsKey(e.getKey()))
+                        providingMethods.put(e.getKey(), e.getValue());
+                }
+                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            }
+        }
+        return providingMethods;
+    }
+
+    public static HashMap<String, ExecutableElement> findProvidingMethods(Types typeUtils, Element componentProvider){
+        HashMap<String, ExecutableElement> providingMethods = new HashMap<>();
+        if (componentProvider.getKind() == ElementKind.CLASS){
+            TypeElement typeElement = (TypeElement) componentProvider;
+            for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
+                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+            }
+            for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
+                if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+            }
+            typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            while (!typeElement.toString().equals(Object.class.getName())) {
+                for (Map.Entry<String, ExecutableElement> e : findProvidingModuleMethodsInternal(typeElement, providingMethods).entrySet()) {
+                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+                }
+                for (Map.Entry<String, ExecutableElement> e : findProvidingComponentMethodsInternal(typeElement, providingMethods).entrySet()) {
+                    if (!providingMethods.containsKey(e.getKey())) providingMethods.put(e.getKey(), e.getValue());
+                }
+                typeElement = (TypeElement) typeUtils.asElement(typeElement.getSuperclass());
+            }
+        }
+        return providingMethods;
+    }
+
+    private static HashMap<String, ExecutableElement> findProvidingModuleMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
+        List<? extends Element> enclosedElements = element.getEnclosedElements();
+        for (Element enclosedElement : enclosedElements) {
+            if (enclosedElement.getKind() == ElementKind.METHOD){
+                ProvidesModule providesModule = enclosedElement.getAnnotation(ProvidesModule.class);
+                if (providesModule != null){
+                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
+                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
+                }
+            }
+        }
+        return providingMethods;
+    }
+
+    private static HashMap<String, ExecutableElement> findProvidingComponentMethodsInternal(TypeElement element, HashMap<String, ExecutableElement> providingMethods) {
+        List<? extends Element> enclosedElements = element.getEnclosedElements();
+        for (Element enclosedElement : enclosedElements) {
+            if (enclosedElement.getKind() == ElementKind.METHOD){
+                ProvidesComponent providesComponent = enclosedElement.getAnnotation(ProvidesComponent.class);
+                if (providesComponent != null){
+                    ExecutableElement executableElement = (ExecutableElement) enclosedElement;
+                    providingMethods.put(executableElement.getReturnType().toString(), executableElement);
+                }
+            }
+        }
+        return providingMethods;
+    }
+
+    public static MethodSpec.Builder overrideConstructor(ExecutableElement method){
+        Set<Modifier> modifiers = method.getModifiers();
+
+        MethodSpec.Builder methodBuilder = MethodSpec.constructorBuilder();
+
+        for (AnnotationMirror mirror : method.getAnnotationMirrors()) {
+            AnnotationSpec annotationSpec = AnnotationSpec.get(mirror);
+            if (!annotationSpec.type.equals(ClassName.get(Override.class)))
+                methodBuilder.addAnnotation(annotationSpec);
+        }
+
+        modifiers = new LinkedHashSet<>(modifiers);
+        modifiers.remove(Modifier.ABSTRACT);
+        methodBuilder.addModifiers(modifiers);
+
+        for (TypeParameterElement typeParameterElement : method.getTypeParameters()) {
+            TypeVariable var = (TypeVariable) typeParameterElement.asType();
+            methodBuilder.addTypeVariable(TypeVariableName.get(var));
+        }
+
+        List<? extends VariableElement> parameters = method.getParameters();
+        for (VariableElement parameter : parameters) {
+            TypeName type = TypeName.get(parameter.asType());
+            String name = parameter.getSimpleName().toString();
+            Set<Modifier> parameterModifiers = parameter.getModifiers();
+            ParameterSpec.Builder parameterBuilder = ParameterSpec.builder(type, name)
+                                                                  .addModifiers(parameterModifiers.toArray(new Modifier[parameterModifiers.size()]));
+            for (AnnotationMirror mirror : parameter.getAnnotationMirrors()) {
+                parameterBuilder.addAnnotation(AnnotationSpec.get(mirror));
+            }
+            methodBuilder.addParameter(parameterBuilder.build());
+        }
+        methodBuilder.varargs(method.isVarArgs());
+
+        for (TypeMirror thrownType : method.getThrownTypes()) {
+            methodBuilder.addException(TypeName.get(thrownType));
+        }
+
+        return methodBuilder;
+
+    }
+
+    public static MethodSpec.Builder override(ExecutableElement method) {
+
+        Set<Modifier> modifiers = method.getModifiers();
+
+        String methodName = method.getSimpleName().toString();
+        MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName);
+
+        for (AnnotationMirror mirror : method.getAnnotationMirrors()) {
+            AnnotationSpec annotationSpec = AnnotationSpec.get(mirror);
+            //if (!annotationSpec.type.equals(ClassName.get(Override.class)))
+            //    methodBuilder.addAnnotation(annotationSpec);
+        }
+
+        modifiers = new LinkedHashSet<>(modifiers);
+        modifiers.remove(Modifier.ABSTRACT);
+        methodBuilder.addModifiers(modifiers);
+
+        for (TypeParameterElement typeParameterElement : method.getTypeParameters()) {
+            TypeVariable var = (TypeVariable) typeParameterElement.asType();
+            methodBuilder.addTypeVariable(TypeVariableName.get(var));
+        }
+
+        methodBuilder.returns(TypeName.get(method.getReturnType()));
+
+        List<? extends VariableElement> parameters = method.getParameters();
+        for (VariableElement parameter : parameters) {
+            TypeName type = TypeName.get(parameter.asType());
+            String name = parameter.getSimpleName().toString();
+            Set<Modifier> parameterModifiers = parameter.getModifiers();
+            ParameterSpec.Builder parameterBuilder = ParameterSpec.builder(type, name)
+                                                                  .addModifiers(parameterModifiers.toArray(new Modifier[parameterModifiers.size()]));
+            for (AnnotationMirror mirror : parameter.getAnnotationMirrors()) {
+                parameterBuilder.addAnnotation(AnnotationSpec.get(mirror));
+            }
+            methodBuilder.addParameter(parameterBuilder.build());
+        }
+        methodBuilder.varargs(method.isVarArgs());
+
+        for (TypeMirror thrownType : method.getThrownTypes()) {
+            methodBuilder.addException(TypeName.get(thrownType));
+        }
+
+        return methodBuilder;
+    }
+
+
+    public static boolean hasComponentAnnotation(TypeElement element)
+    {
+        List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
+        for (AnnotationMirror mirror : mirrors){
+            if (mirror.getAnnotationType().asElement().asType().toString().equals("dagger.Component")){
+                return true;
+            }
+        }
+        return false;
+    }
 }

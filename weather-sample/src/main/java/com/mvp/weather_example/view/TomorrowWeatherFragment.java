@@ -10,7 +10,7 @@ import com.mvp.weather_example.presenter.WeatherPresenter;
 @UIView(presenter = TomorrowWeatherPresenter.class)
 public class TomorrowWeatherFragment extends WeatherFragment {
 
-    @Presenter TomorrowWeatherPresenter presenter;
+    public @Presenter TomorrowWeatherPresenter presenter;
 
     @Override
     protected void onWeatherIconClicked() {

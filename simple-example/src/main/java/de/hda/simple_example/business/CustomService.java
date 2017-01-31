@@ -10,10 +10,6 @@ import javax.inject.Inject;
 
 import de.hda.simple_example.event.Contract;
 
-/**
- * Created by Andy on 26.12.2016.
- */
-
 public class CustomService {
 
     private EventBus eventBus;

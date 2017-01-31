@@ -1,6 +1,9 @@
 package com.mvp.weather_example.di;
 
+import android.support.v7.app.AppCompatActivity;
+
 import com.mvp.BaseApplicationProvider;
+import com.mvp.ComponentEventBus;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
@@ -17,14 +20,21 @@ public class ModuleProvider extends BaseApplicationProvider {
     @Override
     public void onCreate() {
         super.onCreate();
-        componentWeather = DaggerComponentWeather.builder()
-                .moduleWeather(new ModuleWeather(this.getApplicationContext()))
-                .componentEventBus(this.componentEventBus())
-                .build();
+    }
+
+    @ProvidesModule
+    public ModuleWeather moduleWeather(){
+        return new ModuleWeather(this.getApplicationContext());
     }
 
     @ProvidesComponent
-    public ComponentWeather componentWeather(){
+    public ComponentWeather componentWeather(ModuleWeather moduleWeather, ComponentEventBus componentEventBus){
+        if (componentWeather == null){
+            componentWeather = DaggerComponentWeather.builder()
+                    .moduleWeather(moduleWeather)
+                    .componentEventBus(componentEventBus)
+                    .build();
+        }
         return componentWeather;
     }
 
@@ -33,4 +43,8 @@ public class ModuleProvider extends BaseApplicationProvider {
         return new ModuleThreeHourForecast(threeHourForecastWeather);
     }
 
+    @ProvidesModule
+    public ModuleFragmentFactory moduleFragmentFactory(AppCompatActivity activity){
+        return new ModuleFragmentFactory(activity);
+    }
 }

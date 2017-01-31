@@ -18,8 +18,7 @@ class Events {
 
     static {
         try {
-            Class<?> mvpEventListenerClass = Class.forName(PACKAGE_PREFIX + "MvpEventListener");
-            m = mvpEventListenerClass.getDeclaredMethod("get", String.class, Object.class, Handler.class, ExecutorService.class);
+            m = Class.forName("com.mvp.MvpEventListener").getDeclaredMethod("get", String.class, Object.class, Handler.class, ExecutorService.class);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (NoSuchMethodException e) {

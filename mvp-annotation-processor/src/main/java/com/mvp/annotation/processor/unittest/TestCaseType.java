@@ -19,6 +19,7 @@ public class TestCaseType extends AbsGeneratingType {
 
     public static final String TESTCASE_CLASSNAME = "TestCase";
     public static final String METHODNAME_CONFIGURE_PRESENTER = "configurePresenter";
+    private static final String METHODNAME_GET_EVENT_BUS_COMPONENT = "componentEventBus";
 
     public TestCaseType(Filer filer, String packageName) {
         super(filer, packageName);
@@ -39,13 +40,16 @@ public class TestCaseType extends AbsGeneratingType {
         ClassName testingContextClass = ClassName.get(getPackageName(), "TestingContext");
         ClassName mockitoClass = ClassName.get("org.mockito", "Mockito");
 
+        ClassName componentEventBus = ClassName.get("com.mvp", "ComponentEventBus");
+        ClassName daggerComponentEventBus = ClassName.get("com.mvp", "DaggerComponentEventBus");
+        ClassName customEventBus = ClassName.get("com.mvp", "ModuleCustomEventBus");
         builder.addField(testingContextClass, "testingContext")
-                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .addMethod(MethodSpec.constructorBuilder()
+               .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+               .addMethod(MethodSpec.constructorBuilder()
                     .addModifiers(Modifier.PUBLIC)
                     .addCode("this.testingContext = new $T();\n", testingContextClass)
                     .build())
-                .addMethod(MethodSpec.methodBuilder(METHODNAME_CONFIGURE_PRESENTER)
+               .addMethod(MethodSpec.methodBuilder(METHODNAME_CONFIGURE_PRESENTER)
                     .addModifiers(Modifier.PROTECTED)
                     .addTypeVariable(t)
                     .addTypeVariable(v)
@@ -64,7 +68,16 @@ public class TestCaseType extends AbsGeneratingType {
                     .endControlFlow()
                     .addCode("return builder.build();\n")
                     .returns(a)
-                    .build());
+                    .build())
+               .addField(componentEventBus, "componentEventBus", Modifier.PRIVATE)
+               .addMethod(MethodSpec.methodBuilder(METHODNAME_GET_EVENT_BUS_COMPONENT)
+                             .addModifiers(Modifier.PROTECTED)
+                             .returns(componentEventBus)
+                             .beginControlFlow("if (this.componentEventBus == null)")
+                             .addStatement("this.componentEventBus = $T.builder().moduleCustomEventBus(new $T(this.testingContext.eventBus())).build()", daggerComponentEventBus, customEventBus)
+                             .endControlFlow()
+                             .addStatement("return this.componentEventBus")
+                             .build());
 
         return builder;
     }

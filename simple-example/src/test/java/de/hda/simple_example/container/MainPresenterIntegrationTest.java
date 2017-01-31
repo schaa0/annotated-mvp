@@ -1,6 +1,8 @@
 package de.hda.simple_example.container;
 
 import android.support.annotation.NonNull;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 
 import com.mvp.ActivityPresenterBuilder;
 import com.mvp.MainActivityController;
@@ -9,6 +11,7 @@ import com.mvp.MainPresenterBuilder;
 import com.mvp.PresenterType;
 import com.mvp.TestCase;
 import com.mvp.ViewType;
+import com.mvp.annotation.ApplicationClass;
 import com.mvp.annotation.InjectUIView;
 
 import org.junit.After;
@@ -17,14 +20,21 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowViewGroup;
 import org.robolectric.shadows.support.v4.SupportFragmentController;
 import org.robolectric.util.ActivityController;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.business.GithubService;
 import de.hda.simple_example.business.MainPresenter;
+import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
@@ -44,6 +54,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21)
+@ApplicationClass(value = ApplicationProvider.class)
 public class MainPresenterIntegrationTest extends TestCase {
 
     @InjectUIView private SupportFragmentController<MainFragment> mainFragmentController;
@@ -56,10 +67,11 @@ public class MainPresenterIntegrationTest extends TestCase {
     private ActivityPresenter activityPresenter;
 
     private static final String ERROR_MESSAGE = "{ message: an error occured! }";
+    private ApplicationProvider provider;
 
     @Before
     public void setUp() throws Exception {
-
+        provider = (ApplicationProvider) RuntimeEnvironment.application;
     }
 
     @After
@@ -73,8 +85,11 @@ public class MainPresenterIntegrationTest extends TestCase {
 
     private void buildMainPresenter(ViewType viewType, PresenterType presenterType, final GithubService githubService, MainPresenter.State state) {
 
+        MainFragment mainFragment = MainFragment.newInstance(state);
+        MainFragmentController controller = new MainFragmentController(mainFragment, MainActivity.class);
         MainPresenterBuilder builder =
-                new MainPresenterBuilder(new MainFragmentController(MainFragment.newInstance(state), MainActivity.class))
+                new MainPresenterBuilder(controller, provider)
+                        .parameter(githubService)
                         .in(R.id.container);
 
         MainPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
@@ -87,8 +102,7 @@ public class MainPresenterIntegrationTest extends TestCase {
 
     private void buildMainActivityPresenter(ViewType viewType, PresenterType presenterType){
 
-        ActivityPresenterBuilder builder = new ActivityPresenterBuilder(new MainActivityController());
-
+        ActivityPresenterBuilder builder = new ActivityPresenterBuilder(new MainActivityController(), provider);
         ActivityPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
 
         activityPresenter = binding.presenter();
@@ -104,7 +118,7 @@ public class MainPresenterIntegrationTest extends TestCase {
                 .thenReturn(new FailingCallAdapter<SearchResult>() {
                     @Override
                     public Response<SearchResult> buildResponse() {
-                        return Response.error(500, ResponseBody.create(MediaType.parse("application/json"), ERROR_MESSAGE));
+                        return Response.error(500, ResponseBody.create(MediaType.parse("context/json"), ERROR_MESSAGE));
                     }
                 });
         return githubService;

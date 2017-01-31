@@ -23,7 +23,9 @@ public class BaseApplicationProvider extends Application {
     @Override
     public void onCreate() {
         moduleEventBus = new ModuleEventBus();
-        componentEventBus = DaggerComponentEventBus.builder().moduleCustomEventBus(new ModuleCustomEventBus(mvpEventBus().eventBus)).build();
+        componentEventBus = DaggerComponentEventBus.builder()
+                                   .moduleCustomEventBus(new ModuleCustomEventBus(mvpEventBus().eventBus))
+                                   .build();
         super.onCreate();
     }
 

@@ -1,6 +1,9 @@
 package de.hda.simple_example.container;
 
+import android.content.Context;
+
 import com.mvp.BaseApplicationProvider;
+import com.mvp.ComponentEventBus;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
@@ -15,18 +18,13 @@ import de.hda.simple_example.di.ModuleRepository;
 import de.hda.simple_example.model.Repository;
 
 @Provider
-public class ModuleProvider extends BaseApplicationProvider {
+public class ApplicationProvider extends BaseApplicationProvider {
 
     private ComponentApplication componentApplication;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        componentApplication = DaggerComponentApplication.builder()
-                .moduleGithubService(new ModuleGithubService())
-                .moduleApplication(new ModuleApplication(getApplicationContext()))
-                .componentEventBus(componentEventBus())
-                .build();
     }
 
     @ProvidesModule
@@ -39,8 +37,26 @@ public class ModuleProvider extends BaseApplicationProvider {
         return new ModuleMainPresenterState(state);
     }
 
+    @ProvidesModule
+    public ModuleGithubService moduleGithubService(){
+        return new ModuleGithubService();
+    }
+
+    @ProvidesModule
+    public ModuleApplication moduleApplication(){
+        return new ModuleApplication(this.getApplicationContext());
+    }
+
     @ProvidesComponent
-    public ComponentApplication componentApplication(){
+    public ComponentApplication componentApplication(ModuleGithubService moduleGithubService, ModuleApplication moduleApplication, ComponentEventBus componentEventBus){
+        if (componentApplication == null)
+        {
+            componentApplication = DaggerComponentApplication.builder()
+                                                             .moduleGithubService(moduleGithubService)
+                                                             .moduleApplication(moduleApplication)
+                                                             .componentEventBus(componentEventBus)
+                                                             .build();
+        }
         return componentApplication;
     }
 

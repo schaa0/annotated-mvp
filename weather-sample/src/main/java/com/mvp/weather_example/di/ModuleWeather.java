@@ -7,7 +7,12 @@ import com.bumptech.glide.Glide;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.ImageRequestManagerImpl;
+import com.mvp.weather_example.service.TodayWeatherResponseFilter;
+import com.mvp.weather_example.service.TomorrowWeatherResponseFilter;
+import com.mvp.weather_example.service.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
+
+import javax.inject.Named;
 
 import dagger.Module;
 import dagger.Provides;
@@ -45,9 +50,23 @@ public class ModuleWeather {
         return new ImageRequestManagerImpl(Glide.with(context));
     }
 
-    @Provides
+    /*@Provides
     @ApplicationScope
     public DateProvider dateProvider() {
         return new DateProvider();
+    }*/
+
+    @Provides
+    @Named("Today")
+    @ApplicationScope
+    public WeatherResponseFilter todayWeatherParser(DateProvider dateProvider) {
+        return new TodayWeatherResponseFilter(dateProvider);
+    }
+
+    @Provides
+    @Named("Tomorrow")
+    @ApplicationScope
+    public WeatherResponseFilter tomorrowWeatherParser(DateProvider dateProvider) {
+        return new TomorrowWeatherResponseFilter(dateProvider);
     }
 }
