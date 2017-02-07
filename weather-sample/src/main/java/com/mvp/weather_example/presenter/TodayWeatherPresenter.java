@@ -1,51 +1,90 @@
 package com.mvp.weather_example.presenter;
 
 import android.location.Location;
-import android.location.LocationManager;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Presenter;
 import com.mvp.weather_example.di.ComponentWeather;
+import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
-import com.mvp.weather_example.model.today.TodayWeather;
-import com.mvp.weather_example.service.ImageRequestManager;
+import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
 
+import java.io.IOException;
+
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import retrofit2.Call;
 
 /**
  * Created by Andy on 22.12.2016.
  */
 
-@Presenter(needsComponents = { ComponentWeather.class })
-public class TodayWeatherPresenter extends WeatherPresenter {
+@Presenter(needsComponents = {ComponentWeather.class})
+public class TodayWeatherPresenter extends WeatherPresenter
+{
 
-    protected TodayWeatherPresenter() { }
+    protected TodayWeatherPresenter()
+    {
+    }
 
     @Inject
-    public TodayWeatherPresenter(LocationManager locationManager, WeatherService weatherService, ImageRequestManager requestManager, @Named("Today") WeatherResponseFilter weatherParser) {
-        super(locationManager, weatherService, requestManager, weatherParser);
+    public TodayWeatherPresenter(LocationProvider locationProvider, WeatherService weatherService, @Named("Today") WeatherResponseFilter weatherParser)
+    {
+        super(locationProvider, weatherService, weatherParser);
     }
 
     @Override
-    public void loadWeather(double longitude, double latitude) {
-        Call<TodayWeather> call = weatherService.getCurrentWeather(longitude, latitude, "metric", WeatherService.API_KEY);
-        internalShowWeather(call);
-    }
-
-    @BackgroundThread
-    public void loadForecastWeatherDataForToday() {
-        Location lastKnownLocation = getLastKnownLocation();
-        if (lastKnownLocation != null) {
-            double longitude = lastKnownLocation.getLongitude();
-            double latitude = lastKnownLocation.getLatitude();
-            Call<ThreeHoursForecastWeather> call = weatherService.getForecastWeather(longitude, latitude, "metric", WeatherService.API_KEY);
-            internalShowForecastWeather(call);
+    protected void loadWeather(double longitude, double latitude)
+    {
+        try
+        {
+            dispatchRequestStarted();
+            final Weather weather = weatherService.getCurrentWeather(longitude, latitude, "metric");
+            updateState(weather);
+            submitOnUiThread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    getView().showWeather(lastTemperature, lastHumidity);
+                    weatherService.loadIcon(weather.icon(), TodayWeatherPresenter.this);
+                    dispatchRequestFinished();
+                }
+            });
+        } catch (IOException e)
+        {
+            dispatchEvent(e).toAny();
         }
     }
 
+    @BackgroundThread
+    public void loadForecastWeatherDataForToday()
+    {
+        try
+        {
+            Location lastKnownLocation = locationProvider.lastLocation();
+            if (lastKnownLocation != null)
+            {
+                double longitude = lastKnownLocation.getLongitude();
+                double latitude = lastKnownLocation.getLatitude();
+                dispatchRequestStarted();
+                ThreeHoursForecastWeather weather =
+                        weatherService.getForecastWeather(longitude, latitude, "metric");
+                dispatchRequestFinished();
+                final String forecastData = weatherParser.parse(weather);
+                submitOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        getView().showForecastWeather(forecastData);
+                    }
+                });
+            }
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 }

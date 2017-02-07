@@ -3,58 +3,64 @@ package com.mvp.weather_example.service;
 import com.mvp.weather_example.model.forecast.threehours.List;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Locale;
-import java.util.TimeZone;
-
-/**
- * Created by Andy on 31.01.2017.
- */
 
 public abstract class WeatherResponseFilter
 {
 
     protected DateProvider dateProvider;
 
-    public WeatherResponseFilter(DateProvider dateProvider){
+    public WeatherResponseFilter(DateProvider dateProvider)
+    {
         this.dateProvider = dateProvider;
     }
 
     protected abstract Calendar getCurrentDate();
 
-    public String parse(ThreeHoursForecastWeather body) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        dateFormat.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+    public String parse(ThreeHoursForecastWeather body) throws ParseException
+    {
         StringBuilder sb = new StringBuilder();
-        boolean foundAnEntry = false;
+        boolean foundAnEntryPreviously = false;
         Calendar currentDate = getCurrentDate();
-        for (List list : body.getList()) {
-            String strDate = list.getDtTxt();
-            try {
-                Calendar parsedDate = Calendar.getInstance(Locale.GERMANY);
-                parsedDate.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
-                parsedDate.setTime(dateFormat.parse(strDate));
-                if (isCorrectDay(currentDate, parsedDate) && parsedDateDoesntRepresentThePast(currentDate, parsedDate)){
-                    foundAnEntry = true;
-                    sb.append(dateFormat.format(parsedDate.getTime())).append(": ").append(list.getMain().getTemp()).append("°C").append("\n");
-                }else if(foundAnEntry)
-                    break;
-
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
+        for (List entry : body.getList())
+        {
+            boolean result = parse(sb, currentDate, entry);
+            if (foundAnEntryPreviouslyButNotThisTime(foundAnEntryPreviously, result))
+                break;
+            else if (result)
+                foundAnEntryPreviously = true;
         }
-        final String forecastWeather = sb.toString();
-        return forecastWeather;
+        return sb.toString();
     }
 
-    private boolean parsedDateDoesntRepresentThePast(Calendar currentDate, Calendar parsedDate) {
+    private boolean foundAnEntryPreviouslyButNotThisTime(boolean foundAnEntryPreviously, boolean thisTime)
+    {
+        return foundAnEntryPreviously && !thisTime;
+    }
+
+    private boolean parsedDateDoesNotRepresentThePast(Calendar currentDate, Calendar parsedDate)
+    {
         return currentDate.compareTo(parsedDate) < 0;
     }
 
     protected abstract boolean isCorrectDay(Calendar currentDate, Calendar parsedDate);
+
+    private boolean parse(StringBuilder sb, Calendar currentDate, List list) throws ParseException
+    {
+        String strDate = list.getDtTxt();
+        Calendar parsedDate = dateProvider.parse(strDate);
+        if (isCorrectDay(currentDate, parsedDate) && parsedDateDoesNotRepresentThePast(currentDate, parsedDate))
+        {
+            sb.append(strDate)
+              .append(": ")
+              .append(list.getMain().getTemp())
+              .append("°C")
+              .append("\n");
+            return true;
+        }else{
+            return false;
+        }
+    }
 
 }

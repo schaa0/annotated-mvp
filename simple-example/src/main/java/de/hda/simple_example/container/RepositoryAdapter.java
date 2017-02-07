@@ -15,10 +15,15 @@ import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import de.hda.simple_example.R;
 import de.hda.simple_example.model.Repository;
 
 public class RepositoryAdapter extends RecyclerView.Adapter<RepositoryAdapter.RepoViewHolder>{
+
+    @Inject
+    public RepositoryAdapter() { }
 
     private List<Repository> repositories = new ArrayList<>();
     private OnItemClickListener itemClickListener;

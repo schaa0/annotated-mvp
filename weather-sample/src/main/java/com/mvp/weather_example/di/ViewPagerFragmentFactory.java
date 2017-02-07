@@ -7,7 +7,7 @@ import com.mvp.weather_example.view.TomorrowWeatherFragment;
 
 import javax.inject.Inject;
 
-public class FragmentFactory
+public class ViewPagerFragmentFactory
 {
 
     private static final int PAGE_COUNT = 2;

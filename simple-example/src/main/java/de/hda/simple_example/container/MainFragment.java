@@ -4,14 +4,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 
 import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Presenter;
@@ -19,6 +17,10 @@ import com.mvp.annotation.UIView;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.model.Repository;
@@ -31,8 +33,14 @@ import de.hda.simple_example.model.Repository;
 public class MainFragment extends Fragment implements IMainView, RepositoryAdapter.OnItemClickListener {
 
     public static final String TAG = MainFragment.class.getName();
+    private static final String KEY_ADAPTER = "KEY_ADAPTER";
 
     @Presenter MainPresenter presenter;
+    @Inject RepositoryAdapter repositoryAdapter;
+    @BindView(R.id.orientation) View orientationView;
+    @BindView(R.id.recyclerView) RecyclerView recyclerView;
+    RecyclerView.OnScrollListener scrollListener;
+    LinearLayoutManager lm;
 
     @ModuleParam
     public MainPresenter.State provideState(){
@@ -40,8 +48,11 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     }
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
+        ApplicationProvider applicationProvider = (ApplicationProvider) getActivity().getApplication();
+        applicationProvider.componentFragment().inject(this);
     }
 
     @Nullable
@@ -53,8 +64,7 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
-        recyclerView = (RecyclerView) getView().findViewById(R.id.recyclerView);
+        ButterKnife.bind(this, getView());
         lm = new LinearLayoutManager(recyclerView.getContext(), LinearLayoutManager.VERTICAL, false);
         recyclerView.setLayoutManager(lm);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -64,54 +74,53 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 if (presenter != null && !presenter.isLoading() && !presenter.reachedEndOfStream()) {
-                    if (lm.findLastVisibleItemPosition() == adapter.getItemCount() - 1) {
+                    if (lm.findLastVisibleItemPosition() == repositoryAdapter.getItemCount() - 1) {
                         presenter.loadMoreRepositories();
                     }
                 }
             }
         };
         recyclerView.addOnScrollListener(scrollListener);
-        adapter = new RepositoryAdapter();
-        adapter.setOnItemClickListener(this);
-        recyclerView.setAdapter(adapter);
+        repositoryAdapter.setOnItemClickListener(this);
+        recyclerView.setAdapter(repositoryAdapter);
 
         if (savedInstanceState != null){
-            adapter.onRestoreInstanceState(savedInstanceState.getBundle("adapter"));
+            repositoryAdapter.onRestoreInstanceState(savedInstanceState.getBundle(KEY_ADAPTER));
         }
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putBundle("adapter", adapter.onSaveInstanceState());
+        outState.putBundle(KEY_ADAPTER, repositoryAdapter.onSaveInstanceState());
     }
 
     @Override
     public void onItemClick(int position) {
-        Repository repository = adapter.getItemAtPosition(position);
+        Repository repository = repositoryAdapter.getItemAtPosition(position);
         presenter.showDetailView(repository);
     }
 
     @Override
     public void setRepositories(List<Repository> repositories) {
-        adapter.set(repositories);
+        repositoryAdapter.set(repositories);
     }
 
     @Override
     public void addRepositories(List<Repository> repositories) {
-        adapter.addAll(repositories);
+        repositoryAdapter.addAll(repositories);
     }
 
     @Override
     public void showDetailViewInActivity(Repository repository) {
         Intent intent = new Intent(getActivity(), DetailActivity.class);
-        intent.putExtra("repository", repository);
+        intent.putExtra(DetailActivity.KEY_REPOSITORY, repository);
         getActivity().startActivity(intent);
     }
 
     @Override
     public String provideOrientationTag() {
-        return getView().findViewById(R.id.orientation).getTag().toString();
+        return orientationView.getTag().toString();
     }
 
     @Override
@@ -119,11 +128,6 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
         recyclerView.removeOnScrollListener(scrollListener);
         super.onDestroyView();
     }
-
-    RecyclerView recyclerView;
-    RepositoryAdapter adapter;
-    RecyclerView.OnScrollListener scrollListener;
-    LinearLayoutManager lm;
 
     public static MainFragment newInstance(MainPresenter.State state) {
         Bundle args = new Bundle();

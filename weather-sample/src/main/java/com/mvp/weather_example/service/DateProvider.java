@@ -1,6 +1,10 @@
 package com.mvp.weather_example.service;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -16,6 +20,18 @@ public class DateProvider {
         instance.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
         instance.setTimeInMillis(System.currentTimeMillis());
         return instance;
+    }
+
+    public Calendar parse(String strDate) throws ParseException
+    {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+
+        Calendar parsedDate = Calendar.getInstance(Locale.GERMANY);
+        parsedDate.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+        parsedDate.setTime(dateFormat.parse(strDate));
+
+        return parsedDate;
     }
 
 }

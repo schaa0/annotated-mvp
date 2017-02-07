@@ -51,6 +51,23 @@ public class Utils {
         return value;
     }
 
+    public static AnnotationValue getAnnotationValue(Element element, String annotationName, String key) {
+        List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
+        AnnotationValue value = null;
+        for (AnnotationMirror mirror : mirrors){
+            if (!mirror.getAnnotationType().asElement().asType().toString().equals(annotationName))
+                continue;
+            Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = mirror.getElementValues();
+            for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet()){
+                if(key.equals(entry.getKey().getSimpleName().toString())) {
+                    value = entry.getValue();
+                    break;
+                }
+            }
+        }
+        return value;
+    }
+
     public static String toParameterName(ClassName module)
     {
         return Character.toLowerCase(module.simpleName().charAt(0)) + module.simpleName().substring(1);

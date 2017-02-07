@@ -16,9 +16,7 @@ public class ThreeHourForecastPresenter extends MvpPresenter<IThreeHourForecastV
 
     private String forecastWeather;
 
-    protected ThreeHourForecastPresenter() {
-
-    }
+    protected ThreeHourForecastPresenter() { }
 
     @Inject
     public ThreeHourForecastPresenter(String forecastWeather){

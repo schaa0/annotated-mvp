@@ -5,6 +5,7 @@ import android.net.Uri;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestManager;
+import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
 
 /**
@@ -20,8 +21,15 @@ public class ImageRequestManagerImpl implements ImageRequestManager {
     }
 
     @Override
-    public void load(String iconUrl, SimpleTarget<Bitmap> target) {
-        requestManager.load(Uri.parse(iconUrl)).asBitmap().into(target);
+    public void load(String iconUrl, final IconCallback iconCallback) {
+        requestManager.load(Uri.parse(iconUrl)).asBitmap().into(new SimpleTarget<Bitmap>()
+        {
+            @Override
+            public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation)
+            {
+                iconCallback.onIconLoaded(resource);
+            }
+        });
     }
 
 }

@@ -12,36 +12,39 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.mvp.annotation.InjectUIView;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
+
+import javax.inject.Inject;
+
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.CustomService;
 import de.hda.simple_example.event.Contract;
-import de.hda.simple_example.di.DaggerComponentCustomService;
 
 
 @UIView(presenter = ActivityPresenter.class)
 public class MainActivity extends AppCompatActivity implements IView {
 
+    public static final String KEY_SEARCHVIEW_STATE = "KEY_SEARCHVIEW_STATE";
+
     @Presenter
     ActivityPresenter presenter;
-    private CustomService customService;
+    @Inject
+    CustomService customService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
+        ButterKnife.bind(this);
         this.savedInstanceState = savedInstanceState;
-        progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         ApplicationProvider provider = (ApplicationProvider) getApplication();
-        customService = DaggerComponentCustomService.builder()
-                                .componentApplication(provider.componentApplication(
-                                        provider.moduleGithubService(),
-                                        provider.moduleApplication(),
-                                        provider.componentEventBus()
-                                )).build().customService();
+        provider.componentActivity().inject(this);
 
         customService.onCreate();
 
@@ -60,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements IView {
     protected void onStart() {
         supportInvalidateOptionsMenu();
         super.onStart();
-        if (presenter != null)
+        if (presenter != null && searchViewMenuItem != null)
             presenter.onSearchViewInitialized();
     }
 
@@ -117,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putParcelable("mykey", saveInstanceState());
+        outState.putParcelable(KEY_SEARCHVIEW_STATE, saveInstanceState());
     }
 
     @Override
@@ -178,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements IView {
 
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
-        internalRestoreInstanceState(savedInstanceState.<SavedState>getParcelable("mykey"));
+        internalRestoreInstanceState(savedInstanceState.<SavedState>getParcelable(KEY_SEARCHVIEW_STATE));
     }
 
     @Override
@@ -190,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements IView {
 
     Bundle savedInstanceState;
     MenuItem searchViewMenuItem;
-    ProgressBar progressBar;
+    @BindView(R.id.progressBar) ProgressBar progressBar;
     SearchView searchView;
     boolean isExpanded;
     boolean isFocused;

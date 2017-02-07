@@ -19,7 +19,7 @@ public class CustomService {
         this.eventBus = eventBus;
     }
 
-    @Event
+    @Event(thread = Event.BACKGROUND_THREAD)
     public void onSearchRepositories(Contract.SearchRepositoriesEvent event){
         Log.e(CustomService.class.getName(), "Query: " + event.getQuery());
     }

@@ -3,7 +3,6 @@ package com.mvp.weather_example.di;
 import android.support.v7.app.AppCompatActivity;
 
 import com.mvp.BaseApplicationProvider;
-import com.mvp.ComponentEventBus;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
@@ -20,6 +19,10 @@ public class ModuleProvider extends BaseApplicationProvider {
     @Override
     public void onCreate() {
         super.onCreate();
+        componentWeather = DaggerComponentWeather.builder()
+                                                 .moduleWeather(this.moduleWeather())
+                                                 .componentEventBus(this.componentEventBus())
+                                                 .build();
     }
 
     @ProvidesModule
@@ -28,13 +31,7 @@ public class ModuleProvider extends BaseApplicationProvider {
     }
 
     @ProvidesComponent
-    public ComponentWeather componentWeather(ModuleWeather moduleWeather, ComponentEventBus componentEventBus){
-        if (componentWeather == null){
-            componentWeather = DaggerComponentWeather.builder()
-                    .moduleWeather(moduleWeather)
-                    .componentEventBus(componentEventBus)
-                    .build();
-        }
+    public ComponentWeather componentWeather(){
         return componentWeather;
     }
 
@@ -44,7 +41,15 @@ public class ModuleProvider extends BaseApplicationProvider {
     }
 
     @ProvidesModule
-    public ModuleFragmentFactory moduleFragmentFactory(AppCompatActivity activity){
-        return new ModuleFragmentFactory(activity);
+    public ModuleViewPagerFragmentFactory moduleFragmentFactory(AppCompatActivity activity){
+        return new ModuleViewPagerFragmentFactory(activity);
+    }
+
+    public ComponentActivity createComponentActivity(AppCompatActivity activity)
+    {
+        return DaggerComponentActivity.builder()
+                               .componentEventBus(this.componentEventBus())
+                               .moduleViewPagerFragmentFactory(this.moduleFragmentFactory(activity))
+                               .build();
     }
 }

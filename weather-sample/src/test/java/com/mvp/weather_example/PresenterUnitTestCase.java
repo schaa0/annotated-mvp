@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.mvp.MvpEventBus;
+import com.mvp.MvpPresenter;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 
 import org.robolectric.util.concurrent.RoboExecutorService;
@@ -13,7 +14,7 @@ import java.lang.reflect.Field;
 public class PresenterUnitTestCase
 {
 
-    protected void injectFields(Object presenter)
+    protected void injectFields(MvpPresenter<?> presenter)
     {
         try
         {

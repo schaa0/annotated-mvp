@@ -23,41 +23,13 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 
 
-public abstract class WeatherFragment extends Fragment implements IWeatherView{
+public abstract class WeatherFragment extends Fragment implements WeatherView
+{
 
     public @BindView(R.id.temperatureTextView) TextView temperatureTextView;
     @BindView(R.id.humidityTextView) TextView humidityTextView;
     @BindView(R.id.imageView) ImageView imageView;
     @BindView(R.id.progressBar) ProgressBar progressBar;
-
-    FragmentLifecycleCallback lifecycleCallback = null;
-
-    public void setLifecycleCallback(FragmentLifecycleCallback lifecycleCallback)
-    {
-        this.lifecycleCallback = lifecycleCallback;
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        if (this.lifecycleCallback != null)
-            this.lifecycleCallback.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onStart()
-    {
-        super.onStart();
-        if (this.lifecycleCallback != null) this.lifecycleCallback.onStart();
-    }
-
-    @Override
-    public void onResume()
-    {
-        super.onResume();
-        if (this.lifecycleCallback != null) this.lifecycleCallback.onResume();
-    }
 
     @Nullable
     @Override
@@ -69,16 +41,10 @@ public abstract class WeatherFragment extends Fragment implements IWeatherView{
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         ButterKnife.bind(this, getView());
-        if (this.lifecycleCallback != null) this.lifecycleCallback.onActivityCreated(savedInstanceState);
     }
 
     @OnClick(R.id.imageView)
     protected abstract void onWeatherIconClicked();
-
-    @Override
-    public int provideCurrentOrientation() {
-        return getActivity().getResources().getConfiguration().orientation;
-    }
 
     @Override
     public void showWeather(String temperature, String humidity) {

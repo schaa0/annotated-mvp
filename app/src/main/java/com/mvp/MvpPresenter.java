@@ -68,8 +68,8 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     public void onDestroyed() {
         if (!destroyed) {
             destroyed = true;
-            for (Map.Entry<String,Future<?>> entry : tasks.entrySet())
-                entry.getValue().cancel(true);
+            /*for (Map.Entry<String,Future<?>> entry : tasks.entrySet())
+                entry.getValue().cancel(false);*/
             unregisterEventListeners();
             tasks.clear();
             if (executorService != AsyncTask.THREAD_POOL_EXECUTOR)
@@ -100,7 +100,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
 
     protected synchronized void tryCancelTask(String key) {
         if (tasks.containsKey(key)) {
-            tasks.get(key).cancel(true);
+            //tasks.get(key).cancel(false);
             tasks.remove(key);
         }
     }
@@ -113,7 +113,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
                 runnable.run();
                 if (tasks.containsKey(taskId)) {
                     Future<?> future = tasks.get(taskId);
-                    future.cancel(false);
+                    //future.cancel(false);
                     tasks.remove(taskId);
                 }
             }

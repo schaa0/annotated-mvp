@@ -9,10 +9,9 @@ import com.mvp.weather_example.model.Weather;
  * Created by Andy on 22.12.2016.
  */
 
-public interface IWeatherView extends MvpView {
+public interface WeatherView extends MvpView {
     void requestStarted();
     void requestFinished();
-    int provideCurrentOrientation();
     void showWeather(String temperature, String humidity);
     boolean isPermissionGranted(String permission);
     void requestPermission(String permission, int requestCode);

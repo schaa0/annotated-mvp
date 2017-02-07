@@ -1,8 +1,6 @@
 package de.hda.simple_example.container;
 
 import android.support.annotation.NonNull;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 
 import com.mvp.ActivityPresenterBuilder;
 import com.mvp.MainActivityController;
@@ -21,20 +19,14 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
-import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadows.ShadowViewGroup;
 import org.robolectric.shadows.support.v4.SupportFragmentController;
 import org.robolectric.util.ActivityController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.business.GithubService;
 import de.hda.simple_example.business.MainPresenter;
-import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
@@ -53,7 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21)
+@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = ApplicationProviderDelegate.class)
 @ApplicationClass(value = ApplicationProvider.class)
 public class MainPresenterIntegrationTest extends TestCase {
 
@@ -67,11 +59,11 @@ public class MainPresenterIntegrationTest extends TestCase {
     private ActivityPresenter activityPresenter;
 
     private static final String ERROR_MESSAGE = "{ message: an error occured! }";
-    private ApplicationProvider provider;
+    private ApplicationProviderDelegate provider;
 
     @Before
     public void setUp() throws Exception {
-        provider = (ApplicationProvider) RuntimeEnvironment.application;
+        provider = (ApplicationProviderDelegate) RuntimeEnvironment.application;
     }
 
     @After
@@ -84,7 +76,6 @@ public class MainPresenterIntegrationTest extends TestCase {
     }
 
     private void buildMainPresenter(ViewType viewType, PresenterType presenterType, final GithubService githubService, MainPresenter.State state) {
-
         MainFragment mainFragment = MainFragment.newInstance(state);
         MainFragmentController controller = new MainFragmentController(mainFragment, MainActivity.class);
         MainPresenterBuilder builder =
@@ -161,12 +152,12 @@ public class MainPresenterIntegrationTest extends TestCase {
         state.page = 2;
         state.query = "google";
         buildMainPresenter(ViewType.REAL, PresenterType.REAL, buildSucceedingGithubService(), state);
-        mainFragmentController.get().adapter.addAll(Arrays.asList(new Repository[]{Repository.NULL, Repository.NULL}));
+        mainFragmentController.get().repositoryAdapter.addAll(Arrays.asList(new Repository[]{Repository.NULL, Repository.NULL}));
         mainPresenter.loadMoreRepositories();
         int expected = 3;
-        int actual = mainFragmentController.get().adapter.getItemCount();
+        int actual = mainFragmentController.get().repositoryAdapter.getItemCount();
         assertEquals(expected, actual);
-        Repository expectedRepository = mainFragmentController.get().adapter.getItemAtPosition(2);
+        Repository expectedRepository = mainFragmentController.get().repositoryAdapter.getItemAtPosition(2);
         assertEquals(expectedRepository.getId(), SucceedingCallAdapter.ID_FROM_MESSAGE);
     }
 

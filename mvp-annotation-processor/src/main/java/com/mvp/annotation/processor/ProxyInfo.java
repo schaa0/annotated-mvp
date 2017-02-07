@@ -135,13 +135,13 @@ public class ProxyInfo {
                 methodBuilder.addCode(CodeBlock.of("throw new $T();", IllegalStateException.class));
 
             }else if (method.returnType == TypeName.VOID){
-                statement = "presenterImpl." + method.name + "(" + parametersToString(method.parameters)  + ")";
+                statement = String.format("presenterImpl.%s(%s)", method.name, parametersToString(method.parameters));
                 BackgroundThread backgroundAnnotation = initialMethod.getAnnotation(BackgroundThread.class);
                 UiThread uiThreadAnnotation = initialMethod.getAnnotation(UiThread.class);
                 ClassName looperType = ClassName.get("android.os", "Looper");
                 if(backgroundAnnotation != null){
                     methodBuilder.beginControlFlow("if ($T.myLooper().equals($T.getMainLooper()))", looperType, looperType)
-                            .addCode(CodeBlock.of("this.presenterImpl.submit(\"" + method.name + "\", new Runnable(){ @Override public void run() { " + statement +  ";   } });"))
+                            .addStatement(String.format("this.presenterImpl.submit(\"%s\", new Runnable(){ @Override public void run() { %s; } })", method.name, statement))
                             .nextControlFlow("else")
                             .addStatement(statement)
                             .endControlFlow();
@@ -219,7 +219,6 @@ public class ProxyInfo {
             for (int i = 0, size = parameters.size(); i < size; i++) {
                 ParameterSpec parameter = parameters.get(i);
                 TypeName type = TypeName.get(resolvedParameterTypes.get(i));
-                //parameters.set(i, parameter.toBuilder(type, parameter.name).build());
                 ParameterSpec.Builder paramBuilder = ParameterSpec.builder(type, parameter.name);
                 if (paramsShouldBeFinal) paramBuilder.addModifiers(Modifier.FINAL);
                 parameters.set(i, paramBuilder.build());

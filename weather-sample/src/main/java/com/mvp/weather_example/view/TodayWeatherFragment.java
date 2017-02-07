@@ -1,7 +1,5 @@
 package com.mvp.weather_example.view;
 
-import android.support.annotation.NonNull;
-
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.UIView;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
@@ -12,17 +10,21 @@ import com.mvp.weather_example.presenter.WeatherPresenter;
  */
 
 @UIView(presenter = TodayWeatherPresenter.class)
-public class TodayWeatherFragment extends WeatherFragment {
+public class TodayWeatherFragment extends WeatherFragment
+{
 
-    @Presenter TodayWeatherPresenter presenter;
+    @Presenter
+    TodayWeatherPresenter presenter;
 
     @Override
-    protected void onWeatherIconClicked() {
+    protected void onWeatherIconClicked()
+    {
         presenter.loadForecastWeatherDataForToday();
     }
 
     @Override
-    protected WeatherPresenter getPresenter() {
+    protected WeatherPresenter getPresenter()
+    {
         return presenter;
     }
 }

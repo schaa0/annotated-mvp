@@ -4,20 +4,51 @@ import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeath
 import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 
+import java.io.IOException;
+
 import retrofit2.Call;
-import retrofit2.http.GET;
-import retrofit2.http.Query;
+import retrofit2.Response;
 
-public interface WeatherService {
+public class WeatherService
+{
 
-    String API_KEY = "52e258b9d648c55104d57055ee214f5a";
+    private final WeatherApi api;
+    private final ImageRequestManager imageRequestManager;
+    private String apiKey;
 
-    @GET("/data/2.5/weather")
-    Call<TodayWeather> getCurrentWeather(@Query("lon") double longitude, @Query("lat")double latitude, @Query("units") String metric, @Query("appid") String apiKey);
+    public WeatherService(WeatherApi api, ImageRequestManager imageRequestManager, String apiKey){
+        this.api = api;
+        this.imageRequestManager = imageRequestManager;
+        this.apiKey = apiKey;
+    }
 
-    @GET("/data/2.5/forecast/daily")
-    Call<TomorrowWeather> getTomorrowWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("cnt") int days, @Query("appid") String apiKey);
 
-    @GET("/data/2.5/forecast")
-    Call<ThreeHoursForecastWeather> getForecastWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("appid") String apiKey);
+    public void loadIcon(String icon, final ImageRequestManager.IconCallback iconCallback) {
+        imageRequestManager.load(icon, iconCallback);
+    }
+
+    public TomorrowWeather getTomorrowWeather(double longitude, double latitude, String metric, int forecastDays) throws IOException
+    {
+        Call<TomorrowWeather> call = api.getTomorrowWeather(longitude, latitude, metric, forecastDays, apiKey);
+        Response<TomorrowWeather> execute = call.execute();
+        TomorrowWeather tomorrowWeather = execute.body();
+        return tomorrowWeather;
+    }
+
+    public ThreeHoursForecastWeather getForecastWeather(double longitude, double latitude, String metric) throws IOException
+    {
+        Call<ThreeHoursForecastWeather> call = api.getForecastWeather(longitude, latitude, metric, apiKey);
+        Response<ThreeHoursForecastWeather> execute = call.execute();
+        ThreeHoursForecastWeather threeHoursForecastWeather = execute.body();
+        return threeHoursForecastWeather;
+    }
+
+    public TodayWeather getCurrentWeather(double longitude, double latitude, String metric) throws IOException
+    {
+        Call<TodayWeather> call = api.getCurrentWeather(longitude, latitude, metric, apiKey);
+        Response<TodayWeather> response = call.execute();
+        TodayWeather todayWeather = response.body();
+        return todayWeather;
+    }
+
 }

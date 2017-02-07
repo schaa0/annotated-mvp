@@ -37,17 +37,11 @@ public class TestCaseType extends AbsGeneratingType {
         ClassName presenterTypeEnum = ClassName.get(getPackageName(), "PresenterType");
 
         TypeSpec.Builder builder = TypeSpec.classBuilder(TESTCASE_CLASSNAME);
-        ClassName testingContextClass = ClassName.get(getPackageName(), "TestingContext");
         ClassName mockitoClass = ClassName.get("org.mockito", "Mockito");
 
-        ClassName componentEventBus = ClassName.get("com.mvp", "ComponentEventBus");
-        ClassName daggerComponentEventBus = ClassName.get("com.mvp", "DaggerComponentEventBus");
-        ClassName customEventBus = ClassName.get("com.mvp", "ModuleCustomEventBus");
-        builder.addField(testingContextClass, "testingContext")
-               .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+        builder.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                .addMethod(MethodSpec.constructorBuilder()
                     .addModifiers(Modifier.PUBLIC)
-                    .addCode("this.testingContext = new $T();\n", testingContextClass)
                     .build())
                .addMethod(MethodSpec.methodBuilder(METHODNAME_CONFIGURE_PRESENTER)
                     .addModifiers(Modifier.PROTECTED)
@@ -57,7 +51,6 @@ public class TestCaseType extends AbsGeneratingType {
                     .addParameter(controllerType, "builder")
                     .addParameter(viewTypeEnum, "viewType")
                     .addParameter(presenterTypeEnum, "presenterType")
-                    .addCode("builder.with(testingContext);\n")
                     .beginControlFlow("if (viewType == $T.REAL)", viewTypeEnum)
                     .addCode("builder.withViewImplementation();\n")
                     .nextControlFlow("else")
@@ -69,15 +62,22 @@ public class TestCaseType extends AbsGeneratingType {
                     .addCode("return builder.build();\n")
                     .returns(a)
                     .build())
-               .addField(componentEventBus, "componentEventBus", Modifier.PRIVATE)
-               .addMethod(MethodSpec.methodBuilder(METHODNAME_GET_EVENT_BUS_COMPONENT)
-                             .addModifiers(Modifier.PROTECTED)
-                             .returns(componentEventBus)
-                             .beginControlFlow("if (this.componentEventBus == null)")
-                             .addStatement("this.componentEventBus = $T.builder().moduleCustomEventBus(new $T(this.testingContext.eventBus())).build()", daggerComponentEventBus, customEventBus)
-                             .endControlFlow()
-                             .addStatement("return this.componentEventBus")
-                             .build());
+               .addMethod(MethodSpec.methodBuilder(METHODNAME_CONFIGURE_PRESENTER)
+                                    .addModifiers(Modifier.PROTECTED)
+                                    .addTypeVariable(t)
+                                    .addTypeVariable(v)
+                                    .addTypeVariable(a)
+                                    .addParameter(controllerType, "builder")
+                                    .addParameter(v, "viewMock")
+                                    .addParameter(presenterTypeEnum, "presenterType")
+                                    .addStatement("builder.withView(viewMock)")
+                                    .beginControlFlow("if(presenterType == $T.MOCK)", presenterTypeEnum)
+                                    .addStatement("builder.withMockPresenter()")
+                                    .endControlFlow()
+                                    .addStatement("return builder.build()")
+                                    .returns(a)
+                                    .build()
+                );
 
         return builder;
     }

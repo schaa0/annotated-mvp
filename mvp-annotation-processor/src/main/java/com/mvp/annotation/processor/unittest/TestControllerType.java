@@ -46,7 +46,6 @@ public class TestControllerType extends AbsGeneratingType {
         }
         ClassName clazzClass = ClassName.get("java.lang", "Class");
         ParameterizedTypeName classOfActivity = ParameterizedTypeName.get(clazzClass, gang.getActivityClass());
-        ClassName testingContextClass = ClassName.get("com.mvp", "TestingContext");
         ClassName robolectricClass = ClassName.get("org.robolectric", "Robolectric");
         ParameterizedTypeName delegateBinder = ParameterizedTypeName.get(ClassName.get("com.mvp", "DelegateBinder"), gang.getViewClass(), gang.getPresenterClass());
         ClassName constructorClass = ClassName.get("java.lang.reflect", "Constructor");
@@ -88,6 +87,13 @@ public class TestControllerType extends AbsGeneratingType {
 
         ClassName bundle = ClassName.get("android.os", "Bundle");
         builder.addField(bundle, "bundle", Modifier.PRIVATE);
+
+        builder.addField(moduleEventBusClass, "moduleEventBus", Modifier.PRIVATE);
+        builder.addMethod(MethodSpec.methodBuilder("with")
+                    .addParameter(moduleEventBusClass, "moduleEventBus")
+                    .addStatement("this.moduleEventBus = moduleEventBus")
+                    .returns(void.class)
+                    .build());
 
         builder.addMethod(MethodSpec.methodBuilder("withSavedInstanceState")
                 .addParameter(bundle, "bundle")
@@ -152,7 +158,7 @@ public class TestControllerType extends AbsGeneratingType {
         buildMethod.addCode("try {\n" +
                                 "   Class<?> clazz = $T.forName(controller.get().getClass().getPackage().getName() + \".\" + controller.get().getClass().getSimpleName() + \"DelegateBinder\");\n" +
                                 "   $T<?> constructor = clazz.getDeclaredConstructors()[0];\n" +
-                                "   $T binder = ($T) constructor.newInstance(activity, presenterComponent, new $T(testingContext.eventBus()));\n" +
+                                "   $T binder = ($T) constructor.newInstance(activity, presenterComponent, this.moduleEventBus);\n" +
                                 "   setupActivity(binder);\n" +
                                 "   return binder.getPresenter();\n" +
                                 "}  catch (java.lang.ClassNotFoundException e) {\n" +
@@ -165,7 +171,7 @@ public class TestControllerType extends AbsGeneratingType {
                                 "       e.printStackTrace();\n" +
                                 "}\n" +
                                 "throw new java.lang.IllegalStateException(\"presenter could not be instantiated!\");",
-                        clazzClass, constructorClass, delegateBinder, delegateBinder, moduleEventBusClass)
+                        clazzClass, constructorClass, delegateBinder, delegateBinder)
                 .returns(gang.getPresenterClass());
 
         ClassName mvpActivityDelegate = ClassName.get("com.mvp", "MvpActivityDelegate");
@@ -196,18 +202,11 @@ public class TestControllerType extends AbsGeneratingType {
                 .addModifiers(Modifier.PUBLIC)
                 .addField(activityControllerClass, "controller", Modifier.PRIVATE)
                 .addField(componentPresenterClass, "presenterComponent", Modifier.PRIVATE)
-                .addField(testingContextClass, "testingContext", Modifier.PRIVATE)
                 .addMethod(constructorBuilder
                         .build())
                 .addMethod(MethodSpec.methodBuilder("with")
                         .addParameter(componentPresenterClass, "presenterComponent")
                         .addCode("this.presenterComponent = presenterComponent;\n")
-                        .addCode("return this;\n")
-                        .returns(testControllerClass)
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("with")
-                        .addParameter(testingContextClass, "testingContext")
-                        .addCode("this.testingContext = testingContext;\n")
                         .addCode("return this;\n")
                         .returns(testControllerClass)
                         .build())

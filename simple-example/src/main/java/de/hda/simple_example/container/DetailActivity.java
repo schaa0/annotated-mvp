@@ -5,23 +5,28 @@ import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import de.hda.simple_example.R;
 import de.hda.simple_example.model.Repository;
 
-/**
- * Created by Andy on 19.12.2016.
- */
-
 public class DetailActivity extends AppCompatActivity {
+
+    public static final String KEY_REPOSITORY = "repository";
+
+    @BindView(R.id.orientation)
+    View orientationView;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_detail_activity);
+        ButterKnife.bind(this);
         if (!isInLandscape()) {
             if (savedInstanceState == null) {
-                Repository repository = getIntent().getParcelableExtra("repository");
+                Repository repository = getIntent().getParcelableExtra(KEY_REPOSITORY);
                 DetailFragment fragment = DetailFragment.newInstance(repository);
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.container, fragment, DetailFragment.TAG)
@@ -38,7 +43,7 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private boolean isInLandscape() {
-        return findViewById(R.id.orientation).getTag().toString().equals("sw600dp|land");
+        return orientationView.getTag().toString().equals("sw600dp|land");
     }
 
 }

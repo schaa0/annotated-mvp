@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.processing.Filer;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -74,20 +75,20 @@ public class ApplicationDelegate extends AbsGeneratingType
             {
 
                 TypeMirror typeMirror = method.getReturnType();
-                if (!foundInstances.contains(typeMirror.toString()))
+                String key = buildKey(method);
+                if (!foundInstances.contains(key))
                 {
                     List<TypeMirror> typeMirrors = searchForConstructorInjectedDependencies(method);
-                    addWithMethod(builder, delegateClass, typeMirror);
                     for (TypeMirror mirror : typeMirrors)
                     {
-                        if (!foundInstances.contains(mirror.toString()))
+                        key = buildKey(method);
+                        if (!foundInstances.contains(key))
                         {
                             constructorInjectedDependencies.add(mirror.toString());
-                            addWithMethod(builder, delegateClass, mirror);
-                            foundInstances.add(mirror.toString());
+                            foundInstances.add(addWithMethod(builder, delegateClass, method, mirror));
                         }
                     }
-                    foundInstances.add(typeMirror.toString());
+                    foundInstances.add(addWithMethod(builder, delegateClass, method, typeMirror));
                 }
             }
         }
@@ -95,6 +96,8 @@ public class ApplicationDelegate extends AbsGeneratingType
         for (Map.Entry<TypeMirror, ArrayList<ExecutableElement>> entry : moduleToInstanceType.entrySet())
         {
             TypeMirror module = entry.getKey();
+            if (module.toString().equals("com.mvp.ModuleEventBus"))
+                continue;
             List<ExecutableElement> methods = findMethodsInModule(module);
             List<ExecutableElement> constructors = findConstructors(module);
             String moduleSimpleClassName = typeUtils.asElement(module).getSimpleName().toString();
@@ -123,6 +126,7 @@ public class ApplicationDelegate extends AbsGeneratingType
             {
                 MethodSpec.Builder methodBuilder = override(method);
                 String name = toParameterName(ClassName.bestGuess(method.getReturnType().toString()));
+                name += getValueFromNamedAnnotation(method);
                 methodBuilder.addModifiers(Modifier.PUBLIC);
                 String params = "";
                 List<? extends VariableElement> parameters = method.getParameters();
@@ -134,7 +138,8 @@ public class ApplicationDelegate extends AbsGeneratingType
                     if (constructorInjectedDependencies.contains(typeMirror.toString())){
                         ClassName className = ClassName.bestGuess(typeMirror.toString());
                         String parameterName = "ref" + className.simpleName();
-                        final String possible = String.format("%s.this.%s", delegateClass, toParameterName(className));
+                        String parameterNameField = toParameterName(className) + getValueFromNamedAnnotation(method);
+                        final String possible = String.format("%s.this.%s", delegateClass, parameterNameField);
                         String s = className.simpleName();
                         methodBuilder.addStatement(String.format("final %s %s;", s, parameterName));
                         methodBuilder.beginControlFlow(String.format("if (%s != null)", possible));
@@ -162,14 +167,6 @@ public class ApplicationDelegate extends AbsGeneratingType
 
         for (Map.Entry<TypeMirror, ArrayList<TypeMirror>> entry : componentsToInstanceType.entrySet())
         {
-            for (TypeMirror typeMirror : entry.getValue())
-            {
-                if (!foundInstances.contains(typeMirror.toString()))
-                {
-                    addWithMethod(builder, delegateClass, typeMirror);
-                    foundInstances.add(typeMirror.toString());
-                }
-            }
             TypeMirror component = entry.getKey();
             List<ExecutableElement> methods = findMethodsInComponent(component);
             String moduleComponentClassName = typeUtils.asElement(component).getSimpleName().toString();
@@ -184,7 +181,6 @@ public class ApplicationDelegate extends AbsGeneratingType
             for (ExecutableElement method : methods)
             {
                 MethodSpec.Builder methodBuilder = override(method);
-                String name = toParameterName(ClassName.bestGuess(method.getReturnType().toString()));
                 methodBuilder.addModifiers(Modifier.PUBLIC);
                 String params = "";
                 List<? extends VariableElement> parameters = method.getParameters();
@@ -196,8 +192,20 @@ public class ApplicationDelegate extends AbsGeneratingType
                     if (position < size - 1)
                         params += ", ";
                 }
-                methodBuilder.beginControlFlow(String.format("if (%s.this.%s != null)", delegateClass, name));
-                methodBuilder.addStatement(String.format("return %s.this.%s", delegateClass, name));
+                if (method.getReturnType().toString().equals(void.class.getName())){
+                    methodBuilder.addStatement(String.format("component.%s(%s)", method.getSimpleName().toString(), params));
+                    componentDelegateBuilder.addMethod(methodBuilder.build());
+                    continue;
+                }
+                String key = buildKey(method);
+                String name = toParameterName(ClassName.bestGuess(method.getReturnType().toString()));
+                String parameterNameField = name + getValueFromNamedAnnotation(method);
+                if (!foundInstances.contains(key))
+                {
+                    foundInstances.add(addWithMethod(builder, delegateClass, method, method.getReturnType()));
+                }
+                methodBuilder.beginControlFlow(String.format("if (%s.this.%s != null)", delegateClass, parameterNameField));
+                methodBuilder.addStatement(String.format("return %s.this.%s", delegateClass, parameterNameField));
                 methodBuilder.nextControlFlow("else");
                 methodBuilder.addStatement(String.format("return this.component.%s(%s)", method.getSimpleName().toString(), params));
                 methodBuilder.endControlFlow();
@@ -213,6 +221,8 @@ public class ApplicationDelegate extends AbsGeneratingType
             MethodSpec.Builder methodBuilder = override(method);
             methodBuilder.addModifiers(Modifier.PUBLIC);
             TypeMirror returnType = method.getReturnType();
+            //if (method.getReturnType().toString().equals("com.mvp.ComponentEventBus"))
+                //continue;
             String s = typeUtils.asElement(returnType).getSimpleName().toString();
             ExecutableElement executableElement = providingMethods.get(returnType.toString());
             String params = "";
@@ -235,6 +245,8 @@ public class ApplicationDelegate extends AbsGeneratingType
             MethodSpec.Builder methodBuilder = override(method);
             methodBuilder.addModifiers(Modifier.PUBLIC);
             TypeMirror returnType = method.getReturnType();
+            if (method.getReturnType().toString().equals("com.mvp.ModuleEventBus"))
+                continue;
             String s = typeUtils.asElement(returnType).getSimpleName().toString();
             ExecutableElement constructor = moduleConstructorParams.get(returnType);
             HashMap<TypeMirror, String> variableNames = new HashMap<>();
@@ -287,6 +299,20 @@ public class ApplicationDelegate extends AbsGeneratingType
         return builder;
     }
 
+    private String buildKey(ExecutableElement method)
+    {
+        String valueFromNamedAnnotation = getValueFromNamedAnnotation(method);
+        ClassName className = ClassName.bestGuess(method.getReturnType().toString());
+        String pre = (!valueFromNamedAnnotation.equals("")) ? "Named" : "";
+        return "with" + pre + valueFromNamedAnnotation + toParameterName(className) + valueFromNamedAnnotation;
+    }
+
+    private String getValueFromNamedAnnotation(ExecutableElement executableElement)
+    {
+        AnnotationValue annotationValue = Utils.getAnnotationValue(executableElement, "javax.inject.Named", "value");
+        return annotationValue == null || annotationValue.getValue() == null ? "" : annotationValue.getValue().toString();
+    }
+
     private void addWithMethod(TypeSpec.Builder builder, String delegateClass, TypeMirror typeMirror)
     {
         ClassName module = ClassName.bestGuess(typeMirror.toString());
@@ -300,6 +326,27 @@ public class ApplicationDelegate extends AbsGeneratingType
                                     .returns(ClassName.bestGuess(getPackageName() + "." + delegateClass))
                                     .build()
         );
+    }
+
+    private String addWithMethod(TypeSpec.Builder builder, String delegateClass, ExecutableElement method, TypeMirror typeMirror)
+    {
+        ClassName module = ClassName.bestGuess(typeMirror.toString());
+        String valueFromNamedAnnotation = getValueFromNamedAnnotation(method);
+        String name = toParameterName(module) + valueFromNamedAnnotation;
+        builder.addField(module, name, Modifier.PRIVATE);
+        String methodName = "with";
+        methodName += (!valueFromNamedAnnotation.equals("")) ? "Named" + valueFromNamedAnnotation : "";
+        builder.addMethod(MethodSpec.methodBuilder(methodName)
+                                    .addModifiers(Modifier.PUBLIC)
+                                    .addParameter(module, name)
+                                    .addStatement(String.format("this.%s = %s", name, name))
+                                    .addStatement("return this")
+                                    .returns(ClassName.bestGuess(getPackageName() + "." + delegateClass))
+                                    .build()
+        );
+
+        return methodName + name;
+
     }
 
     private List<TypeMirror> searchForConstructorInjectedDependencies(ExecutableElement providingMethod)
@@ -358,8 +405,7 @@ public class ApplicationDelegate extends AbsGeneratingType
             if (enclosedElement.getKind() == ElementKind.METHOD)
             {
                 ExecutableElement executableElement = (ExecutableElement) enclosedElement;
-                if (!executableElement.getReturnType().toString().equals(void.class.getName()))
-                    methods.add((ExecutableElement) enclosedElement);
+                methods.add(executableElement);
             }
         }
         return methods;

@@ -18,6 +18,6 @@ public class SettingsImpl implements Settings {
 
     @Override
     public String getLastQuery() {
-        return sharedPreferences.getString("lastQuery", "");
+        return sharedPreferences.getString(LAST_QUERY_KEY, "");
     }
 }

@@ -1,16 +1,17 @@
 package de.hda.simple_example.container;
 
-import android.content.Context;
-
 import com.mvp.BaseApplicationProvider;
-import com.mvp.ComponentEventBus;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 
 import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.ComponentFragment;
+import de.hda.simple_example.di.DaggerComponentActivity;
 import de.hda.simple_example.di.DaggerComponentApplication;
+import de.hda.simple_example.di.DaggerComponentFragment;
 import de.hda.simple_example.di.ModuleApplication;
 import de.hda.simple_example.di.ModuleGithubService;
 import de.hda.simple_example.di.ModuleMainPresenterState;
@@ -25,6 +26,11 @@ public class ApplicationProvider extends BaseApplicationProvider {
     @Override
     public void onCreate() {
         super.onCreate();
+        componentApplication = DaggerComponentApplication.builder()
+                                                         .moduleGithubService(this.moduleGithubService())
+                                                         .moduleApplication(this.moduleApplication())
+                                                         .componentEventBus(this.componentEventBus())
+                                                         .build();
     }
 
     @ProvidesModule
@@ -48,16 +54,18 @@ public class ApplicationProvider extends BaseApplicationProvider {
     }
 
     @ProvidesComponent
-    public ComponentApplication componentApplication(ModuleGithubService moduleGithubService, ModuleApplication moduleApplication, ComponentEventBus componentEventBus){
-        if (componentApplication == null)
-        {
-            componentApplication = DaggerComponentApplication.builder()
-                                                             .moduleGithubService(moduleGithubService)
-                                                             .moduleApplication(moduleApplication)
-                                                             .componentEventBus(componentEventBus)
-                                                             .build();
-        }
+    public ComponentApplication componentApplication(){
         return componentApplication;
+    }
+
+    @ProvidesComponent
+    public ComponentActivity componentActivity(){
+        return DaggerComponentActivity.builder().componentApplication(componentApplication).build();
+    }
+
+    @ProvidesComponent
+    public ComponentFragment componentFragment() {
+        return DaggerComponentFragment.builder().componentApplication(componentApplication).build();
     }
 
 }

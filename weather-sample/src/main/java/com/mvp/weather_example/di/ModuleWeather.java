@@ -4,13 +4,15 @@ import android.content.Context;
 import android.location.LocationManager;
 
 import com.bumptech.glide.Glide;
+import com.mvp.weather_example.service.LocationProvider;
+import com.mvp.weather_example.service.WeatherApi;
+import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.ImageRequestManagerImpl;
 import com.mvp.weather_example.service.TodayWeatherResponseFilter;
 import com.mvp.weather_example.service.TomorrowWeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherResponseFilter;
-import com.mvp.weather_example.service.WeatherService;
 
 import javax.inject.Named;
 
@@ -22,6 +24,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @Module
 public class ModuleWeather {
 
+    private static final String API_KEY = "52e258b9d648c55104d57055ee214f5a";
     private final Context context;
 
     public ModuleWeather(Context context){
@@ -36,12 +39,24 @@ public class ModuleWeather {
 
     @Provides
     @ApplicationScope
-    public WeatherService weatherService() {
+    public LocationProvider locationProvider(LocationManager locationManager) {
+        return new LocationProvider(locationManager);
+    }
+
+    @Provides
+    @ApplicationScope
+    public WeatherService weatherService(WeatherApi weatherApi, ImageRequestManager imageRequestManager) {
+        return new WeatherService(weatherApi, imageRequestManager, API_KEY);
+    }
+
+    @Provides
+    @ApplicationScope
+    public WeatherApi weatherAPI() {
         return new Retrofit.Builder()
                 .addConverterFactory(GsonConverterFactory.create())
                 .baseUrl("http://api.openweathermap.org")
                 .build()
-                .create(WeatherService.class);
+                .create(WeatherApi.class);
     }
 
     @Provides
@@ -49,12 +64,6 @@ public class ModuleWeather {
     public ImageRequestManager glide(){
         return new ImageRequestManagerImpl(Glide.with(context));
     }
-
-    /*@Provides
-    @ApplicationScope
-    public DateProvider dateProvider() {
-        return new DateProvider();
-    }*/
 
     @Provides
     @Named("Today")

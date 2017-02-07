@@ -73,7 +73,6 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor {
             return true;
 
         new AbstractControllerClassType(filer, packageName).generate();
-        new TestingContextType(filer, packageName).generate();
         new ViewEnumType(filer, packageName).generate();
         new PresenterEnumType(filer, packageName).generate();
         new TestCaseType(filer, packageName).generate();

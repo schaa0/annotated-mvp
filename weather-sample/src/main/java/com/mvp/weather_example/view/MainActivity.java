@@ -2,7 +2,6 @@ package com.mvp.weather_example.view;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -10,15 +9,16 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.widget.Toast;
 
 import com.mvp.EventBus;
+import com.mvp.annotation.Event;
 import com.mvp.weather_example.R;
-import com.mvp.weather_example.di.ComponentActivity;
-import com.mvp.weather_example.di.DaggerComponentActivity;
-import com.mvp.weather_example.di.FragmentFactory;
-import com.mvp.weather_example.di.ModuleFragmentFactory;
+import com.mvp.weather_example.di.ViewPagerFragmentFactory;
 import com.mvp.weather_example.di.ModuleProvider;
 import com.mvp.weather_example.event.PermissionEvent;
+
+import java.io.IOException;
 
 import javax.inject.Inject;
 
@@ -40,20 +40,10 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ButterKnife.bind(this);
-    }
 
-    @Override
-    protected void onPostCreate(@Nullable Bundle savedInstanceState)
-    {
-        super.onPostCreate(savedInstanceState);
-        ModuleProvider provider = (ModuleProvider) getApplication();
-        ComponentActivity componentActivity =
-                DaggerComponentActivity.builder()
-                                       .componentEventBus(provider.componentEventBus())
-                                       .moduleFragmentFactory(provider.moduleFragmentFactory(this))
-                                       .build();
-        componentActivity.inject(this);
+        ButterKnife.bind(this);
+        ((ModuleProvider) getApplication()).createComponentActivity(this).inject(this);
+
         eventBus.register(this);
 
         setSupportActionBar(toolbar);
@@ -61,6 +51,7 @@ public class MainActivity extends AppCompatActivity
         tabLayout.addTab(tabLayout.newTab());
         tabLayout.addTab(tabLayout.newTab());
         tabLayout.setupWithViewPager(mViewPager, true);
+
     }
 
     @Override
@@ -80,34 +71,39 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
     }
 
+    @Event
+    public void onLoadingWeatherFailed(IOException e){
+        Toast.makeText(this, String.format("Loading weather failed: %s", e.toString()), Toast.LENGTH_SHORT).show();
+    }
+
     public static class SectionsPagerAdapter extends FragmentPagerAdapter
     {
 
-        private FragmentFactory fragmentFactory;
+        private ViewPagerFragmentFactory viewPagerFragmentFactory;
 
         @Inject
-        public SectionsPagerAdapter(FragmentManager fm, FragmentFactory fragmentFactory)
+        public SectionsPagerAdapter(FragmentManager fm, ViewPagerFragmentFactory viewPagerFragmentFactory)
         {
             super(fm);
-            this.fragmentFactory = fragmentFactory;
+            this.viewPagerFragmentFactory = viewPagerFragmentFactory;
         }
 
         @Override
         public Fragment getItem(int position)
         {
-            return fragmentFactory.getItem(position);
+            return viewPagerFragmentFactory.getItem(position);
         }
 
         @Override
         public int getCount()
         {
-            return fragmentFactory.getCount();
+            return viewPagerFragmentFactory.getCount();
         }
 
         @Override
         public CharSequence getPageTitle(int position)
         {
-            return fragmentFactory.getPageTitle(position);
+            return viewPagerFragmentFactory.getPageTitle(position);
         }
     }
 }

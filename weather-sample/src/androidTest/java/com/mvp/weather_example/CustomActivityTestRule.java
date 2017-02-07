@@ -1,7 +1,4 @@
-package com.mvp.weather_example; /**
- * Created by Andy on 19.01.2017.
- */
-
+package com.mvp.weather_example;
 
 import android.app.Activity;
 import android.app.Application;
@@ -17,7 +14,7 @@ import android.support.test.runner.lifecycle.Stage;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
-import com.mvp.weather_example.di.FragmentFactory;
+import com.mvp.weather_example.di.ViewPagerFragmentFactory;
 
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -25,19 +22,7 @@ import org.junit.runners.model.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * This rule provides functional testing of a single activity. The activity under test will be
- * launched before each test annotated with
- * <a href="http://junit.org/javadoc/latest/org/junit/Test.html"><code>Test</code></a> and before
- * methods annotated with
- * <a href="http://junit.sourceforge.net/javadoc/org/junit/Before.html"><code>Before</code></a>. It
- * will be terminated after the test is completed and methods annotated with
- * <a href="http://junit.sourceforge.net/javadoc/org/junit/After.html"><code>After</code></a> are
- * finished. During the duration of the test you will be able to manipulate your Activity directly.
- *
- * @param <T> The activity to test
- */
-public abstract class CustomActivityTestRule<T extends AppCompatActivity> extends UiThreadTestRule
+public class CustomActivityTestRule<T extends AppCompatActivity> extends UiThreadTestRule
 {
 
     private static final String TAG = "ActivityTestRule";
@@ -69,7 +54,7 @@ public abstract class CustomActivityTestRule<T extends AppCompatActivity> extend
         mInstrumentation = InstrumentationRegistry.getInstrumentation();
     }
 
-    protected abstract void onInjectDependencies(T activity);
+    protected void onInjectDependencies(T activity){ }
 
     private void registerLifecycleCallbacks()
     {
@@ -328,7 +313,7 @@ public abstract class CustomActivityTestRule<T extends AppCompatActivity> extend
         }
     }
 
-    public void with(FragmentFactory fragmentFactory)
+    public void with(ViewPagerFragmentFactory viewPagerFragmentFactory)
     {
 
     }

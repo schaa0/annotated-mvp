@@ -157,7 +157,9 @@ public class PresenterBuilderType extends AbsGeneratingType
             for (ModuleMethod moduleMethod : moduleMethods)
             {
                 ClassName providedInstanceClassName = moduleMethod.getClassType();
-                String parameterName = toParameterName(providedInstanceClassName);
+                ExecutableElement executableElement = moduleMethod.getExecutableElement();
+                String value = getValueFromNamedAnnotation(executableElement);
+                String parameterName = toParameterName(providedInstanceClassName) + value;
                 builder.addField(providedInstanceClassName, parameterName, Modifier.PRIVATE);
                 fieldNames.add(parameterName);
                 if (!moduleMethod.isConstructorParameter() && providingMethods.get(providedInstanceClassName.toString()) != null)
@@ -183,6 +185,8 @@ public class PresenterBuilderType extends AbsGeneratingType
             {
                 ClassName providedInstanceClassName = ClassName.bestGuess(method.getReturnType().toString());
                 String parameterName = toParameterName(providedInstanceClassName);
+                String value = getValueFromNamedAnnotation(method);
+                parameterName += value;
                 builder.addField(providedInstanceClassName, parameterName, Modifier.PRIVATE);
                 fieldNames.add(parameterName);
                 String methodName;
@@ -193,6 +197,7 @@ public class PresenterBuilderType extends AbsGeneratingType
                 {
                     methodName = "withInstance";
                 }
+                if (!value.equals("")) methodName += "Named" + value;
                 builder.addMethod(MethodSpec.methodBuilder(methodName)
                                             .addModifiers(Modifier.PUBLIC)
                                             .addParameter(providedInstanceClassName, parameterName)
@@ -200,7 +205,7 @@ public class PresenterBuilderType extends AbsGeneratingType
                                             .addCode(String.format("this.%s = %s;\n", parameterName, parameterName))
                                             .addCode("return this;\n")
                                             .build());
-                componentClassNamesToFieldNames.put(providedInstanceClassName.toString(), parameterName);
+                componentClassNamesToFieldNames.put(providedInstanceClassName.toString() + value, parameterName);
             }
             component.setFieldNames(fieldNames);
         }
@@ -220,18 +225,6 @@ public class PresenterBuilderType extends AbsGeneratingType
                                     .addParameter(gang.getViewClass(), "view")
                                     .addCode("this.view = view;\n")
                                     .addCode("return this;\n")
-                                    .returns(presenterBuilderClass)
-                                    .build());
-
-        ClassName testingContext = ClassName.get(shortestPackageName, "TestingContext");
-        builder.addField(testingContext, "testingContext", Modifier.PRIVATE);
-        builder.addMethod(MethodSpec.methodBuilder("with")
-                                    .addModifiers(Modifier.PROTECTED)
-                                    .addAnnotation(Override.class)
-                                    .addParameter(testingContext, "testingContext")
-                                    .addCode("this.testingContext = testingContext;\n" +
-                                            "controller.with(this.testingContext);\n" +
-                                            "return this;")
                                     .returns(presenterBuilderClass)
                                     .build());
 
@@ -263,6 +256,8 @@ public class PresenterBuilderType extends AbsGeneratingType
             {
                 ClassName typeName = ClassName.bestGuess(componentMethod.getReturnType().toString());
                 String parameterName = toParameterName(typeName);
+                String value = getValueFromNamedAnnotation(componentMethod);
+                parameterName += value;
                 constructorBuilder.addParameter(typeName, parameterName);
                 createComponentClassBuilder.addField(typeName, parameterName, Modifier.PRIVATE);
                 constructorInitializer.append(String.format("this.%s = %s;\n", parameterName, parameterName));
@@ -463,6 +458,8 @@ public class PresenterBuilderType extends AbsGeneratingType
         ParameterizedTypeName presenterComponent = ParameterizedTypeName.get(ClassName.get("com.mvp", "PresenterComponent"), gang.getViewClass(), gang.getPresenterClass());
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("build");
 
+        methodBuilder.addStatement("controller.with(provider.mvpEventBus())");
+
         for (ClassName module : modules)
         {
             buildInitializationCode(providingMethods, methodBuilder, module, moduleClassNamesToFieldNames, false);
@@ -533,7 +530,7 @@ public class PresenterBuilderType extends AbsGeneratingType
             {
                 ExecutableElement executableElement = methods.get(i);
                 ClassName paramClass = ClassName.bestGuess(executableElement.getReturnType().toString());
-                paramsBuilder.append(toParameterName(paramClass));
+                paramsBuilder.append(toParameterName(paramClass) + getValueFromNamedAnnotation(executableElement));
                 if (i < methods.size() - 1) paramsBuilder.append(", ");
             }
             String delegateName = component.simpleName().toString() + "Delegate";
@@ -542,7 +539,7 @@ public class PresenterBuilderType extends AbsGeneratingType
         }
 
         ClassName moduleEventBusClass = ClassName.get("com.mvp", "ModuleEventBus");
-        methodBuilder.addCode(".moduleEventBus(new $T(testingContext.eventBus()))\n", moduleEventBusClass);
+        methodBuilder.addCode(".moduleEventBus(provider.mvpEventBus())\n");
 
         methodBuilder.addCode(".build()\n).build();\n")
                      .endControlFlow()
@@ -552,6 +549,12 @@ public class PresenterBuilderType extends AbsGeneratingType
         builder.addMethod(methodBuilder.build());
 
         return builder;
+    }
+
+    private String getValueFromNamedAnnotation(ExecutableElement executableElement)
+    {
+        AnnotationValue annotationValue = Utils.getAnnotationValue(executableElement, "javax.inject.Named", "value");
+        return annotationValue == null || annotationValue.getValue() == null ? "" : annotationValue.getValue().toString();
     }
 
     private void buildInitializationCode(HashMap<String, ExecutableElement> providingMethods, MethodSpec.Builder methodBuilder, ClassName className, HashMap<String, String> componentOrModuleClassToFieldName, boolean isComponent)
