@@ -6,8 +6,8 @@ import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 
 import de.hda.simple_example.business.MainPresenter;
-import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.di.ComponentFragment;
 import de.hda.simple_example.di.DaggerComponentActivity;
 import de.hda.simple_example.di.DaggerComponentApplication;

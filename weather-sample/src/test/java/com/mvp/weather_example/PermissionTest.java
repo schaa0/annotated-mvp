@@ -11,18 +11,15 @@ import com.mvp.TestCase;
 import com.mvp.TodayWeatherFragmentController;
 import com.mvp.TodayWeatherPresenterBuilder;
 import com.mvp.ViewType;
-import com.mvp.annotation.ApplicationClass;
-import com.mvp.annotation.InjectUIView;
+import com.mvp.weather_example.di.TestModuleProvider;
 import com.mvp.weather_example.di.ViewPagerFragmentFactory;
-import com.mvp.weather_example.di.ModuleProvider;
-import com.mvp.weather_example.di.ModuleProviderDelegate;
 import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.WeatherService;
-import com.mvp.weather_example.view.WeatherView;
 import com.mvp.weather_example.view.MainActivity;
 import com.mvp.weather_example.view.TodayWeatherFragment;
+import com.mvp.weather_example.view.WeatherView;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -46,25 +43,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Created by Andy on 04.02.2017.
- */
-
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = BuildConfig.class, sdk = 21, application = ModuleProviderDelegate.class)
-@ApplicationClass(ModuleProvider.class)
+@Config(constants = BuildConfig.class, sdk = 21, application = TestModuleProvider.class)
 public class PermissionTest extends TestCase
 {
 
-    @InjectUIView
-    private SupportFragmentController<TodayWeatherFragment> todayWeatherFragmentController;
-
-    private ModuleProviderDelegate provider;
+    private TestModuleProvider provider;
 
     @Before
     public void setUp() throws Exception {
-        provider = (ModuleProviderDelegate) RuntimeEnvironment.application;
-        provider.with(new ViewPagerFragmentFactory(){
+        provider = (TestModuleProvider) RuntimeEnvironment.application;
+        provider.with(new ViewPagerFragmentFactory(provider.getApplicationContext()){
             @Override
             public Fragment getItem(int position)
             {

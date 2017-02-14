@@ -8,15 +8,11 @@ import android.support.v7.app.AppCompatActivity;
 
 import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 import com.mvp.weather_example.R;
 import com.mvp.weather_example.presenter.ThreeHourForecastPresenter;
 
-/**
- * Created by Andy on 23.12.2016.
- */
-
-@UIView(presenter = ThreeHourForecastPresenter.class)
+@View(presenter = ThreeHourForecastPresenter.class)
 public class ThreeHourForecastActivity extends AppCompatActivity implements IThreeHourForecastView, DialogInterface.OnClickListener{
 
     public static final String KEY_FORECAST = "forecast";

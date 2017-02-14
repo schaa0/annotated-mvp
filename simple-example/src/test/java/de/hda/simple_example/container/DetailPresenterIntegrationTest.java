@@ -10,13 +10,10 @@ import com.mvp.MainPresenterBuilder;
 import com.mvp.PresenterType;
 import com.mvp.TestCase;
 import com.mvp.ViewType;
-import com.mvp.annotation.ApplicationClass;
-import com.mvp.annotation.InjectUIView;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
@@ -26,37 +23,32 @@ import de.hda.simple_example.R;
 import de.hda.simple_example.business.DetailPresenter;
 import de.hda.simple_example.business.GithubService;
 import de.hda.simple_example.business.MainPresenter;
-import de.hda.simple_example.di.ModuleRepository;
 import de.hda.simple_example.model.Repository;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21)
-@ApplicationClass(value = ApplicationProvider.class)
+@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = TestApplicationProvider.class)
 public class DetailPresenterIntegrationTest extends TestCase {
 
-    @InjectUIView
     private SupportFragmentController<DetailFragment> detailFragmentController;
     private DetailPresenter detailPresenter;
     private IDetailView detailFragmentView;
 
-    @InjectUIView
     private SupportFragmentController<MainFragment> mainFragmentController;
     private MainPresenter mainPresenter;
     private IMainView mainFragmentView;
 
-    private ApplicationProvider provider;
+    private TestApplicationProvider provider;
 
     @Before
     public void setUp() throws Exception {
-        this.provider = (ApplicationProvider) RuntimeEnvironment.application;
+        this.provider = (TestApplicationProvider) RuntimeEnvironment.application;
     }
 
     private void buildMainPresenter(ViewType viewType, PresenterType presenterType) {

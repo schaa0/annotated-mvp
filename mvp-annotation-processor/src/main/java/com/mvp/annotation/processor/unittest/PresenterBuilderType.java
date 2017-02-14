@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import static com.mvp.annotation.processor.Utils.*;
+
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -28,6 +28,7 @@ import javax.lang.model.util.Types;
 
 import static com.mvp.annotation.processor.Utils.getAnnotationValue;
 import static com.mvp.annotation.processor.Utils.hasProvidesAnnotation;
+import static com.mvp.annotation.processor.Utils.toParameterName;
 
 /**
  * Created by Andy on 15.12.2016.

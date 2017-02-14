@@ -7,10 +7,6 @@ import com.mvp.weather_example.view.IThreeHourForecastView;
 
 import javax.inject.Inject;
 
-/**
- * Created by Andy on 23.12.2016.
- */
-
 @Presenter(needsModules = ModuleThreeHourForecast.class)
 public class ThreeHourForecastPresenter extends MvpPresenter<IThreeHourForecastView> {
 

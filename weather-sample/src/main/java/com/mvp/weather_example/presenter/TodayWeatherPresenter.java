@@ -16,10 +16,6 @@ import java.io.IOException;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
 @Presenter(needsComponents = {ComponentWeather.class})
 public class TodayWeatherPresenter extends WeatherPresenter
 {
@@ -42,19 +38,15 @@ public class TodayWeatherPresenter extends WeatherPresenter
             dispatchRequestStarted();
             final Weather weather = weatherService.getCurrentWeather(longitude, latitude, "metric");
             updateState(weather);
-            submitOnUiThread(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    getView().showWeather(lastTemperature, lastHumidity);
-                    weatherService.loadIcon(weather.icon(), TodayWeatherPresenter.this);
-                    dispatchRequestFinished();
-                }
+            submitOnUiThread(() -> {
+                getView().showWeather(lastTemperature, lastHumidity);
+                weatherService.loadIcon(weather.icon(), TodayWeatherPresenter.this);
+                dispatchRequestFinished();
             });
         } catch (IOException e)
         {
             dispatchEvent(e).toAny();
+            dispatchRequestFinished();
         }
     }
 
@@ -73,18 +65,12 @@ public class TodayWeatherPresenter extends WeatherPresenter
                         weatherService.getForecastWeather(longitude, latitude, "metric");
                 dispatchRequestFinished();
                 final String forecastData = weatherParser.parse(weather);
-                submitOnUiThread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        getView().showForecastWeather(forecastData);
-                    }
-                });
+                submitOnUiThread(() -> getView().showForecastWeather(forecastData));
             }
         } catch (Exception e)
         {
             e.printStackTrace();
+            dispatchRequestFinished();
         }
     }
 }

@@ -8,12 +8,11 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 
 import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 
 import java.util.List;
 
@@ -29,7 +28,7 @@ import de.hda.simple_example.model.Repository;
  * Created by Andy on 18.12.2016.
  */
 
-@UIView(presenter = MainPresenter.class)
+@View(presenter = MainPresenter.class)
 public class MainFragment extends Fragment implements IMainView, RepositoryAdapter.OnItemClickListener {
 
     public static final String TAG = MainFragment.class.getName();
@@ -37,7 +36,8 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
 
     @Presenter MainPresenter presenter;
     @Inject RepositoryAdapter repositoryAdapter;
-    @BindView(R.id.orientation) View orientationView;
+    @BindView(R.id.orientation)
+    android.view.View orientationView;
     @BindView(R.id.recyclerView) RecyclerView recyclerView;
     RecyclerView.OnScrollListener scrollListener;
     LinearLayoutManager lm;
@@ -57,7 +57,7 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public android.view.View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 

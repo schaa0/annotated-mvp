@@ -1,13 +1,7 @@
 package com.mvp.weather_example.di;
 
-import com.mvp.ModuleEventBus;
-
 import dagger.Module;
 import dagger.Provides;
-
-/**
- * Created by Andy on 23.12.2016.
- */
 
 @Module
 public class ModuleThreeHourForecast {

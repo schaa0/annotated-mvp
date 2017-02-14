@@ -1,15 +1,6 @@
 package com.mvp;
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.support.v4.app.LoaderManager;
 import android.support.v7.app.AppCompatActivity;
-
-import com.mvp.annotation.Presenter;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import dagger.Module;
 import dagger.Provides;

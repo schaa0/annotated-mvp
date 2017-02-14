@@ -2,9 +2,6 @@ package com.mvp;
 
 import android.os.Bundle;
 
-import com.mvp.MvpPresenter;
-import com.mvp.MvpView;
-
 /**
  * Created by Andy on 13.12.2016.
  */

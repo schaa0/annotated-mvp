@@ -1,6 +1,5 @@
 package de.hda.simple_example.business;
 
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.mvp.EventBus;

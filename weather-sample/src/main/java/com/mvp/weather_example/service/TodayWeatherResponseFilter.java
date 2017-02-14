@@ -4,10 +4,6 @@ import java.util.Calendar;
 
 import javax.inject.Inject;
 
-/**
- * Created by Andy on 31.01.2017.
- */
-
 public class TodayWeatherResponseFilter extends WeatherResponseFilter
 {
     @Inject

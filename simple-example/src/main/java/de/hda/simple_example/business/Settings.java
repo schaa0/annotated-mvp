@@ -5,6 +5,6 @@ package de.hda.simple_example.business;
  */
 
 public interface Settings {
-    void setLastQuery(String query);
-    String getLastQuery();
+    void saveLastQuery(String query);
+    String readLastQuery();
 }

@@ -4,20 +4,23 @@ import android.content.Context;
 import android.location.LocationManager;
 
 import com.bumptech.glide.Glide;
-import com.mvp.weather_example.service.LocationProvider;
-import com.mvp.weather_example.service.WeatherApi;
-import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.ImageRequestManagerImpl;
+import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.TodayWeatherResponseFilter;
 import com.mvp.weather_example.service.TomorrowWeatherResponseFilter;
+import com.mvp.weather_example.service.WeatherApi;
 import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.WeatherService;
+
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
 
 import dagger.Module;
 import dagger.Provides;
+import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -55,6 +58,10 @@ public class ModuleWeather {
         return new Retrofit.Builder()
                 .addConverterFactory(GsonConverterFactory.create())
                 .baseUrl("http://api.openweathermap.org")
+                .client(new OkHttpClient.Builder()
+                        .connectTimeout(5, TimeUnit.SECONDS)
+                        .readTimeout(5, TimeUnit.SECONDS)
+                        .build())
                 .build()
                 .create(WeatherApi.class);
     }

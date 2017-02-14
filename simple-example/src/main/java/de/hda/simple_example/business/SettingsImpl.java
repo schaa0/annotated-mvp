@@ -12,12 +12,12 @@ public class SettingsImpl implements Settings {
     }
 
     @Override
-    public void setLastQuery(String query) {
+    public void saveLastQuery(String query) {
         sharedPreferences.edit().putString(LAST_QUERY_KEY, query).apply();
     }
 
     @Override
-    public String getLastQuery() {
+    public String readLastQuery() {
         return sharedPreferences.getString(LAST_QUERY_KEY, "");
     }
 }

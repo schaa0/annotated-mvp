@@ -3,7 +3,6 @@ package com.mvp.weather_example;
 import com.google.gson.Gson;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
 import okhttp3.Request;
 import retrofit2.Call;

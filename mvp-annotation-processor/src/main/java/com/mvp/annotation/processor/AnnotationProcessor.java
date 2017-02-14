@@ -8,8 +8,8 @@ import com.mvp.annotation.Presenter;
 import com.mvp.annotation.PresenterScope;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
-import com.mvp.annotation.UIView;
 import com.mvp.annotation.UiThread;
+import com.mvp.annotation.View;
 import com.mvp.annotation.ViewEvent;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
@@ -111,7 +111,7 @@ public class AnnotationProcessor extends AbstractProcessor
         }
 
         if (uiViewClasses == null)
-            uiViewClasses = env.getElementsAnnotatedWith(UIView.class);
+            uiViewClasses = env.getElementsAnnotatedWith(View.class);
 
         applicationClassType = componentProvider.asType();
 
@@ -378,7 +378,7 @@ public class AnnotationProcessor extends AbstractProcessor
     private void findGangs(RoundEnvironment env)
     {
         gangs = new ArrayList<>();
-        Set<? extends Element> elementsAnnotatedWith = env.getElementsAnnotatedWith(UIView.class);
+        Set<? extends Element> elementsAnnotatedWith = env.getElementsAnnotatedWith(View.class);
         for (Element viewElement : elementsAnnotatedWith)
         {
             if (viewElement.getKind() == ElementKind.CLASS)
@@ -636,11 +636,11 @@ public class AnnotationProcessor extends AbstractProcessor
             TypeMirror activityType = element.asType();
             String packageName = extractPackage(activityType);
 
-            UIView uiView = element.getAnnotation(UIView.class);
+            View view = element.getAnnotation(View.class);
             TypeMirror presenter = null;
             try
             {
-                uiView.presenter();
+                view.presenter();
             } catch (MirroredTypeException ex)
             {
                 presenter = ex.getTypeMirror();
@@ -1384,7 +1384,7 @@ public class AnnotationProcessor extends AbstractProcessor
     {
         Set<String> supportedAnnotations = new HashSet<>();
         supportedAnnotations.add(Presenter.class.getCanonicalName());
-        supportedAnnotations.add(UIView.class.getCanonicalName());
+        supportedAnnotations.add(View.class.getCanonicalName());
         supportedAnnotations.add(Provider.class.getCanonicalName());
         supportedAnnotations.add(Generated.class.getCanonicalName());
         return supportedAnnotations;

@@ -9,8 +9,6 @@ import com.mvp.MainPresenterBuilder;
 import com.mvp.PresenterType;
 import com.mvp.TestCase;
 import com.mvp.ViewType;
-import com.mvp.annotation.ApplicationClass;
-import com.mvp.annotation.InjectUIView;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,7 +34,6 @@ import okhttp3.ResponseBody;
 import retrofit2.Response;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,25 +42,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = ApplicationProviderDelegate.class)
-@ApplicationClass(value = ApplicationProvider.class)
+@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = TestApplicationProvider.class)
 public class MainPresenterIntegrationTest extends TestCase {
 
-    @InjectUIView private SupportFragmentController<MainFragment> mainFragmentController;
+    private SupportFragmentController<MainFragment> mainFragmentController;
     private IMainView mainFragmentView;
-
-    @InjectUIView private ActivityController<MainActivity> mainActivityController;
+    private ActivityController<MainActivity> mainActivityController;
     private IView mainActivityView;
 
     private MainPresenter mainPresenter;
     private ActivityPresenter activityPresenter;
 
     private static final String ERROR_MESSAGE = "{ message: an error occured! }";
-    private ApplicationProviderDelegate provider;
+    private TestApplicationProvider provider;
 
     @Before
     public void setUp() throws Exception {
-        provider = (ApplicationProviderDelegate) RuntimeEnvironment.application;
+        provider = (TestApplicationProvider) RuntimeEnvironment.application;
     }
 
     @After

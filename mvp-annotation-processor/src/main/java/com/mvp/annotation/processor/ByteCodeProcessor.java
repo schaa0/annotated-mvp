@@ -1,10 +1,10 @@
 package com.mvp.annotation.processor;
 
 import com.mvp.annotation.ModuleParam;
-import com.mvp.annotation.Provider;
 import com.mvp.annotation.Presenter;
+import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -36,7 +36,6 @@ import javassist.bytecode.annotation.MemberValue;
 import javassist.bytecode.annotation.MemberValueVisitor;
 import javassist.bytecode.annotation.ShortMemberValue;
 import javassist.bytecode.annotation.StringMemberValue;
-import weaver.common.Scope;
 import weaver.common.WeaveEnvironment;
 import weaver.instrumentation.injection.ClassInjector;
 import weaver.processor.WeaverProcessor;
@@ -160,7 +159,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
             }else {
 
-                if (ctClass.hasAnnotation(UIView.class) && ctClass.subclassOf(activityClass)) {
+                if (ctClass.hasAnnotation(View.class) && ctClass.subclassOf(activityClass)) {
                     log("Start weaving " + ctClass.getSimpleName());
 
                     CtMethod[] methods1 = ctClass.getDeclaredMethods();
@@ -180,7 +179,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
                     injectComponentField(ctClass, classInjector);
                     injectDelegateLifeCycleIntoActivity(ctClass, classInjector, presenterClassName, presenterFieldName, componentPresenterInterfaceName);
                     writeClass(ctClass);
-                } else if (ctClass.hasAnnotation(UIView.class) && ctClass.subclassOf(fragmentClass)) {
+                } else if (ctClass.hasAnnotation(View.class) && ctClass.subclassOf(fragmentClass)) {
                     log("Start weaving " + ctClass.getSimpleName());
 
                     CtMethod[] methods1 = ctClass.getDeclaredMethods();
@@ -240,7 +239,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
     private String getPresenterClassName(CtClass ctClass) {
         AnnotationsAttribute visible = (AnnotationsAttribute) ctClass.getClassFile().getAttribute(AnnotationsAttribute.visibleTag);
-        MemberValue presenter = visible.getAnnotation(UIView.class.getCanonicalName()).getMemberValue("presenter");
+        MemberValue presenter = visible.getAnnotation(View.class.getCanonicalName()).getMemberValue("presenter");
         MyMemberValueVisitor visitor = new MyMemberValueVisitor();
         presenter.accept(visitor);
         return visitor.getClassName();

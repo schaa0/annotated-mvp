@@ -3,10 +3,10 @@ package com.mvp.weather_example;
 import android.support.test.espresso.ViewInteraction;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.mvp.annotation.ApplicationClass;
+import com.mvp.CustomActivityTestRule;
 import com.mvp.annotation.Stub;
-import com.mvp.weather_example.di.ModuleProvider;
-import com.mvp.weather_example.di.ModuleProviderDelegate;
+import com.mvp.uiautomator.UiAutomatorTestCase;
+import com.mvp.weather_example.di.AndroidTestModuleProvider;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
@@ -34,28 +34,21 @@ import static android.support.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static android.support.test.espresso.matcher.ViewMatchers.withId;
 import static android.support.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.any;
-import static org.hamcrest.Matchers.anything;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 @RunWith(AndroidJUnit4.class)
-@ApplicationClass(ModuleProvider.class)
-public class SimpleTest extends TestCase<ModuleProviderDelegate>
+public class SimpleTest extends UiAutomatorTestCase<AndroidTestModuleProvider>
 {
 
     @Mock
     WeatherApi weatherApi;
     @Mock
     ImageRequestManager imageRequestManager;
-
     @Stub
     DateProvider dateProvider = new StubDateProvider(2017, Calendar.JANUARY, 22, 23, 0, 0);
 
@@ -69,7 +62,7 @@ public class SimpleTest extends TestCase<ModuleProviderDelegate>
     {
         super.setUp();
         doNothing().when(imageRequestManager).load(anyString(), ArgumentMatchers.any(ImageRequestManager.IconCallback.class));
-        app().with(imageRequestManager);
+        dependencies().with(imageRequestManager);
     }
 
     @Test
@@ -78,12 +71,13 @@ public class SimpleTest extends TestCase<ModuleProviderDelegate>
         doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
                 .when(weatherApi).getForecastWeather(anyDouble(), anyDouble(), anyString(), anyString());
 
-        app().with(weatherApi).withNamedTomorrow(dateProvider).apply();
+        dependencies().with(weatherApi).withNamedTomorrow(dateProvider).apply();
 
         mActivity = rule.launchActivity(null);
+        allowPermissionsIfNeeded();
 
         ViewInteraction appCompatTextView = onView(
-                allOf(withText("Tomorrow"), isDisplayed()));
+                allOf(withText(R.string.tomorrow), isDisplayed()));
         appCompatTextView.perform(click());
 
         ViewInteraction appCompatImageView = onView(
@@ -120,9 +114,10 @@ public class SimpleTest extends TestCase<ModuleProviderDelegate>
         doReturn(new WeatherCall<>(TodayWeather.class, Responses.TODAY_WEATHER))
                 .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble(), anyString(), anyString());
 
-        app().with(weatherApi).apply();
+        dependencies().with(weatherApi).apply();
 
         mActivity = rule.launchActivity(null);
+        allowPermissionsIfNeeded();
 
         String tagToday = "android:switcher:" + R.id.container + ":0";
         TodayWeatherFragment todayWeatherFragment =

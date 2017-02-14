@@ -7,10 +7,6 @@ import com.mvp.weather_example.view.MainActivity;
 import dagger.Module;
 import dagger.Provides;
 
-/**
- * Created by Andy on 21.01.2017.
- */
-
 @Module
 public class ModuleViewPagerFragmentFactory
 {
@@ -23,7 +19,7 @@ public class ModuleViewPagerFragmentFactory
 
     @Provides
     public ViewPagerFragmentFactory fragmentFactory() {
-        return new ViewPagerFragmentFactory();
+        return new ViewPagerFragmentFactory(activity.getApplicationContext());
     }
 
     @Provides

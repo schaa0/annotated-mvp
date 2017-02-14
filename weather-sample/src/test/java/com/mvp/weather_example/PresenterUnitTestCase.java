@@ -5,8 +5,10 @@ import android.os.Looper;
 
 import com.mvp.MvpEventBus;
 import com.mvp.MvpPresenter;
-import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 
+import org.junit.After;
+import org.junit.Before;
+import org.mockito.InjectMocks;
 import org.robolectric.util.concurrent.RoboExecutorService;
 
 import java.lang.reflect.Field;
@@ -14,23 +16,38 @@ import java.lang.reflect.Field;
 public class PresenterUnitTestCase
 {
 
-    protected void injectFields(MvpPresenter<?> presenter)
+    private MvpEventBus eventBus;
+
+    @Before
+    public void setUp() throws Exception {
+        eventBus = new MvpEventBus(new Handler(Looper.myLooper()), new RoboExecutorService());
+        findAndSetFields();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+
+    }
+
+    private void findAndSetFields() throws IllegalAccessException, NoSuchFieldException
     {
-        try
+        Field[] fields = getClass().getDeclaredFields();
+        for (Field field : fields)
         {
-            findAndSetField(presenter, "executorService", new RoboExecutorService());
-            findAndSetField(presenter, "handler", new Handler(Looper.myLooper()));
-            findAndSetField(presenter, "eventBus", new MvpEventBus());
-        } catch (NoSuchFieldException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
-        {
-            e.printStackTrace();
+            if (field.getAnnotation(InjectMocks.class) != null){
+                field.setAccessible(true);
+                Object obj = field.get(this);
+                if (MvpPresenter.class.isAssignableFrom(obj.getClass())){
+                    findAndSetField(obj, "executorService", new RoboExecutorService());
+                    findAndSetField(obj, "handler", new Handler(Looper.myLooper()));
+                    findAndSetField(obj, "eventBus", eventBus);
+                }
+            }
         }
     }
 
     private void findAndSetField(Object obj, String fieldName, Object objectToInject) throws NoSuchFieldException, IllegalAccessException {
+
         findAndSetField(obj, obj.getClass(), fieldName, objectToInject);
     }
 

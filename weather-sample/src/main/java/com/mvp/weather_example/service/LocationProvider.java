@@ -9,10 +9,6 @@ import android.os.Bundle;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Andy on 04.02.2017.
- */
-
 public class LocationProvider implements LocationListener
 {
 

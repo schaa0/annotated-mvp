@@ -2,7 +2,6 @@ package com.mvp;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.VisibleForTesting;
 import android.util.Log;
 
 import com.mvp.annotation.OnEventListener;
@@ -12,8 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.inject.Singleton;
 
 public class MvpEventBus implements IMvpEventBus, EventBus {
 

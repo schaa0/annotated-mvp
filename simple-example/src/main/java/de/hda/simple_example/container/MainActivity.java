@@ -8,25 +8,23 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.mvp.annotation.InjectUIView;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 
 import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.R;
+import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.business.CustomService;
 import de.hda.simple_example.event.Contract;
 
 
-@UIView(presenter = ActivityPresenter.class)
+@View(presenter = ActivityPresenter.class)
 public class MainActivity extends AppCompatActivity implements IView {
 
     public static final String KEY_SEARCHVIEW_STATE = "KEY_SEARCHVIEW_STATE";
@@ -88,10 +86,10 @@ public class MainActivity extends AppCompatActivity implements IView {
                 return true;
             }
         });
-        searchView.setOnQueryTextFocusChangeListener(new View.OnFocusChangeListener() {
+        searchView.setOnQueryTextFocusChangeListener(new android.view.View.OnFocusChangeListener() {
 
             @Override
-            public void onFocusChange(View v, boolean hasFocus) {
+            public void onFocusChange(android.view.View v, boolean hasFocus) {
                 isFocused = hasFocus;
             }
         });
@@ -182,12 +180,6 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         internalRestoreInstanceState(savedInstanceState.<SavedState>getParcelable(KEY_SEARCHVIEW_STATE));
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
     }
 
 

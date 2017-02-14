@@ -7,8 +7,8 @@ import com.mvp.annotation.Presenter;
 import javax.inject.Inject;
 
 import de.hda.simple_example.container.IView;
-import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.event.Contract;
 
 @Presenter(needsComponents = {ComponentApplication.class} )
 public class ActivityPresenter extends MvpPresenter<IView> {
@@ -63,13 +63,13 @@ public class ActivityPresenter extends MvpPresenter<IView> {
     }
 
     public void sendEventSearchRepositories(String query) {
-        settings.setLastQuery(query);
+        settings.saveLastQuery(query);
         dispatchEvent(new Contract.SearchRepositoriesEvent(query)).toAny();
     }
 
     public void onSearchViewInitialized() {
         if (shouldSetLastQueryFromCache) {
-            String lastQuery = settings.getLastQuery();
+            String lastQuery = settings.readLastQuery();
             if (!lastQuery.isEmpty())
                 getView().setLastQuery(lastQuery);
         }

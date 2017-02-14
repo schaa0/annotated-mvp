@@ -1,14 +1,20 @@
 package com.mvp.weather_example.di;
 
+import android.content.Context;
 import android.support.v4.app.Fragment;
 
+import com.mvp.weather_example.R;
 import com.mvp.weather_example.view.TodayWeatherFragment;
 import com.mvp.weather_example.view.TomorrowWeatherFragment;
 
-import javax.inject.Inject;
-
 public class ViewPagerFragmentFactory
 {
+
+    private Context context;
+
+    public ViewPagerFragmentFactory(Context context){
+        this.context = context;
+    }
 
     private static final int PAGE_COUNT = 2;
 
@@ -27,9 +33,9 @@ public class ViewPagerFragmentFactory
     {
         switch (position) {
             case 0:
-                return "Today";
+                return context.getString(R.string.today);
             case 1:
-                return "Tomorrow";
+                return context.getString(R.string.tomorrow);
             default:
                 throw new IllegalArgumentException(String.format("invalid position : %d", position));
         }

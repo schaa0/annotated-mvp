@@ -6,18 +6,14 @@ import android.location.Location;
 import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
-import com.mvp.annotation.ApplicationClass;
-import com.mvp.weather_example.di.ModuleProvider;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
-import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
-import com.mvp.weather_example.service.WeatherService;
+import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.view.WeatherView;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -34,7 +30,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -47,10 +42,10 @@ import static org.mockito.Mockito.when;
 public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
 {
 
-    public static final int RC_PERM_FINE_LOCATION = TodayWeatherPresenter.REQUEST_CODE_PERM_ACCESS_FINE_LOCATION;
-    public static final int RC_PERM_COARSE_LOCATION = TodayWeatherPresenter.REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION;
-    public static final String PERM_FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
-    public static final String PERM_COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
+    static final int RC_PERM_FINE_LOCATION = TodayWeatherPresenter.REQUEST_CODE_PERM_ACCESS_FINE_LOCATION;
+    static final int RC_PERM_COARSE_LOCATION = TodayWeatherPresenter.REQUEST_CODE_PERM_ACCESS_COARSE_LOCATION;
+    static final String PERM_FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
+    static final String PERM_COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
 
     @Mock
     private LocationProvider locationProvider;
@@ -58,23 +53,22 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
     private WeatherResponseFilter weatherParser;
     @Mock
     private WeatherService weatherService;
+    @Mock
+    private WeatherView view;
 
     @InjectMocks
     private TodayWeatherPresenter presenter;
 
-    private WeatherView view;
-
-    @Before
+    @Override
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        view = mock(WeatherView.class);
+        super.setUp();
         presenter.setView(view);
-        injectFields(presenter);
     }
 
-    @After
+    @Override
     public void tearDown() throws Exception {
-
+        super.tearDown();
     }
 
     @Test

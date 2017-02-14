@@ -1,10 +1,5 @@
 package com.mvp.annotation.processor;
 
-/**
- * Created by Andy on 10.12.2016.
- */
-
-import java.util.Calendar;
 import java.util.List;
 
 import javassist.ClassPool;

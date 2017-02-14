@@ -6,6 +6,8 @@
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" filepath="$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" />
       <module fileurl="file://$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" filepath="$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mvp-test/mvp-test.iml" filepath="$PROJECT_DIR$/mvp-test/mvp-test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mvp-test-uiautomator/mvp-test-uiautomator.iml" filepath="$PROJECT_DIR$/mvp-test-uiautomator/mvp-test-uiautomator.iml" />
       <module fileurl="file://$PROJECT_DIR$/simple-example/simple-example.iml" filepath="$PROJECT_DIR$/simple-example/simple-example.iml" />
       <module fileurl="file://$PROJECT_DIR$/weather-sample/weather-sample.iml" filepath="$PROJECT_DIR$/weather-sample/weather-sample.iml" />
     </modules>

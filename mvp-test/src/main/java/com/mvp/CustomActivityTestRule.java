@@ -1,4 +1,4 @@
-package com.mvp.weather_example;
+package com.mvp;
 
 import android.app.Activity;
 import android.app.Application;
@@ -13,8 +13,6 @@ import android.support.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import android.support.test.runner.lifecycle.Stage;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-
-import com.mvp.weather_example.di.ViewPagerFragmentFactory;
 
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -49,7 +47,7 @@ public class CustomActivityTestRule<T extends AppCompatActivity> extends UiThrea
     public CustomActivityTestRule(Class<T> activityClass)
     {
         mActivityClass = activityClass;
-        mInitialTouchMode = false;
+        mInitialTouchMode = true;
         mLaunchActivity = false;
         mInstrumentation = InstrumentationRegistry.getInstrumentation();
     }
@@ -192,7 +190,7 @@ public class CustomActivityTestRule<T extends AppCompatActivity> extends UiThrea
      * Prefer
      * <a href="http://junit.sourceforge.net/javadoc/org/junit/Before.html"><code>Before</code></a>
      * over this method. This method should usually not be overwritten directly in tests and only be
-     * used by subclasses of com.mvp.weather_example.CustomActivityTestRule  to get notified when the activity is created and
+     * used by subclasses of com.mvp.CustomActivityTestRule  to get notified when the activity is created and
      * visible but test runs.
      */
     protected void afterActivityLaunched()
@@ -311,11 +309,6 @@ public class CustomActivityTestRule<T extends AppCompatActivity> extends UiThrea
             afterActivityFinished();
             mActivity = null;
         }
-    }
-
-    public void with(ViewPagerFragmentFactory viewPagerFragmentFactory)
-    {
-
     }
 
     /**

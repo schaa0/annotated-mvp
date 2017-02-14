@@ -4,23 +4,18 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.DetailPresenter;
 import de.hda.simple_example.model.Repository;
 
-/**
- * Created by Andy on 18.12.2016.
- */
-
-@UIView(presenter = DetailPresenter.class)
+@View(presenter = DetailPresenter.class)
 public class DetailFragment extends Fragment implements IDetailView{
 
     public static final String TAG = DetailFragment.class.getName();
@@ -36,7 +31,7 @@ public class DetailFragment extends Fragment implements IDetailView{
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public android.view.View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.detail_layout, container, false);
     }
 

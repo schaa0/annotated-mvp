@@ -10,7 +10,9 @@ import java.lang.annotation.Target;
  */
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-public @interface InjectUIView {
-//    Class<?> viewClass();
+@Target({ElementType.FIELD, ElementType.TYPE})
+public @interface Generate
+{
+    Class<?>[] views();
+    Class<?> application();
 }

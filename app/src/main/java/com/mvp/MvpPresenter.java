@@ -2,21 +2,16 @@ package com.mvp;
 
 import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.Looper;
-import android.support.annotation.VisibleForTesting;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.OnEventListener;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import javax.inject.Inject;
@@ -68,8 +63,8 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     public void onDestroyed() {
         if (!destroyed) {
             destroyed = true;
-            /*for (Map.Entry<String,Future<?>> entry : tasks.entrySet())
-                entry.getValue().cancel(false);*/
+            for (Map.Entry<String,Future<?>> entry : tasks.entrySet())
+                entry.getValue().cancel(false);
             unregisterEventListeners();
             tasks.clear();
             if (executorService != AsyncTask.THREAD_POOL_EXECUTOR)
@@ -100,7 +95,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
 
     protected synchronized void tryCancelTask(String key) {
         if (tasks.containsKey(key)) {
-            //tasks.get(key).cancel(false);
+            tasks.get(key).cancel(false);
             tasks.remove(key);
         }
     }
@@ -113,7 +108,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
                 runnable.run();
                 if (tasks.containsKey(taskId)) {
                     Future<?> future = tasks.get(taskId);
-                    //future.cancel(false);
+                    future.cancel(false);
                     tasks.remove(taskId);
                 }
             }

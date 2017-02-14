@@ -10,19 +10,12 @@ import com.mvp.weather_example.stubs.StubDateProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.text.ParseException;
 import java.util.Calendar;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import javax.inject.Inject;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class UnitTestWeatherParser

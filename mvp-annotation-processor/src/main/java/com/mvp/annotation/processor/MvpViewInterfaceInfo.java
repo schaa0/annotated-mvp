@@ -1,7 +1,5 @@
 package com.mvp.annotation.processor;
 
-import com.squareup.javapoet.ClassName;
-
 import java.util.HashMap;
 import java.util.List;
 
@@ -10,7 +8,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
 public class MvpViewInterfaceInfo {

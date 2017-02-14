@@ -7,8 +7,6 @@ import android.support.annotation.IdRes;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 
-import javax.inject.Inject;
-
 public class MvpViewDelegate<V extends MvpViewInLayout<P>, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P> {
 
     public static final int CONTAINER_ACTIVITY = 0x1;

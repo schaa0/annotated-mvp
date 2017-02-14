@@ -1,9 +1,5 @@
 package com.mvp;
 
-import android.util.Log;
-
-import javax.inject.Singleton;
-
 import dagger.Module;
 import dagger.Provides;
 

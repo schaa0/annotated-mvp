@@ -1,7 +1,6 @@
 package de.hda.simple_example.di;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
 import com.mvp.ComponentEventBus;
 import com.mvp.EventBus;

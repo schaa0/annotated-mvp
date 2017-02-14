@@ -14,8 +14,8 @@ import android.widget.Toast;
 import com.mvp.EventBus;
 import com.mvp.annotation.Event;
 import com.mvp.weather_example.R;
-import com.mvp.weather_example.di.ViewPagerFragmentFactory;
 import com.mvp.weather_example.di.ModuleProvider;
+import com.mvp.weather_example.di.ViewPagerFragmentFactory;
 import com.mvp.weather_example.event.PermissionEvent;
 
 import java.io.IOException;
@@ -24,16 +24,18 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.Unbinder;
 
 public class MainActivity extends AppCompatActivity
 {
 
-    public @BindView(R.id.container) ViewPager mViewPager;
-    public @BindView(R.id.tab_layout1) TabLayout tabLayout;
-    public @BindView(R.id.toolbar) Toolbar toolbar;
+    @BindView(R.id.container) ViewPager mViewPager;
+    @BindView(R.id.tab_layout1) TabLayout tabLayout;
+    @BindView(R.id.toolbar) Toolbar toolbar;
 
-    public @Inject SectionsPagerAdapter mSectionsPagerAdapter;
-    public @Inject EventBus eventBus;
+    @Inject public SectionsPagerAdapter mSectionsPagerAdapter;
+    @Inject public EventBus eventBus;
+    private Unbinder unbinder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -41,7 +43,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ButterKnife.bind(this);
+        unbinder = ButterKnife.bind(this);
         ((ModuleProvider) getApplication()).createComponentActivity(this).inject(this);
 
         eventBus.register(this);
@@ -67,6 +69,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy()
     {
+        unbinder.unbind();
         eventBus.unregister(this);
         super.onDestroy();
     }

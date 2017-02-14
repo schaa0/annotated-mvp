@@ -1,14 +1,9 @@
 package com.mvp;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
-import android.support.v7.app.AppCompatActivity;
-
-import java.lang.ref.WeakReference;
 
 public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresenter<V>> implements LoaderManager.LoaderCallbacks<P>   {
 

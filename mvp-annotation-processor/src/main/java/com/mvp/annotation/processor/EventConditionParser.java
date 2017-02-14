@@ -1,7 +1,5 @@
 package com.mvp.annotation.processor;
 
-import com.mvp.annotation.Event;
-
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

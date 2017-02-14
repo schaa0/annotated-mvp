@@ -15,9 +15,9 @@ import java.util.List;
 import javax.inject.Inject;
 
 import de.hda.simple_example.container.IMainView;
-import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.di.ModuleMainPresenterState;
+import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
 import retrofit2.Call;

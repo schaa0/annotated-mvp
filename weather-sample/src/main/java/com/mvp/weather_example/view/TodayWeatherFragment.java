@@ -1,15 +1,11 @@
 package com.mvp.weather_example.view;
 
 import com.mvp.annotation.Presenter;
-import com.mvp.annotation.UIView;
+import com.mvp.annotation.View;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 import com.mvp.weather_example.presenter.WeatherPresenter;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
-@UIView(presenter = TodayWeatherPresenter.class)
+@View(presenter = TodayWeatherPresenter.class)
 public class TodayWeatherFragment extends WeatherFragment
 {
 

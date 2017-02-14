@@ -1,11 +1,12 @@
-package com.mvp.weather_example;
+package com.mvp;
 
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.test.runner.AndroidJUnitRunner;
-import android.util.Log;
+
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,26 +17,20 @@ public abstract class AbstractRunner<T extends Application> extends AndroidJUnit
     private LifecycleCallback callback;
 
     @Override
-    public void onCreate(Bundle arguments)
-    {
-        super.onCreate(arguments);
-    }
-
-    @Override
     public Application newApplication(ClassLoader cl, String className, Context context) throws InstantiationException, IllegalAccessException, ClassNotFoundException
     {
-        application = (T) super.newApplication(cl, internalGetApplicationClassName(), context);
+        application = (T) super.newApplication(cl, parseApplicationClassName(), context);
         callback = new LifecycleCallback();
         application.registerActivityLifecycleCallbacks(callback);
         return application;
     }
 
-    private String internalGetApplicationClassName()
+    private String parseApplicationClassName()
     {
-        return getApplicationClassName() + "Delegate";
+        Class<?> applicationClass = ((Class<?>)
+                ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0]);
+        return applicationClass.getPackage().getName() + ".AndroidTest" + applicationClass.getSimpleName();
     }
-
-    protected abstract String getApplicationClassName();
 
     public T getApplication()
     {

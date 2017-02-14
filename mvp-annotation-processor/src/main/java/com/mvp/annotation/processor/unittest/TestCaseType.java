@@ -6,8 +6,6 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 
-import java.lang.reflect.Type;
-
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Modifier;
 

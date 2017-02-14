@@ -34,22 +34,19 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
     {
         try{
             dispatchRequestStarted();
-            final Weather weather =
-                    weatherService.getTomorrowWeather(longitude, latitude, "metric", FORECAST_DAYS);
+            final Weather weather = weatherService.getTomorrowWeather(longitude, latitude, "metric", FORECAST_DAYS);
             updateState(weather);
-            submitOnUiThread(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    weatherService.loadIcon(weather.icon(), TomorrowWeatherPresenter.this);
-                    getView().showWeather(lastTemperature, lastHumidity);
-                    dispatchRequestFinished();
-                }
-            });
+            submitOnUiThread(() -> postWeatherResult(weather));
         }catch(IOException e){
             dispatchEvent(e).toAny();
         }
+    }
+
+    private void postWeatherResult(Weather weather)
+    {
+        weatherService.loadIcon(weather.icon(), TomorrowWeatherPresenter.this);
+        getView().showWeather(lastTemperature, lastHumidity);
+        dispatchRequestFinished();
     }
 
     @BackgroundThread
@@ -63,23 +60,22 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
                 dispatchRequestStarted();
                 double longitude = lastKnownLocation.getLongitude();
                 double latitude = lastKnownLocation.getLatitude();
-                ThreeHoursForecastWeather weather =
-                        weatherService.getForecastWeather(longitude, latitude, "metric");
+                ThreeHoursForecastWeather weather = weatherService.getForecastWeather(longitude, latitude, "metric");
                 final String forecastData = weatherParser.parse(weather);
-                submitOnUiThread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        getView().showForecastWeather(forecastData);
-                        dispatchRequestFinished();
-                    }
-                });
+                submitOnUiThread(() -> postForecastWeather(forecastData));
             }
         }catch(IOException e) {
             dispatchEvent(e).toAny();
         }catch(ParseException e) {
             e.printStackTrace();
+        }finally{
+            dispatchRequestFinished();
         }
+    }
+
+    private void postForecastWeather(String forecastData)
+    {
+        getView().showForecastWeather(forecastData);
+        dispatchRequestFinished();
     }
 }

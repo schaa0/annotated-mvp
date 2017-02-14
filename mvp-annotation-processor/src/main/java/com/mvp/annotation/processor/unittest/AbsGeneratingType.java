@@ -5,7 +5,6 @@ import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
 
-import javax.annotation.Generated;
 import javax.annotation.processing.Filer;
 
 /**
@@ -34,13 +33,17 @@ public abstract class AbsGeneratingType implements GeneratingClass {
     protected abstract TypeSpec.Builder build();
 
     protected String concatSimpleNameWithPackage(String simpleClassName){
-        return packageName + "." + simpleClassName;
+        if (packageName.equals(""))
+            return simpleClassName;
+        else
+            return packageName + "." + simpleClassName;
     }
 
     protected void writeClass(TypeSpec.Builder builder) {
         try {
             JavaFile.builder(packageName, builder.build())
                     .addFileComment("Generated code")
+                    .indent("   ")
                     .build().writeTo(filer);
         } catch (IOException e) {
             //e.printStackTrace();

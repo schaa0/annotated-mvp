@@ -39,18 +39,20 @@ public class ApplicationDelegate extends AbsGeneratingType
 
     private Types typeUtils;
     private TypeElement provider;
+    private String prefix;
     private HashMap<String, ExecutableElement> moduleMethods;
     private HashMap<String, ExecutableElement> componentMethods;
     private Elements elementUtils;
     private HashMap<TypeMirror, ArrayList<ExecutableElement>> moduleToInstanceType = new HashMap<>();
     private HashMap<TypeMirror, ArrayList<TypeMirror>> componentsToInstanceType = new HashMap<>();
     private List<String> constructorInjectedDependencies = new ArrayList<>();
-    public ApplicationDelegate(Filer filer, String packageName, Types typeUtils, Elements elementUtils, TypeElement provider)
+    public ApplicationDelegate(Filer filer, String packageName, Types typeUtils, Elements elementUtils, TypeElement provider, String prefix)
     {
         super(filer, packageName);
         this.typeUtils = typeUtils;
         this.elementUtils = elementUtils;
         this.provider = provider;
+        this.prefix = prefix;
         moduleMethods = Utils.findProvidingMethodsOfModules(typeUtils, provider);
         componentMethods = Utils.findProvidingMethodsOfComponents(typeUtils, provider);
     }
@@ -61,7 +63,7 @@ public class ApplicationDelegate extends AbsGeneratingType
         parseInstancesOfModules();
         parseInstancesOfComponents();
         HashMap<String, ExecutableElement> providingMethods = findProvidingMethods(typeUtils, provider);
-        String delegateClass = provider.getSimpleName().toString() + "Delegate";
+        String delegateClass = prefix + provider.getSimpleName().toString();
         TypeSpec.Builder builder = TypeSpec.classBuilder(delegateClass);
         builder.superclass(ClassName.get(provider));
         builder.addModifiers(Modifier.PUBLIC);
@@ -232,7 +234,10 @@ public class ApplicationDelegate extends AbsGeneratingType
                 VariableElement parameter = parameters.get(i);
                 TypeMirror typeMirror = parameter.asType();
                 ExecutableElement e = providingMethods.get(typeMirror.toString());
-                params += "this." + e.getSimpleName().toString() + "()";
+                if (e != null)
+                    params += "this." + e.getSimpleName().toString() + "()";
+                else
+                    params += parameter.getSimpleName().toString();
                 if (i < parameters.size() - 1) params += ",";
             }
             methodBuilder.addStatement(String.format("return new %sDelegate(super.%s(%s))", s, executableElement.getSimpleName().toString(), params));

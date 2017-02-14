@@ -1,13 +1,14 @@
 
 package com.mvp.weather_example.model.today;
 
-import java.util.List;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.mvp.weather_example.model.Weather;
+
+import java.util.List;
 
 public class TodayWeather implements Weather, Parcelable
 {

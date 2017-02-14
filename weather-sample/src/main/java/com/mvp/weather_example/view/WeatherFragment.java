@@ -22,7 +22,6 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-
 public abstract class WeatherFragment extends Fragment implements WeatherView
 {
 

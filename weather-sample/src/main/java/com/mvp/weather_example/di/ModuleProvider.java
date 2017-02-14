@@ -7,10 +7,6 @@ import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
 @Provider
 public class ModuleProvider extends BaseApplicationProvider {
 
@@ -45,6 +41,7 @@ public class ModuleProvider extends BaseApplicationProvider {
         return new ModuleViewPagerFragmentFactory(activity);
     }
 
+    @ProvidesComponent
     public ComponentActivity createComponentActivity(AppCompatActivity activity)
     {
         return DaggerComponentActivity.builder()

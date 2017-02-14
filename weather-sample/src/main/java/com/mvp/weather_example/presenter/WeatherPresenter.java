@@ -16,10 +16,6 @@ import com.mvp.weather_example.service.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.view.WeatherView;
 
-/**
- * Created by Andy on 22.12.2016.
- */
-
 public abstract class WeatherPresenter extends MvpPresenter<WeatherView> implements LocationProvider.OnLocationChangedListener, ImageRequestManager.IconCallback
 {
 
@@ -111,39 +107,18 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
         {
             final double longitude = location.getLongitude();
             final double latitude = location.getLatitude();
-            submit("loadWeather", new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    loadWeather(longitude, latitude);
-                }
-            });
+            submit("loadWeather", () -> loadWeather(longitude, latitude));
         }
     }
 
     protected void dispatchRequestStarted()
     {
-        submitOnUiThread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                getView().requestStarted();
-            }
-        });
+        submitOnUiThread(() -> getView().requestStarted());
     }
 
     protected void dispatchRequestFinished()
     {
-        submitOnUiThread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                getView().requestFinished();
-            }
-        });
+        submitOnUiThread(() -> getView().requestFinished());
     }
 
     private boolean requestPermissionsIfNeeded(WeatherView view)
@@ -202,13 +177,6 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
     public void onIconLoaded(final Bitmap resource)
     {
         this.icon = resource;
-        submitOnUiThread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                getView().showIcon(resource);
-            }
-        });
+        submitOnUiThread(() -> getView().showIcon(resource));
     }
 }

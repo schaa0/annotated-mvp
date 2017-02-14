@@ -1,1 +1,1 @@
-include ':app', ':mvp-annotation-processor', ':mvp-annotation', ':simple-example', ':weather-sample'
+include ':app', ':mvp-annotation-processor', ':mvp-annotation', ':simple-example', ':weather-sample', ':mvp-test', ':mvp-test-uiautomator'

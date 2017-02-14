@@ -1,4 +1,4 @@
-package com.mvp.weather_example;
+package com.mvp;
 
 import android.app.Application;
 import android.support.test.InstrumentationRegistry;
@@ -9,14 +9,12 @@ import org.mockito.MockitoAnnotations;
 
 import java.lang.reflect.Field;
 
-import static org.mockito.Mockito.mock;
-
 public abstract class TestCase<T extends Application>
 {
 
     private T app;
 
-    public T app()
+    public T dependencies()
     {
         return app;
     }

@@ -11,6 +11,8 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/mvp-annotation" />
             <option value="$PROJECT_DIR$/mvp-annotation-processor" />
+            <option value="$PROJECT_DIR$/mvp-test" />
+            <option value="$PROJECT_DIR$/mvp-test-uiautomator" />
             <option value="$PROJECT_DIR$/simple-example" />
             <option value="$PROJECT_DIR$/weather-sample" />
           </set>
