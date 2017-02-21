@@ -77,6 +77,9 @@ public class ApplicationDelegate extends AbsGeneratingType
             {
 
                 TypeMirror typeMirror = method.getReturnType();
+                if (typeMirror.toString().equals("com.mvp.IMvpEventBus")){
+                    continue;
+                }
                 String key = buildKey(method);
                 if (!foundInstances.contains(key))
                 {
@@ -335,15 +338,15 @@ public class ApplicationDelegate extends AbsGeneratingType
 
     private String addWithMethod(TypeSpec.Builder builder, String delegateClass, ExecutableElement method, TypeMirror typeMirror)
     {
-        ClassName module = ClassName.bestGuess(typeMirror.toString());
+        ClassName theType = ClassName.bestGuess(typeMirror.toString());
         String valueFromNamedAnnotation = getValueFromNamedAnnotation(method);
-        String name = toParameterName(module) + valueFromNamedAnnotation;
-        builder.addField(module, name, Modifier.PRIVATE);
+        String name = toParameterName(theType) + valueFromNamedAnnotation;
+        builder.addField(theType, name, Modifier.PRIVATE);
         String methodName = "with";
         methodName += (!valueFromNamedAnnotation.equals("")) ? "Named" + valueFromNamedAnnotation : "";
         builder.addMethod(MethodSpec.methodBuilder(methodName)
                                     .addModifiers(Modifier.PUBLIC)
-                                    .addParameter(module, name)
+                                    .addParameter(theType, name)
                                     .addStatement(String.format("this.%s = %s", name, name))
                                     .addStatement("return this")
                                     .returns(ClassName.bestGuess(getPackageName() + "." + delegateClass))

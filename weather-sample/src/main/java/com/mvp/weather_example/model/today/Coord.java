@@ -1,4 +1,3 @@
-
 package com.mvp.weather_example.model.today;
 
 import android.os.Parcel;
@@ -10,73 +9,63 @@ import com.google.gson.annotations.SerializedName;
 public class Coord implements Parcelable
 {
 
-    @SerializedName("lon")
-    @Expose
-    private double lon;
-    @SerializedName("lat")
-    @Expose
-    private double lat;
-    public final static Parcelable.Creator<Coord> CREATOR = new Creator<Coord>() {
+    public final static Parcelable.Creator<Coord> CREATOR = new Creator<Coord>()
+    {
 
 
         @SuppressWarnings({
-            "unchecked"
-        })
-        public Coord createFromParcel(Parcel in) {
+                                  "unchecked"
+                          })
+        public Coord createFromParcel(Parcel in)
+        {
             Coord instance = new Coord();
-            instance.lon = ((double) in.readValue((double.class.getClassLoader())));
-            instance.lat = ((double) in.readValue((double.class.getClassLoader())));
+            instance.lon = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.lat = ((Double) in.readValue((Double.class.getClassLoader())));
             return instance;
         }
 
-        public Coord[] newArray(int size) {
+        public Coord[] newArray(int size)
+        {
             return (new Coord[size]);
         }
 
-    }
-    ;
+    };
+    @SerializedName("lon")
+    @Expose
+    private Double lon;
+    @SerializedName("lat")
+    @Expose
+    private Double lat;
 
-    /**
-     * No args constructor for use in serialization
-     * 
-     */
-    public Coord() {
-    }
-
-    /**
-     * 
-     * @param lon
-     * @param lat
-     */
-    public Coord(double lon, double lat) {
-        super();
-        this.lon = lon;
-        this.lat = lat;
-    }
-
-    public double getLon() {
+    public Double getLon()
+    {
         return lon;
     }
 
-    public void setLon(double lon) {
+    public void setLon(Double lon)
+    {
         this.lon = lon;
     }
 
-    public double getLat() {
+    public Double getLat()
+    {
         return lat;
     }
 
-    public void setLat(double lat) {
+    public void setLat(Double lat)
+    {
         this.lat = lat;
     }
 
-    public void writeToParcel(Parcel dest, int flags) {
+    public void writeToParcel(Parcel dest, int flags)
+    {
         dest.writeValue(lon);
         dest.writeValue(lat);
     }
 
-    public int describeContents() {
-        return  0;
+    public int describeContents()
+    {
+        return 0;
     }
 
 }

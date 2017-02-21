@@ -24,10 +24,6 @@ import de.hda.simple_example.R;
 import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.model.Repository;
 
-/**
- * Created by Andy on 18.12.2016.
- */
-
 @View(presenter = MainPresenter.class)
 public class MainFragment extends Fragment implements IMainView, RepositoryAdapter.OnItemClickListener {
 
@@ -35,10 +31,12 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     private static final String KEY_ADAPTER = "KEY_ADAPTER";
 
     @Presenter MainPresenter presenter;
+
     @Inject RepositoryAdapter repositoryAdapter;
-    @BindView(R.id.orientation)
-    android.view.View orientationView;
+
+    @BindView(R.id.orientation) android.view.View orientationView;
     @BindView(R.id.recyclerView) RecyclerView recyclerView;
+
     RecyclerView.OnScrollListener scrollListener;
     LinearLayoutManager lm;
 

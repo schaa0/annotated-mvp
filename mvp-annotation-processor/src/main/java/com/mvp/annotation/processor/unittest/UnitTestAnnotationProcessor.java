@@ -9,12 +9,14 @@ import com.squareup.javapoet.ClassName;
 
 import java.lang.annotation.Annotation;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
@@ -25,6 +27,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 
 import static com.mvp.annotation.processor.Utils.getAnnotationValue;
 
@@ -40,6 +43,8 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
     private Set<Element> viewElements = new LinkedHashSet<>();
 
     private boolean processed = false;
+    private Messager messager;
+    private boolean shouldSkipAllRounds = false;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -48,31 +53,36 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         typeUtils = processingEnv.getTypeUtils();
         elementUtils = processingEnv.getElementUtils();
         filer = processingEnv.getFiler();
+        messager = processingEnv.getMessager();
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment)
     {
+        if (shouldSkipAllRounds)
+            return true;
         if (processed)
             return true;
+
         processed = true;
+
         Set<? extends Element> rootElements = roundEnvironment.getRootElements();
         if (viewElements.isEmpty())
             viewElements = findElementsAnnotatedWith(View.class, rootElements);
-        if (provider == null)
-        {
-            Element testClass = findElementAnnotatedWith(Provider.class, rootElements);
-            if (testClass != null)
-            {
-                provider = elementUtils.getTypeElement(ClassName.bestGuess(testClass.asType().toString()).toString());
-            }
-        }
 
         String packageName = "com.mvp";
         TypeElement typeElement = elementUtils.getTypeElement("org.robolectric.RobolectricTestRunner");
         TypeElement typeElement1 = elementUtils.getTypeElement("android.support.test.runner.AndroidJUnit4");
+
         if (typeElement == null && typeElement1 == null)
         {
+            Iterator<Element> iterator = findElementsAnnotatedWith(Provider.class, rootElements).iterator();
+            if (!iterator.hasNext()){
+                messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
+                shouldSkipAllRounds = true;
+                return true;
+            }
+            provider = elementUtils.getTypeElement(iterator.next().asType().toString());
             if (!viewElements.isEmpty()){
                 new TriggerType(filer, packageName + ".trigger", viewElements, ClassName.get(provider)).generate();
             }
@@ -80,8 +90,21 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         }
 
         TypeElement triggerElement = elementUtils.getTypeElement(packageName + ".trigger.Trigger");
+        if (triggerElement == null)
+        {
+            messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Trigger element has not been generated!");
+            shouldSkipAllRounds = true;
+            return true;
+        }
+
         AnnotationValue views = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "views");
         AnnotationValue application = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "application");
+        if (application == null || application.getValue() == null){
+            messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
+            shouldSkipAllRounds = true;
+            return true;
+        }
+
         Object applicationClass =  application.getValue();
         provider = elementUtils.getTypeElement(ClassName.bestGuess(applicationClass.toString().replace(".class", "")).toString());
 
@@ -201,10 +224,6 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
     public Set<String> getSupportedAnnotationTypes()
     {
         Set<String> supportedAnnotations = new HashSet<>();
-        /*supportedAnnotations.add(Generate.class.getCanonicalName());
-        supportedAnnotations.add(ApplicationClass.class.getCanonicalName());
-        supportedAnnotations.add("org.mockito.Mock");
-        supportedAnnotations.add(Stub.class.getCanonicalName());*/
         supportedAnnotations.add("*");
         return supportedAnnotations;
     }

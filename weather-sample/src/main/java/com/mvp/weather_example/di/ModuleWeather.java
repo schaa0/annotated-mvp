@@ -4,6 +4,8 @@ import android.content.Context;
 import android.location.LocationManager;
 
 import com.bumptech.glide.Glide;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.ImageRequestManagerImpl;

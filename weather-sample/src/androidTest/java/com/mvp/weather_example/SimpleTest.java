@@ -4,7 +4,6 @@ import android.support.test.espresso.ViewInteraction;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.mvp.CustomActivityTestRule;
-import com.mvp.annotation.Stub;
 import com.mvp.uiautomator.UiAutomatorTestCase;
 import com.mvp.weather_example.di.AndroidTestModuleProvider;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
@@ -49,7 +48,7 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestModuleProvider>
     WeatherApi weatherApi;
     @Mock
     ImageRequestManager imageRequestManager;
-    @Stub
+
     DateProvider dateProvider = new StubDateProvider(2017, Calendar.JANUARY, 22, 23, 0, 0);
 
     private MainActivity mActivity;

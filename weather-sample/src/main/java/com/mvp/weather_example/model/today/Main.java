@@ -1,4 +1,3 @@
-
 package com.mvp.weather_example.model.today;
 
 import android.os.Parcel;
@@ -10,118 +9,138 @@ import com.google.gson.annotations.SerializedName;
 public class Main implements Parcelable
 {
 
-    @SerializedName("temp")
-    @Expose
-    private double temp;
-    @SerializedName("pressure")
-    @Expose
-    private int pressure;
-    @SerializedName("humidity")
-    @Expose
-    private int humidity;
-    @SerializedName("temp_min")
-    @Expose
-    private double tempMin;
-    @SerializedName("temp_max")
-    @Expose
-    private double tempMax;
-    public final static Parcelable.Creator<Main> CREATOR = new Creator<Main>() {
+    public final static Parcelable.Creator<Main> CREATOR = new Creator<Main>()
+    {
 
 
         @SuppressWarnings({
-            "unchecked"
-        })
-        public Main createFromParcel(Parcel in) {
+                                  "unchecked"
+                          })
+        public Main createFromParcel(Parcel in)
+        {
             Main instance = new Main();
-            instance.temp = ((double) in.readValue((double.class.getClassLoader())));
-            instance.pressure = ((int) in.readValue((int.class.getClassLoader())));
-            instance.humidity = ((int) in.readValue((int.class.getClassLoader())));
-            instance.tempMin = ((double) in.readValue((double.class.getClassLoader())));
-            instance.tempMax = ((double) in.readValue((double.class.getClassLoader())));
+            instance.temp = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.pressure = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.humidity = ((Integer) in.readValue((Integer.class.getClassLoader())));
+            instance.tempMin = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.tempMax = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.seaLevel = ((Double) in.readValue((Double.class.getClassLoader())));
+            instance.grndLevel = ((Double) in.readValue((Double.class.getClassLoader())));
             return instance;
         }
 
-        public Main[] newArray(int size) {
+        public Main[] newArray(int size)
+        {
             return (new Main[size]);
         }
 
-    }
-    ;
+    };
+    @SerializedName("temp")
+    @Expose
+    private Double temp;
+    @SerializedName("pressure")
+    @Expose
+    private Double pressure;
+    @SerializedName("humidity")
+    @Expose
+    private Integer humidity;
+    @SerializedName("temp_min")
+    @Expose
+    private Double tempMin;
+    @SerializedName("temp_max")
+    @Expose
+    private Double tempMax;
+    @SerializedName("sea_level")
+    @Expose
+    private Double seaLevel;
+    @SerializedName("grnd_level")
+    @Expose
+    private Double grndLevel;
 
-    /**
-     * No args constructor for use in serialization
-     * 
-     */
-    public Main() {
-    }
-
-    /**
-     * 
-     * @param humidity
-     * @param pressure
-     * @param tempMax
-     * @param temp
-     * @param tempMin
-     */
-    public Main(double temp, int pressure, int humidity, double tempMin, double tempMax) {
-        super();
-        this.temp = temp;
-        this.pressure = pressure;
-        this.humidity = humidity;
-        this.tempMin = tempMin;
-        this.tempMax = tempMax;
-    }
-
-    public double getTemp() {
+    public Double getTemp()
+    {
         return temp;
     }
 
-    public void setTemp(double temp) {
+    public void setTemp(Double temp)
+    {
         this.temp = temp;
     }
 
-    public int getPressure() {
+    public Double getPressure()
+    {
         return pressure;
     }
 
-    public void setPressure(int pressure) {
+    public void setPressure(Double pressure)
+    {
         this.pressure = pressure;
     }
 
-    public int getHumidity() {
+    public Integer getHumidity()
+    {
         return humidity;
     }
 
-    public void setHumidity(int humidity) {
+    public void setHumidity(Integer humidity)
+    {
         this.humidity = humidity;
     }
 
-    public double getTempMin() {
+    public Double getTempMin()
+    {
         return tempMin;
     }
 
-    public void setTempMin(double tempMin) {
+    public void setTempMin(Double tempMin)
+    {
         this.tempMin = tempMin;
     }
 
-    public double getTempMax() {
+    public Double getTempMax()
+    {
         return tempMax;
     }
 
-    public void setTempMax(double tempMax) {
+    public void setTempMax(Double tempMax)
+    {
         this.tempMax = tempMax;
     }
 
-    public void writeToParcel(Parcel dest, int flags) {
+    public Double getSeaLevel()
+    {
+        return seaLevel;
+    }
+
+    public void setSeaLevel(Double seaLevel)
+    {
+        this.seaLevel = seaLevel;
+    }
+
+    public Double getGrndLevel()
+    {
+        return grndLevel;
+    }
+
+    public void setGrndLevel(Double grndLevel)
+    {
+        this.grndLevel = grndLevel;
+    }
+
+    public void writeToParcel(Parcel dest, int flags)
+    {
         dest.writeValue(temp);
         dest.writeValue(pressure);
         dest.writeValue(humidity);
         dest.writeValue(tempMin);
         dest.writeValue(tempMax);
+        dest.writeValue(seaLevel);
+        dest.writeValue(grndLevel);
     }
 
-    public int describeContents() {
-        return  0;
+    public int describeContents()
+    {
+        return 0;
     }
 
 }

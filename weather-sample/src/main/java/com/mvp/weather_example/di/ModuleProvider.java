@@ -22,16 +22,6 @@ public class ModuleProvider extends BaseApplicationProvider {
     }
 
     @ProvidesModule
-    public ModuleWeather moduleWeather(){
-        return new ModuleWeather(this.getApplicationContext());
-    }
-
-    @ProvidesComponent
-    public ComponentWeather componentWeather(){
-        return componentWeather;
-    }
-
-    @ProvidesModule
     public ModuleThreeHourForecast getThreeHourForecast(String threeHourForecastWeather){
         return new ModuleThreeHourForecast(threeHourForecastWeather);
     }
@@ -41,7 +31,16 @@ public class ModuleProvider extends BaseApplicationProvider {
         return new ModuleViewPagerFragmentFactory(activity);
     }
 
+    @ProvidesModule
+    public ModuleWeather moduleWeather(){
+        return new ModuleWeather(this.getApplicationContext());
+    }
+
     @ProvidesComponent
+    public ComponentWeather componentWeather(){
+        return componentWeather;
+    }
+
     public ComponentActivity createComponentActivity(AppCompatActivity activity)
     {
         return DaggerComponentActivity.builder()

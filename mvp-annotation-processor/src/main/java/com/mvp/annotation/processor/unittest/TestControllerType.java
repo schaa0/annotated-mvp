@@ -66,7 +66,7 @@ public class TestControllerType extends AbsGeneratingType {
 
         MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
-                .addCode(constructorCode, constructorCodeParams);
+                .addCode(constructorCode, (Object[]) constructorCodeParams);
 
         if (isFragment()){
             constructorBuilder.addParameter(gang.getActivityClass(), "fragment");

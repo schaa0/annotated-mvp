@@ -10,7 +10,7 @@ import javax.inject.Named;
 
 import dagger.Component;
 
-@Component(modules = { ModuleWeather.class, ModuleEventBus.class}, dependencies = {ComponentEventBus.class})
+@Component(modules = { ModuleWeather.class}, dependencies = {ComponentEventBus.class})
 @ApplicationScope
 public interface ComponentWeather {
     LocationProvider locationProvider();

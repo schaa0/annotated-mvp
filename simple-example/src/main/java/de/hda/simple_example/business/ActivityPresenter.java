@@ -57,7 +57,7 @@ public class ActivityPresenter extends MvpPresenter<IView> {
         showOrHideProgressBar();
     }
 
-    @Event(thread = Event.UI_THREAD)
+    @Event
     public void onGithubServiceError(Contract.GithubServiceErrorEvent errorEvent){
         getView().showError(errorEvent);
     }

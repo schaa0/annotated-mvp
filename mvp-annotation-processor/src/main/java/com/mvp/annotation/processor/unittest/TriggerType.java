@@ -46,7 +46,7 @@ public class TriggerType extends AbsGeneratingType
         }
         params += "}";
         AnnotationSpec.Builder annotationBuilder = AnnotationSpec.builder(Generate.class);
-        annotationBuilder.addMember("views", params, vars);
+        annotationBuilder.addMember("views", params, (Object[]) vars);
         annotationBuilder.addMember("application", "$T.class", applicationClassName);
         return TypeSpec.classBuilder("Trigger")
                 .addModifiers(Modifier.ABSTRACT)

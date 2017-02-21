@@ -5,9 +5,6 @@ import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.view.View;
 
-/**
- * Created by Andy on 02.12.2016.
- */
 public class SavedState extends View.BaseSavedState {
 
     private boolean focused;

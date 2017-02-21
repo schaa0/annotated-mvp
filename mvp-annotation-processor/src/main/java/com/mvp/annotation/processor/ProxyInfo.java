@@ -110,12 +110,12 @@ public class ProxyInfo {
                 }
 
                 if (!typeMirrorFormat.equals("")) {
-                    typeMirrorFormat = String.format(typeMirrorFormat, typeNames);
+                    typeMirrorFormat = String.format(typeMirrorFormat, (Object[]) typeNames);
                     typeMirrorFormat = ", " + typeMirrorFormat;
                 }
 
                 if (!parameterFormat.equals("")){
-                    parameterFormat = String.format(parameterFormat, parameters);
+                    parameterFormat = String.format(parameterFormat, (Object[]) parameters);
                     parameterFormat = ", " + parameterFormat;
                 }
 

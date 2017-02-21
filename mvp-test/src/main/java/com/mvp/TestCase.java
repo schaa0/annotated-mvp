@@ -29,7 +29,8 @@ public abstract class TestCase<T extends Application>
 
     @After
     public void tearDown() throws Exception {
-        resetFields(app.getClass());
+        if (app != null)
+            resetFields(app.getClass());
     }
 
     private void resetFields(Class<?> clazz) throws Exception{

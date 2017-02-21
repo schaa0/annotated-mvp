@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +87,7 @@ public class AnnotationProcessor extends AbstractProcessor
     private Map<String, String> presenterFieldNames = new HashMap<>();
 
     private boolean alreadyProcessed = false;
+    private boolean shouldSkipAllRounds = false;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -99,6 +101,10 @@ public class AnnotationProcessor extends AbstractProcessor
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env)
     {
 
+        if (shouldSkipAllRounds){
+            return true;
+        }
+
         APP_COMPAT_ACTIVITY = ClassName.get("android.support.v7.app", "AppCompatActivity");
         APP_COMPAT_ACTIVITY_TYPE = elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType();
 
@@ -107,7 +113,13 @@ public class AnnotationProcessor extends AbstractProcessor
 
         if (componentProvider == null)
         {
-            componentProvider = env.getElementsAnnotatedWith(Provider.class).iterator().next();
+            Iterator<? extends Element> iterator = env.getElementsAnnotatedWith(Provider.class).iterator();
+            if (!iterator.hasNext()){
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
+                shouldSkipAllRounds = true;
+                return true;
+            }
+            componentProvider = iterator.next();
         }
 
         if (uiViewClasses == null)
@@ -139,7 +151,18 @@ public class AnnotationProcessor extends AbstractProcessor
                     continue;
                 }
 
+                if (!derivesFromBasePresenterClass(declaredClassType, presenterType)){
+                    /* Presenter must derive from MvpPresenter class */
+                    continue;
+                }
+
                 TypeMirror viewType = findViewTypeOfPresenter(presenterType, classType);
+
+                if (viewType == null) {
+                    /* Presenter does not specify a view type as generic argument */
+                    continue;
+                }
+
                 List<TypeMirror> basePresenters = findBasePresenters(classType, classType);
                 Collections.reverse(basePresenters);
 
@@ -148,26 +171,18 @@ public class AnnotationProcessor extends AbstractProcessor
                     throw new IllegalStateException(String.format("class: %s is annotated with @Presenter, but does not derive from: %s", classType, presenterType));
                 }
 
-                ClassName viewImplementationClassName = null;
-
-                for (Gang gang : gangs)
-                {
-                    if (gang.getElementPresenterClass().toString().equals(element.toString()))
-                    {
-                        viewImplementationClassName = ClassName.bestGuess(gang.getElementActivityClass().asType().toString());
-                        break;
-                    }
-                }
+                ClassName viewImplementationClassName = findViewImplementationClassName(element);
 
                 if (viewImplementationClassName == null)
                 {
-                    break;
+                    /* Implementation of view interface is missing */
+                    continue;
                 }
 
                 String presenterPackage = extractPackage(classType);
 
                 AnnotationMemberModuleClasses annotationMemberModuleClasses = new AnnotationMemberModuleClasses(presenterPackage).parse(element);
-                AnnotationMemberComponentClasses annotationMemberComponentClasses = new AnnotationMemberComponentClasses(presenterPackage).parse(element);
+                AnnotationMemberComponentClasses annotationMemberComponentClasses = new AnnotationMemberComponentClasses().parse(element);
 
                 String simpleComponentPresenterClassName = "Component" + element.getSimpleName().toString();
                 TypeSpec.Builder builder = TypeSpec.interfaceBuilder(simpleComponentPresenterClassName);
@@ -183,13 +198,9 @@ public class AnnotationProcessor extends AbstractProcessor
                 ClassName annotationClass = ClassName.get("dagger", "Component");
                 ClassName moduleAnnotation = ClassName.get("dagger", "Module");
 
-                String componentDelegateBinderClassName = viewImplementationClassName.packageName() + ".Component" + viewImplementationClassName.simpleName() + "DelegateBinder";
-                String delegateBinderClassName = viewImplementationClassName.packageName() + "." + viewImplementationClassName.simpleName() + "DelegateBinder";
-                ClassName modulePresenterClass = ClassName.bestGuess("Module" + element.getSimpleName().toString());
-
                 builder.addAnnotation(AnnotationSpec.builder(annotationClass)
-                                                    .addMember("modules", CodeBlock.of(moduleFormat, moduleClasses))
-                                                    .addMember("dependencies", componentFormat, componentClasses)
+                                                    .addMember("modules", CodeBlock.of(moduleFormat, (Object[]) moduleClasses))
+                                                    .addMember("dependencies", componentFormat, (Object[]) componentClasses)
                                                     .build());
 
                 builder.addMethod(MethodSpec.methodBuilder("view")
@@ -211,14 +222,12 @@ public class AnnotationProcessor extends AbstractProcessor
                                             .returns(ClassName.bestGuess("android.support.v4.app.LoaderManager"))
                                             .build());
 
-                ParameterizedTypeName componentPresenterType = ParameterizedTypeName.get(ClassName.get("com.mvp", "ComponentPresenter"), ClassName.bestGuess(delegateBinderClassName), TypeName.get(viewType), TypeName.get(classType), ClassName.bestGuess(componentDelegateBinderClassName), modulePresenterClass);
-
                 builder.addModifiers(Modifier.PUBLIC);
 
                 ParameterizedTypeName mvpPresenterModule = ParameterizedTypeName.get(ClassName.get("com.mvp", "MvpPresenterModule"), ClassName.get(viewType), ClassName.get(classType));
                 ParameterizedTypeName presenterComponent = ParameterizedTypeName.get(ClassName.get("com.mvp", "PresenterComponent"), ClassName.get(viewType), ClassName.get(classType));
 
-                builder.addSuperinterface(componentPresenterType);
+                builder.addSuperinterface(presenterComponent);
 
                 writeClass(builder.build(), presenterPackage);
 
@@ -280,6 +289,34 @@ public class AnnotationProcessor extends AbstractProcessor
         return true;
     }
 
+    private ClassName findViewImplementationClassName(Element element)
+    {
+        ClassName viewImplementationClassName = null;
+
+        for (Gang gang : gangs)
+        {
+            if (gang.getElementPresenterClass().toString().equals(element.toString()))
+            {
+                viewImplementationClassName = ClassName.bestGuess(gang.getElementActivityClass().asType().toString());
+                break;
+            }
+        }
+        return viewImplementationClassName;
+    }
+
+    private boolean isSubtypeIfErased(TypeMirror type, TypeMirror targetType) {
+
+        TypeMirror erasedTargetType = typeUtils.erasure(targetType);
+        TypeMirror erasedType = typeUtils.erasure(type);
+
+        return typeUtils.isSubtype(erasedType, erasedTargetType);
+    }
+
+    private boolean derivesFromBasePresenterClass(DeclaredType declaredClassType, DeclaredType presenterType)
+    {
+        return isSubtypeIfErased(declaredClassType, presenterType);
+    }
+
     private void generateOnPresenterLoadedListeners()
     {
 
@@ -337,7 +374,7 @@ public class AnnotationProcessor extends AbstractProcessor
                     String methodName = method.getSimpleName().toString();
                     TypeMirror parameterType = method.getParameters().get(0).asType();
                     TypeMirror returnType = method.getReturnType();
-                    //allGeneratedEventListenerClasses.get(declaringType.asType().toString()).add(convertDataClassToString(parameterType));
+
                     Map<TypeMirror, List<Interceptor>> typeMirrorListMap = customInterceptors.get(declaringType.asType().toString());
                     if (!typeMirrorListMap.containsKey(parameterType))
                     {
@@ -453,6 +490,9 @@ public class AnnotationProcessor extends AbstractProcessor
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = moduleClass.packageName() + "." + moduleClass.simpleName();
                 ExecutableElement executableElement = providingMethods.get(o);
+                if (executableElement == null){
+                    throw new IllegalStateException(String.format("Module %s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", o));
+                }
                 List<? extends VariableElement> parameters = executableElement.getParameters();
                 String parameterFormat = "";
                 String[] parameterFieldNames = new String[parameters.size()];
@@ -487,6 +527,8 @@ public class AnnotationProcessor extends AbstractProcessor
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = componentClass.packageName() + "." + componentClass.simpleName();
                 ExecutableElement executableElement = providingMethods.get(o);
+                if (executableElement == null)
+                    throw new IllegalStateException(String.format("Component %s is not provided by a method, which is annotated with @ProvidesComponent, in the application class!", o));
                 StringBuilder params = new StringBuilder();
                 List<? extends VariableElement> parameters = executableElement.getParameters();
                 for (int position = 0; position < parameters.size(); position++)
@@ -494,6 +536,8 @@ public class AnnotationProcessor extends AbstractProcessor
                     VariableElement variable = parameters.get(position);
                     TypeMirror type = variable.asType();
                     ExecutableElement moduleMethod = providingMethods.get(type.toString());
+                    if (moduleMethod == null)
+                        throw new IllegalStateException(String.format("%s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", o));
                     params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
                     if (position < parameters.size() - 1)
                         params.append(", ");
@@ -577,7 +621,7 @@ public class AnnotationProcessor extends AbstractProcessor
                                                             .addParameter(APP_COMPAT_ACTIVITY, "activity")
                                                             .addParameter(presenterComponent, "presenterComponent")
                                                             .addParameter(ClassName.get("com.mvp", "ModuleEventBus"), "moduleEventBus")
-                                                            .addCode(constructCode, classNameParams)
+                                                            .addCode(constructCode, (Object[]) classNameParams)
                                                             .build())
                                        .addField(FieldSpec.builder(ClassName.bestGuess(activityPackage + "." + delegateClassName), "delegate")
                                                           .addAnnotation(Inject.class)
@@ -1064,11 +1108,6 @@ public class AnnotationProcessor extends AbstractProcessor
                          .build();
     }
 
-    private void note(String key, String message)
-    {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%s: %s", key, message));
-    }
-
     private void writeClass(TypeSpec clazz)
     {
         try
@@ -1215,8 +1254,6 @@ public class AnnotationProcessor extends AbstractProcessor
                                                .addParameter(TypeName.get(dataClass), "data", Modifier.FINAL)
                                                .addParameter(arrTargetType, "target", Modifier.FINAL);
 
-        note("before", "applying interceptors");
-
         processEventBuilder.beginControlFlow("if (e.get() != null)");
 
         String finalStatement = "%s";
@@ -1280,15 +1317,12 @@ public class AnnotationProcessor extends AbstractProcessor
         builder.addStatement(addCallNextEventListenerStatement());
         builder.endControlFlow();
 
-        note("after", "applying interceptors");
-
         if (viewMethodName != null)
         {
             String statement = "e.get().getView()." + viewMethodName + (declaredParameterAvailable ? "(data);" : "();");
             if (interceptors != null && !interceptors.isEmpty())
             {
                 String threadType = interceptors.get(interceptors.size() - 1).getThreadType();
-                note("last interceptor thread type", threadType);
                 if (threadType.equals(Event.UI_THREAD))
                     finalStatement = String.format(finalStatement, addStatement(statement));
                 else
@@ -1298,11 +1332,6 @@ public class AnnotationProcessor extends AbstractProcessor
                 finalStatement = String.format(finalStatement, addStatement(statement));
             }
         }
-
-        /*if (interceptors != null && !interceptors.isEmpty()) {
-            interceptors.removeAll(usedInterceptors);
-            usedInterceptors.clear();
-        }*/
 
         finalStatement = String.format(finalStatement, addCallNextEventListenerStatement());
         finalStatement = finalStatement.replace("%s", "");
@@ -1481,13 +1510,12 @@ public class AnnotationProcessor extends AbstractProcessor
     private class AnnotationMemberComponentClasses
     {
 
-        private String presenterPackage;
         private String componentFormat;
         private ClassName[] classes;
 
-        public AnnotationMemberComponentClasses(String presenterPackage)
+        public AnnotationMemberComponentClasses()
         {
-            this.presenterPackage = presenterPackage;
+
         }
 
         public String getComponentFormat()

@@ -1,4 +1,3 @@
-
 package com.mvp.weather_example.model.today;
 
 import android.os.Parcel;
@@ -10,58 +9,48 @@ import com.google.gson.annotations.SerializedName;
 public class Clouds implements Parcelable
 {
 
-    @SerializedName("all")
-    @Expose
-    private int all;
-    public final static Parcelable.Creator<Clouds> CREATOR = new Creator<Clouds>() {
+    public final static Parcelable.Creator<Clouds> CREATOR = new Creator<Clouds>()
+    {
 
 
         @SuppressWarnings({
-            "unchecked"
-        })
-        public Clouds createFromParcel(Parcel in) {
+                                  "unchecked"
+                          })
+        public Clouds createFromParcel(Parcel in)
+        {
             Clouds instance = new Clouds();
-            instance.all = ((int) in.readValue((int.class.getClassLoader())));
+            instance.all = ((Integer) in.readValue((Integer.class.getClassLoader())));
             return instance;
         }
 
-        public Clouds[] newArray(int size) {
+        public Clouds[] newArray(int size)
+        {
             return (new Clouds[size]);
         }
 
-    }
-    ;
+    };
+    @SerializedName("all")
+    @Expose
+    private Integer all;
 
-    /**
-     * No args constructor for use in serialization
-     * 
-     */
-    public Clouds() {
-    }
-
-    /**
-     * 
-     * @param all
-     */
-    public Clouds(int all) {
-        super();
-        this.all = all;
-    }
-
-    public int getAll() {
+    public Integer getAll()
+    {
         return all;
     }
 
-    public void setAll(int all) {
+    public void setAll(Integer all)
+    {
         this.all = all;
     }
 
-    public void writeToParcel(Parcel dest, int flags) {
+    public void writeToParcel(Parcel dest, int flags)
+    {
         dest.writeValue(all);
     }
 
-    public int describeContents() {
-        return  0;
+    public int describeContents()
+    {
+        return 0;
     }
 
 }
