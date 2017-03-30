@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Android-MVP.iml" filepath="$PROJECT_DIR$/Android-MVP.iml" />
+      <module fileurl="file://$PROJECT_DIR$/annotated-mvp.iml" filepath="$PROJECT_DIR$/annotated-mvp.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" filepath="$PROJECT_DIR$/mvp-annotation/mvp-annotation.iml" />
       <module fileurl="file://$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" filepath="$PROJECT_DIR$/mvp-annotation-processor/mvp-annotation-processor.iml" />

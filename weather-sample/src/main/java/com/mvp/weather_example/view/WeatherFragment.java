@@ -25,10 +25,10 @@ import butterknife.OnClick;
 public abstract class WeatherFragment extends Fragment implements WeatherView
 {
 
-    public @BindView(R.id.temperatureTextView) TextView temperatureTextView;
-    @BindView(R.id.humidityTextView) TextView humidityTextView;
-    @BindView(R.id.imageView) ImageView imageView;
-    @BindView(R.id.progressBar) ProgressBar progressBar;
+    public TextView temperatureTextView;
+    TextView humidityTextView;
+    ImageView imageView;
+    ProgressBar progressBar;
 
     @Nullable
     @Override
@@ -39,10 +39,13 @@ public abstract class WeatherFragment extends Fragment implements WeatherView
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        ButterKnife.bind(this, getView());
+        temperatureTextView = (TextView) getView().findViewById(R.id.temperatureTextView);
+        humidityTextView = (TextView) getView().findViewById(R.id.humidityTextView);
+        imageView = (ImageView) getView().findViewById(R.id.imageView);
+        progressBar = (ProgressBar) getView().findViewById(R.id.progressBar);
+        imageView.setOnClickListener((view) -> onWeatherIconClicked());
     }
 
-    @OnClick(R.id.imageView)
     protected abstract void onWeatherIconClicked();
 
     @Override

@@ -46,7 +46,7 @@ dependencies {
     testCompile 'org.robolectric:robolectric:3.2.2'
     testCompile 'org.robolectric:shadows-support-v4:3.2.2'
     testCompile 'org.mockito:mockito-core:2.2.0'
-    testCompile 'com.google.dagger:dagger:2.7'
+    testCompile 'com.google.dagger:dagger:2.10'
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:25.1.1'
     compile 'com.android.support:design:25.1.1'
@@ -55,10 +55,10 @@ dependencies {
     compile 'com.squareup.retrofit2:converter-gson:2.1.0'
     compile 'com.google.code.gson:gson:2.7'
     compile 'com.github.bumptech.glide:glide:3.7.0'
-    compile 'com.jakewharton:butterknife:8.4.0'
+    compile 'com.jakewharton:butterknife:8.5.1'
 
-    annotationProcessor 'com.jakewharton:butterknife-compiler:8.4.0'
-    annotationProcessor 'com.google.dagger:dagger-compiler:2.7'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.5.1'
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.10'
     androidTestCompile 'com.android.support.test:runner:0.5', {
         exclude group: 'com.android.support', module: 'support-annotations'
     }

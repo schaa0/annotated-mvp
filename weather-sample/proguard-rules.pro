@@ -37,12 +37,11 @@
     @retrofit.http.* <methods>;
 }
 
+-repackageclasses
+
 -keep class com.mvp.MvpEventListener {
     public static final ** get(...);
  }
-
--repackageclasses
-
 -keepnames class * extends com.mvp.MvpPresenter
 -keepnames class * implements com.mvp.IMvpPresenter
 -keep class **Proxy extends com.mvp.MvpPresenter {

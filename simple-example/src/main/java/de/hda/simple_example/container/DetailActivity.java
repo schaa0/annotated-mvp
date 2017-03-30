@@ -14,13 +14,13 @@ public class DetailActivity extends AppCompatActivity {
 
     public static final String KEY_REPOSITORY = "repository";
 
-    @BindView(R.id.orientation)
     View orientationView;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_detail_activity);
+        orientationView = findViewById(R.id.orientation);
         ButterKnife.bind(this);
         if (!isInLandscape()) {
             if (savedInstanceState == null) {

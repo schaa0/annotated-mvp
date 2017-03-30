@@ -5,7 +5,7 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.mvp.CustomActivityTestRule;
 import com.mvp.uiautomator.UiAutomatorTestCase;
-import com.mvp.weather_example.di.AndroidTestModuleProvider;
+import com.mvp.weather_example.di.AndroidTestWeatherApplication;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
@@ -41,7 +41,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 
 @RunWith(AndroidJUnit4.class)
-public class SimpleTest extends UiAutomatorTestCase<AndroidTestModuleProvider>
+public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplication>
 {
 
     @Mock

@@ -34,8 +34,8 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
 
     @Inject RepositoryAdapter repositoryAdapter;
 
-    @BindView(R.id.orientation) android.view.View orientationView;
-    @BindView(R.id.recyclerView) RecyclerView recyclerView;
+    android.view.View orientationView;
+    RecyclerView recyclerView;
 
     RecyclerView.OnScrollListener scrollListener;
     LinearLayoutManager lm;
@@ -62,7 +62,8 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        ButterKnife.bind(this, getView());
+        recyclerView = (RecyclerView) getView().findViewById(R.id.recyclerView);
+        orientationView = getView().findViewById(R.id.orientation);
         lm = new LinearLayoutManager(recyclerView.getContext(), LinearLayoutManager.VERTICAL, false);
         recyclerView.setLayoutManager(lm);
         recyclerView.setItemAnimator(new DefaultItemAnimator());

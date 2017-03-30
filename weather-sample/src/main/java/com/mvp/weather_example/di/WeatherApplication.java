@@ -8,7 +8,7 @@ import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 
 @Provider
-public class ModuleProvider extends BaseApplicationProvider {
+public class WeatherApplication extends BaseApplicationProvider {
 
     private ComponentWeather componentWeather;
 

@@ -142,12 +142,15 @@ public class MainPresenter extends MvpPresenter<IMainView> {
     }
 
     private void internalShowDetailView() {
+
         final Repository repository = state.lastSelectedRepository;
         String strId = repository != Repository.NULL ? String.valueOf(repository.getId()) : "";
         dispatchEvent(strId).toAny();
+
         if (shouldShowDetailViewInAnotherActivity()){
             getView().showDetailViewInActivity(state.lastSelectedRepository);
         }
+
     }
 
     private boolean shouldShowDetailViewInAnotherActivity() {

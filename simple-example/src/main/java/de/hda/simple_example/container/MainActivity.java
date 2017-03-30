@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements IView {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
-        ButterKnife.bind(this);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
         this.savedInstanceState = savedInstanceState;
 
         ApplicationProvider provider = (ApplicationProvider) getApplication();
@@ -183,9 +183,9 @@ public class MainActivity extends AppCompatActivity implements IView {
     }
 
 
+    ProgressBar progressBar;
     Bundle savedInstanceState;
     MenuItem searchViewMenuItem;
-    @BindView(R.id.progressBar) ProgressBar progressBar;
     SearchView searchView;
     boolean isExpanded;
     boolean isFocused;
