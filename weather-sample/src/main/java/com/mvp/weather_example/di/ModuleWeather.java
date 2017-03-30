@@ -6,6 +6,7 @@ import android.location.LocationManager;
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mvp.weather_example.R;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.ImageRequestManagerImpl;
@@ -29,7 +30,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 @Module
 public class ModuleWeather {
 
-    private static final String API_KEY = "52e258b9d648c55104d57055ee214f5a";
     private final Context context;
 
     public ModuleWeather(Context context){
@@ -49,9 +49,16 @@ public class ModuleWeather {
     }
 
     @Provides
+    @Named("apiKey")
     @ApplicationScope
-    public WeatherService weatherService(WeatherApi weatherApi, ImageRequestManager imageRequestManager) {
-        return new WeatherService(weatherApi, imageRequestManager, API_KEY);
+    public String apiKey() {
+        return context.getString(R.string.api_key);
+    }
+
+    @Provides
+    @ApplicationScope
+    public WeatherService weatherService(WeatherApi weatherApi, ImageRequestManager imageRequestManager, @Named("apiKey") String apiKey) {
+        return new WeatherService(weatherApi, imageRequestManager, apiKey);
     }
 
     @Provides

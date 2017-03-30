@@ -4,4 +4,5 @@
     <string name="section_format">Hello World from section: %1$d</string>
     <string name="today">Today</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="api_key">52e258b9d648c55104d57055ee214f5a</string>
 </resources>

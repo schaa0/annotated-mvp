@@ -22,15 +22,20 @@ import java.io.IOException;
 
 import javax.inject.Inject;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.Unbinder;
+
 public class MainActivity extends AppCompatActivity
 {
 
-    ViewPager mViewPager;
-    TabLayout tabLayout;
-    Toolbar toolbar;
+    @BindView(R.id.container) ViewPager mViewPager;
+    @BindView(R.id.tab_layout1) TabLayout tabLayout;
+    @BindView(R.id.toolbar) Toolbar toolbar;
 
     @Inject public SectionsPagerAdapter mSectionsPagerAdapter;
     @Inject public EventBus eventBus;
+    private Unbinder unbinder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -38,10 +43,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mViewPager = (ViewPager) findViewById(R.id.container);
-        tabLayout = (TabLayout) findViewById(R.id.tab_layout1);
-        toolbar = (Toolbar) findViewById(R.id.toolbar);
-
+        unbinder = ButterKnife.bind(this);
         ((WeatherApplication) getApplication()).createComponentActivity(this).inject(this);
 
         eventBus.register(this);
@@ -67,6 +69,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy()
     {
+        unbinder.unbind();
         eventBus.unregister(this);
         super.onDestroy();
     }
