@@ -87,12 +87,7 @@ public class RepositoryAdapter extends RecyclerView.Adapter<RepositoryAdapter.Re
             super(itemView);
             imageView = (ImageView) itemView.findViewById(R.id.imageView);
             textView = (TextView) itemView.findViewById(R.id.textView);
-            imageView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    itemClickListener.onItemClick(getAdapterPosition());
-                }
-            });
+            imageView.setOnClickListener(v -> itemClickListener.onItemClick(getAdapterPosition()));
         }
     }
 

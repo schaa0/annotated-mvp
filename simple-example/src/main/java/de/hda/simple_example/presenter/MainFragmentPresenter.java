@@ -1,4 +1,4 @@
-package de.hda.simple_example.business;
+package de.hda.simple_example.presenter;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -14,20 +14,21 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import de.hda.simple_example.container.IMainView;
-import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.container.MainActivityView;
+import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
+import de.hda.simple_example.service.GithubService;
 import retrofit2.Call;
 import retrofit2.Response;
 
 @Presenter(
         needsModules = {ModuleMainPresenterState.class},
-        needsComponents = {ComponentApplication.class}
+        needsComponents = {ComponentActivity.class}
 )
-public class MainPresenter extends MvpPresenter<IMainView> {
+public class MainFragmentPresenter extends MvpPresenter<MainActivityView> {
 
     public static final String KEY_STATE = "KEY_STATE";
 
@@ -35,16 +36,15 @@ public class MainPresenter extends MvpPresenter<IMainView> {
     protected GithubService githubService;
 
     boolean isLoading;
-    String orientationTag = "port";
 
     private final Contract.LoadingEvent loading = new Contract.LoadingStartedEvent();
     private final Contract.LoadingFinishedEvent notLoading = new Contract.LoadingFinishedEvent();
 
-    protected MainPresenter() {}
+    protected MainFragmentPresenter() {}
 
     @Inject
-    public MainPresenter(State state, GithubService githubService) {
-        Log.e(MainPresenter.class.getName(), String.valueOf(githubService.hashCode()));
+    public MainFragmentPresenter(State state, GithubService githubService) {
+        Log.e(MainFragmentPresenter.class.getName(), String.valueOf(githubService.hashCode()));
         this.state = state;
         this.githubService = githubService;
     }
@@ -54,24 +54,24 @@ public class MainPresenter extends MvpPresenter<IMainView> {
     }
 
     @Override
-    public void onViewsInitialized() {
-        super.onViewsInitialized();
+    public void onNavigationEnabled() {
+        super.onNavigationEnabled();
     }
 
     @Override
-    public void onViewAttached(IMainView view) {
-        orientationTag = getView().provideOrientationTag();
+    public void onViewAttached(MainActivityView view) {
+
     }
 
     @Override
-    public void onViewReattached(IMainView view) {
-        orientationTag = getView().provideOrientationTag();
-        if (orientationTag.equals("sw600dp|port"))
+    public void onViewReattached(MainActivityView view) {
+        if (getView().isInPortrait()) {
             internalShowDetailView();
+        }
     }
 
     @Override
-    public void onViewDetached(IMainView view) {
+    public void onViewDetached(MainActivityView view) {
 
     }
 
@@ -154,7 +154,7 @@ public class MainPresenter extends MvpPresenter<IMainView> {
     }
 
     private boolean shouldShowDetailViewInAnotherActivity() {
-        return orientationTag.contains("port") && state.lastSelectedRepository != null;
+        return getView().isInPortrait() && state.lastSelectedRepository != null;
     }
 
     @Event(thread = Event.BACKGROUND_THREAD)

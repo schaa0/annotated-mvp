@@ -13,8 +13,8 @@ import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.filter.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
-import com.mvp.weather_example.view.ThreeHourForecastActivity;
-import com.mvp.weather_example.view.WeatherView;
+import com.mvp.weather_example.view.ForecastActivity;
+import com.mvp.weather_example.view.WeatherFragmentView;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,7 +57,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
     @Mock
     private WeatherService weatherService;
     @Mock
-    private WeatherView view;
+    private WeatherFragmentView view;
 
     @InjectMocks
     private TodayWeatherPresenter presenter;
@@ -160,9 +160,8 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
         when(weatherService.getForecastWeather(longitude, latitude, "metric"))
                 .thenReturn(new Gson().fromJson(Responses.FORECAST_RESULT, ThreeHoursForecastWeather.class));
         presenter.loadForecastWeatherDataForToday();
-        String expected = createExpectedResult();
         verify(view).requestStarted();
-        assertEquals(getRouter().getLastTarget(), ThreeHourForecastActivity.class);
+        assertEquals(getActivityRouter().getLastTarget(), ForecastActivity.class);
         verify(view).requestFinished();
     }
 

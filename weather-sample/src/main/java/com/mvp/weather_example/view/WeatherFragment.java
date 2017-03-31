@@ -1,6 +1,5 @@
 package com.mvp.weather_example.view;
 
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -18,11 +17,7 @@ import android.widget.TextView;
 import com.mvp.weather_example.R;
 import com.mvp.weather_example.presenter.WeatherPresenter;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
-
-public abstract class WeatherFragment extends Fragment implements WeatherView
+public abstract class WeatherFragment extends Fragment implements WeatherFragmentView
 {
 
     public TextView temperatureTextView;

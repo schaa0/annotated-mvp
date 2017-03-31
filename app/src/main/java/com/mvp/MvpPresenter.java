@@ -30,17 +30,25 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     ExecutorService executorService;
 
     @Inject
-    Router router;
+    ActivityRouter activityRouter;
+
+    @Inject
+    FragmentRouter fragmentRouter;
 
     Map<String, Future<?>> tasks = Collections.synchronizedMap(new HashMap<String, Future<?>>());
     private boolean destroyed;
 
     List<OnEventListener<?>> registeredEventListeners = new ArrayList<>();
+    private boolean isReattached = false;
 
     public MvpPresenter() { }
 
-    protected Router getRouter() {
-        return this.router;
+    protected ActivityRouter getActivityRouter() {
+        return this.activityRouter;
+    }
+
+    public FragmentRouter getFragmentRouter() {
+        return fragmentRouter;
     }
 
     private void unregisterEventListeners() {
@@ -96,7 +104,7 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     }
 
     @Override
-    public void onViewsInitialized() {
+    public void onNavigationEnabled() {
 
     }
 
@@ -127,4 +135,11 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
         this.view = view;
     }
 
+    public boolean isReattached() {
+        return isReattached;
+    }
+
+    public void setIsReattached(boolean isReattached) {
+        this.isReattached = isReattached;
+    }
 }

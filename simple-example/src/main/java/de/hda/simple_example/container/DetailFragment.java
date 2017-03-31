@@ -12,16 +12,17 @@ import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
 import de.hda.simple_example.R;
-import de.hda.simple_example.business.DetailPresenter;
+import de.hda.simple_example.presenter.DetailFragmentPresenter;
 import de.hda.simple_example.model.Repository;
 
-@View(presenter = DetailPresenter.class)
-public class DetailFragment extends Fragment implements IDetailView{
+@View(presenter = DetailFragmentPresenter.class)
+public class DetailFragment extends Fragment implements DetailFragmentView {
 
     public static final String TAG = DetailFragment.class.getName();
     public static final String KEY_REPOSITORY = "repository";
 
-    @Presenter DetailPresenter presenter;
+    @Presenter
+    DetailFragmentPresenter presenter;
 
     @ModuleParam public Repository getRepository() {
         return getArguments().getParcelable(KEY_REPOSITORY);
@@ -32,25 +33,9 @@ public class DetailFragment extends Fragment implements IDetailView{
     @Nullable
     @Override
     public android.view.View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.detail_layout, container, false);
-    }
-
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        textView = (TextView) getView().findViewById(R.id.textView);
-    }
-
-    public static DetailFragment newInstance() {
-        return newInstance(Repository.NULL);
-    }
-
-    public static DetailFragment newInstance(Repository repository){
-        DetailFragment fragment = new DetailFragment();
-        Bundle bundle = new Bundle();
-        bundle.putParcelable(KEY_REPOSITORY, repository);
-        fragment.setArguments(bundle);
-        return fragment;
+        android.view.View view = inflater.inflate(R.layout.detail_layout, container, false);
+        textView = (TextView) view.findViewById(R.id.textView);
+        return view;
     }
 
     @Override

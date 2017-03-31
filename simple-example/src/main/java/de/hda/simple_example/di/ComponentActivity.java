@@ -1,17 +1,18 @@
 package de.hda.simple_example.di;
 
-import com.mvp.ModuleActivity;
+import com.mvp.BaseComponentActivity;
+import com.mvp.BaseModuleActivity;
 import com.mvp.annotation.ActivityScope;
 
 import dagger.Component;
-import dagger.Subcomponent;
 import de.hda.simple_example.container.MainActivity;
+import de.hda.simple_example.service.GithubService;
 
 
-@Subcomponent(modules = {ModuleActivity.class})
+@Component(modules = {ModuleActivity.class }, dependencies = { ComponentApplication.class })
 @ActivityScope
-public interface ComponentActivity
+public interface ComponentActivity extends BaseComponentActivity
 {
     void inject(MainActivity mainActivity);
-    ComponentFragment plus();
+    GithubService githubService();
 }

@@ -18,7 +18,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".view.ThreeHourForecastActivity" />
+        <activity android:name=".view.ForecastActivity" />
 
     </application>
 

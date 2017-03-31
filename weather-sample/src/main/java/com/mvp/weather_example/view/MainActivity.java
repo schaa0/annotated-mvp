@@ -35,7 +35,6 @@ public class MainActivity extends AppCompatActivity
 
     @Inject public SectionsPagerAdapter mSectionsPagerAdapter;
     @Inject public EventBus eventBus;
-    private Unbinder unbinder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -43,7 +42,10 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        unbinder = ButterKnife.bind(this);
+        mViewPager = (ViewPager) findViewById(R.id.container);
+        tabLayout = (TabLayout) findViewById(R.id.tab_layout1);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+
         ((WeatherApplication) getApplication()).createComponentActivity(this).inject(this);
 
         eventBus.register(this);
@@ -69,7 +71,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy()
     {
-        unbinder.unbind();
         eventBus.unregister(this);
         super.onDestroy();
     }

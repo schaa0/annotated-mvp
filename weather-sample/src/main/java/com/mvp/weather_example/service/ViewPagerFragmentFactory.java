@@ -10,13 +10,11 @@ import com.mvp.weather_example.view.TomorrowWeatherFragment;
 
 import javax.inject.Inject;
 
-@ActivityScope
 public class ViewPagerFragmentFactory
 {
 
     private Context context;
 
-    @Inject
     public ViewPagerFragmentFactory(Context context){
         this.context = context;
     }

@@ -14,9 +14,9 @@ import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.filter.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
-import com.mvp.weather_example.view.WeatherView;
+import com.mvp.weather_example.view.WeatherFragmentView;
 
-public abstract class WeatherPresenter extends MvpPresenter<WeatherView> implements LocationProvider.OnLocationChangedListener, ImageRequestManager.IconCallback
+public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView> implements LocationProvider.OnLocationChangedListener, ImageRequestManager.IconCallback
 {
 
     public static final int REQUEST_CODE_PERM_ACCESS_FINE_LOCATION = 45;
@@ -45,7 +45,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
     protected abstract void loadWeather(double longitude, double latitude);
 
     @Override
-    public void onViewAttached(WeatherView view)
+    public void onViewAttached(WeatherFragmentView view)
     {
         requestPermissionsIfNeeded(view);
         locationProvider.addOnLocationChangedListener(this);
@@ -57,7 +57,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
     }
 
     @Override
-    public void onViewReattached(WeatherView view)
+    public void onViewReattached(WeatherFragmentView view)
     {
         requestPermissionsIfNeeded(view);
         locationProvider.addOnLocationChangedListener(this);
@@ -76,7 +76,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
     }
 
     @Override
-    public void onViewDetached(WeatherView view)
+    public void onViewDetached(WeatherFragmentView view)
     {
         locationProvider.removeOnLocationChangedListener(this);
         getView().showIcon(null);
@@ -86,7 +86,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
         }
     }
 
-    private void loadWeatherIfAllPermissionsGranted(WeatherView view)
+    private void loadWeatherIfAllPermissionsGranted(WeatherFragmentView view)
     {
         if (!requestPermissionsIfNeeded(view))
         {
@@ -121,7 +121,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
         submitOnUiThread(() -> getView().requestFinished());
     }
 
-    private boolean requestPermissionsIfNeeded(WeatherView view)
+    private boolean requestPermissionsIfNeeded(WeatherFragmentView view)
     {
         boolean result = false;
         if (!view.isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION))
@@ -145,7 +145,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherView> impleme
 
     private boolean hasAllPermissions()
     {
-        WeatherView view = getView();
+        WeatherFragmentView view = getView();
         if (!view.isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION))
             return false;
         if (!view.isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION))

@@ -99,11 +99,11 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
 
         AnnotationValue views = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "views");
         AnnotationValue application = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "application");
-        /*if (application == null || application.getValue() == null){
+        if (application == null || application.getValue() == null){
             messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
             shouldSkipAllRounds = true;
             return true;
-        }*/
+        }
 
         Object applicationClass =  application.getValue();
         provider = elementUtils.getTypeElement(ClassName.bestGuess(applicationClass.toString().replace(".class", "")).toString());
@@ -118,10 +118,6 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
                 new TestRunnerType(filer, packageName, ClassName.get(provider.asType())).generate();
                 return true;
             }
-        }
-
-        if (true) {
-            return true;
         }
 
         if (viewElements.isEmpty())

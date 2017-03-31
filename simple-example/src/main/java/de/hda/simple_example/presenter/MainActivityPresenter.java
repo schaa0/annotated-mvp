@@ -1,4 +1,4 @@
-package de.hda.simple_example.business;
+package de.hda.simple_example.presenter;
 
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.Event;
@@ -6,21 +6,25 @@ import com.mvp.annotation.Presenter;
 
 import javax.inject.Inject;
 
+import de.hda.simple_example.R;
+import de.hda.simple_example.container.DetailFragment;
 import de.hda.simple_example.container.IView;
-import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.container.MainFragment;
+import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.event.Contract;
+import de.hda.simple_example.model.Repository;
 
-@Presenter(needsComponents = {ComponentApplication.class} )
-public class ActivityPresenter extends MvpPresenter<IView> {
+@Presenter(needsComponents = {ComponentActivity.class} )
+public class MainActivityPresenter extends MvpPresenter<IView> {
 
     private boolean isLoading;
     private Settings settings;
     private boolean shouldSetLastQueryFromCache = false;
 
-    protected ActivityPresenter() {}
+    protected MainActivityPresenter() {}
 
     @Inject
-    public ActivityPresenter(Settings settings){
+    public MainActivityPresenter(Settings settings){
         this.settings = settings;
     }
 
@@ -45,6 +49,25 @@ public class ActivityPresenter extends MvpPresenter<IView> {
     @Override
     public void onViewDetached(IView view) {
 
+    }
+
+    @Override
+    public void onNavigationEnabled() {
+        super.onNavigationEnabled();
+        if (!this.isReattached()) {
+            getFragmentRouter()
+                    .navigateTo(MainFragment.class)
+                    .replace(R.id.container, MainFragment.TAG)
+                    .putExtra(MainFragmentPresenter.KEY_STATE, new MainFragmentPresenter.State())
+                    .commit();
+            if (getView().isDetailContainerPresent()) {
+                getFragmentRouter()
+                        .navigateTo(DetailFragment.class)
+                        .replace(R.id.container_detail, DetailFragment.TAG)
+                        .putExtra(DetailFragment.KEY_REPOSITORY, Repository.NULL)
+                        .commit();
+            }
+        }
     }
 
     public boolean isLoading() {

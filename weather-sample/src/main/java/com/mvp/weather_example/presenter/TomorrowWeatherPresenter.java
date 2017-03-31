@@ -4,20 +4,21 @@ import android.location.Location;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Presenter;
+import com.mvp.weather_example.di.ComponentActivity;
 import com.mvp.weather_example.di.ComponentSingleton;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.filter.TomorrowWeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
-import com.mvp.weather_example.view.ThreeHourForecastActivity;
+import com.mvp.weather_example.view.ForecastActivity;
 
 import java.io.IOException;
 import java.text.ParseException;
 
 import javax.inject.Inject;
 
-@Presenter(needsComponents = { ComponentSingleton.class })
+@Presenter(needsComponents = { ComponentActivity.class })
 public class TomorrowWeatherPresenter extends WeatherPresenter {
     private static final int FORECAST_DAYS = 1;
 
@@ -75,10 +76,10 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
 
     private void postForecastWeather(String forecastData)
     {
-        getRouter()
-                .navigateTo(ThreeHourForecastActivity.class)
-                .putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecastData)
-                .open();
+        getActivityRouter()
+                .navigateTo(ForecastActivity.class)
+                .putExtra(ForecastActivity.KEY_FORECAST, forecastData)
+                .commit();
         dispatchRequestFinished();
     }
 }

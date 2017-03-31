@@ -71,7 +71,7 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
         doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
                 .when(weatherApi).getForecastWeather(anyDouble(), anyDouble(), anyString());
 
-        //dependencies().with(weatherApi).withNamedTomorrow(dateProvider).open();
+        //dependencies().with(weatherApi).withNamedTomorrow(dateProvider).commit();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();

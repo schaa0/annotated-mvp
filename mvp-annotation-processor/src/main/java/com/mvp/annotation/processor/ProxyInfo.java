@@ -132,7 +132,7 @@ public class ProxyInfo {
                         "            e.printStackTrace();\n" +
                         "        }", InvocationTargetException.class));
 
-                methodBuilder.addCode(CodeBlock.of("throw new $T();", IllegalStateException.class));
+               // methodBuilder.addCode(CodeBlock.of("throw new $T();", IllegalStateException.class));
 
             }else if (method.returnType == TypeName.VOID){
                 statement = String.format("presenterImpl.%s(%s)", method.name, parametersToString(method.parameters));

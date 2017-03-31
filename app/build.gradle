@@ -24,7 +24,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile 'org.robolectric:robolectric:3.1.2'
     testCompile 'org.mockito:mockito-core:2.1.0-beta.120'
-    compile 'com.android.support:appcompat-v7:25.1.1'
+    compile 'com.android.support:appcompat-v7:25.0.0'
     //compile 'net.jodah:typetools:0.4.7'
     compile 'com.google.dagger:dagger:2.10'
     annotationProcessor 'com.google.dagger:dagger-compiler:2.10'

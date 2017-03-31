@@ -4,7 +4,7 @@ import android.graphics.Bitmap;
 
 import com.mvp.MvpView;
 
-public interface WeatherView extends MvpView {
+public interface WeatherFragmentView extends MvpView {
     void requestStarted();
     void requestFinished();
     void showWeather(String temperature, String humidity);

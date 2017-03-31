@@ -7,7 +7,7 @@ import dagger.Subcomponent;
 import de.hda.simple_example.container.MainFragment;
 
 
-@Subcomponent
+@Component(dependencies = { ComponentActivity.class })
 @FragmentScope
 public interface ComponentFragment
 {

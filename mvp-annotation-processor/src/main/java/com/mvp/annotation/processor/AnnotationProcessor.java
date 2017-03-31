@@ -536,9 +536,12 @@ public class AnnotationProcessor extends AbstractProcessor
                     VariableElement variable = parameters.get(position);
                     TypeMirror type = variable.asType();
                     ExecutableElement moduleMethod = providingMethods.get(type.toString());
-                    if (moduleMethod == null)
-                        throw new IllegalStateException(String.format("%s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", o));
-                    params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
+                    if (!type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()) && moduleMethod == null)
+                        throw new IllegalStateException(String.format("Error while processing %s: %s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", type, o));
+                    else if(type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()))
+                        params.append("activity");
+                    else
+                        params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
                     if (position < parameters.size() - 1)
                         params.append(", ");
                 }

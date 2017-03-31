@@ -3,6 +3,14 @@ package de.hda.simple_example.container;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
+import com.mvp.DetailFragmentController;
+import com.mvp.DetailFragmentPresenterBuilder;
+import com.mvp.MainFragmentController;
+import com.mvp.MainFragmentPresenterBuilder;
+import com.mvp.PresenterType;
+import com.mvp.TestCase;
+import com.mvp.ViewType;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -11,12 +19,14 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.support.v4.SupportFragmentController;
 
+import java.util.Arrays;
+
 import de.hda.simple_example.R;
-import de.hda.simple_example.business.DetailPresenter;
-import de.hda.simple_example.business.GithubService;
-import de.hda.simple_example.business.MainPresenter;
+import de.hda.simple_example.di.TestSimpleApplication;
 import de.hda.simple_example.model.Repository;
-import edu.emory.mathcs.backport.java.util.Arrays;
+import de.hda.simple_example.presenter.DetailFragmentPresenter;
+import de.hda.simple_example.presenter.MainFragmentPresenter;
+import de.hda.simple_example.service.GithubService;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
@@ -25,36 +35,42 @@ import static org.mockito.Mockito.verify;
 
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = TestApplicationProvider.class)
-public class DetailPresenterIntegrationTest {} /*extends TestCase {
+@Config(constants = de.hda.simple_example.BuildConfig.class, sdk = 21, application = TestSimpleApplication.class)
+public class DetailPresenterIntegrationTest extends TestCase {
 
     private SupportFragmentController<DetailFragment> detailFragmentController;
-    private DetailPresenter detailPresenter;
-    private IDetailView detailFragmentView;
+    private DetailFragmentPresenter detailPresenter;
+    private DetailFragmentView detailFragmentView;
 
     private SupportFragmentController<MainFragment> mainFragmentController;
-    private MainPresenter mainPresenter;
-    private IMainView mainFragmentView;
+    private MainFragmentPresenter mainPresenter;
+    private MainActivityView mainFragmentView;
 
-    private TestApplicationProvider provider;
+    private TestSimpleApplication provider;
 
     @Before
     public void setUp() throws Exception {
-        this.provider = (TestApplicationProvider) RuntimeEnvironment.application;
+        this.provider = (TestSimpleApplication) RuntimeEnvironment.application;
     }
 
     private void buildMainPresenter(ViewType viewType, PresenterType presenterType) {
-        buildMainPresenter(viewType, presenterType, new MainPresenter.State());
+        buildMainPresenter(viewType, presenterType, new MainFragmentPresenter.State());
     }
 
-    private void buildMainPresenter(ViewType viewType, PresenterType presenterType, MainPresenter.State state) {
-        MainFragmentController controller = new MainFragmentController(MainFragment.newInstance(state), MainActivity.class);
-        MainPresenterBuilder builder =
-                new MainPresenterBuilder(controller, provider)
+    private void buildMainPresenter(ViewType viewType, PresenterType presenterType, MainFragmentPresenter.State state) {
+
+        MainFragment fragment = new MainFragment();
+        Bundle b = new Bundle();
+        b.putParcelable(MainFragmentPresenter.KEY_STATE, state);
+        fragment.setArguments(b);
+
+        MainFragmentController controller = new MainFragmentController(fragment, MainActivity.class);
+        MainFragmentPresenterBuilder builder =
+                new MainFragmentPresenterBuilder(controller, provider)
                         .parameter(mock(GithubService.class))
                         .in(R.id.container);
 
-        MainPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
+        MainFragmentPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
 
         mainPresenter = binding.presenter();
         mainFragmentController = binding.controller();
@@ -62,16 +78,21 @@ public class DetailPresenterIntegrationTest {} /*extends TestCase {
     }
 
     private void buildDetailPresenter(ViewType viewType, PresenterType presenterType, Repository repository, Bundle bundle) {
-        DetailFragment fragment = DetailFragment.newInstance(repository);
+
+        DetailFragment fragment = new DetailFragment();
+        Bundle b = new Bundle();
+        b.putParcelable(DetailFragment.KEY_REPOSITORY, repository);
+        fragment.setArguments(b);
+
         DetailFragmentController controller = new DetailFragmentController(fragment, DetailActivity.class);
 
-        DetailPresenterBuilder builder =
-                new DetailPresenterBuilder(controller, provider)
+        DetailFragmentPresenterBuilder builder =
+                new DetailFragmentPresenterBuilder(controller, provider)
                         .withSavedInstanceState(bundle)
                         .parameter(mock(GithubService.class))
                         .in(R.id.container);
 
-        DetailPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
+        DetailFragmentPresenterBuilder.BindingResult binding = configurePresenter(builder, viewType, presenterType);
 
         detailPresenter = binding.presenter();
         detailFragmentController = binding.controller();
@@ -138,4 +159,4 @@ public class DetailPresenterIntegrationTest {} /*extends TestCase {
         verify(detailFragmentView).showId(eq(""));
     }
 
-}*/
+}

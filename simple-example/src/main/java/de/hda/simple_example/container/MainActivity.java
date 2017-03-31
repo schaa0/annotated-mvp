@@ -1,7 +1,6 @@
 package de.hda.simple_example.container;
 
 import android.os.Bundle;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.AbsSavedState;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -17,20 +16,21 @@ import com.mvp.annotation.View;
 import javax.inject.Inject;
 
 import de.hda.simple_example.R;
-import de.hda.simple_example.business.ActivityPresenter;
-import de.hda.simple_example.business.CustomService;
+import de.hda.simple_example.presenter.MainActivityPresenter;
+import de.hda.simple_example.service.CustomService;
 import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.di.SimpleApplication;
 import de.hda.simple_example.event.Contract;
 
 
-@View(presenter = ActivityPresenter.class)
+@View(presenter = MainActivityPresenter.class)
 public class MainActivity extends AppCompatActivity implements IView {
 
     public static final String KEY_SEARCHVIEW_STATE = "KEY_SEARCHVIEW_STATE";
 
     @Presenter
-    ActivityPresenter presenter;
+    MainActivityPresenter presenter;
+
     @Inject
     CustomService customService;
 
@@ -48,15 +48,6 @@ public class MainActivity extends AppCompatActivity implements IView {
         component.inject(this);
 
         customService.register();
-
-        if (savedInstanceState == null){
-            FragmentTransaction ft = getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.container, MainFragment.newInstance(), MainFragment.TAG);
-            if (findViewById(R.id.container_detail) != null)
-                ft.replace(R.id.container_detail, DetailFragment.newInstance(), DetailFragment.TAG);
-            ft.commit();
-        }
 
     }
 
@@ -149,6 +140,11 @@ public class MainActivity extends AppCompatActivity implements IView {
     public void setLastQuery(String lastQuery) {
         MenuItemCompat.expandActionView(searchViewMenuItem);
         this.searchView.setQuery(lastQuery, false);
+    }
+
+    @Override
+    public boolean isDetailContainerPresent() {
+        return findViewById(R.id.container_detail) != null;
     }
 
 

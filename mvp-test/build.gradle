@@ -27,5 +27,5 @@ dependencies {
     }
     provided 'com.android.support.test:rules:0.5'
     provided 'com.linkedin.dexmaker:dexmaker-mockito:2.2.0'
-    provided 'com.android.support:appcompat-v7:25.1.1'
+    provided 'com.android.support:appcompat-v7:25.0.0'
 }

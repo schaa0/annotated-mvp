@@ -18,19 +18,19 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
 import de.hda.simple_example.R;
-import de.hda.simple_example.business.MainPresenter;
+import de.hda.simple_example.presenter.MainFragmentPresenter;
+import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.SimpleApplication;
 import de.hda.simple_example.model.Repository;
 
-@View(presenter = MainPresenter.class)
-public class MainFragment extends Fragment implements IMainView, RepositoryAdapter.OnItemClickListener {
+@View(presenter = MainFragmentPresenter.class)
+public class MainFragment extends Fragment implements MainActivityView, RepositoryAdapter.OnItemClickListener {
 
     public static final String TAG = MainFragment.class.getName();
     private static final String KEY_ADAPTER = "KEY_ADAPTER";
 
-    @Presenter MainPresenter presenter;
+    @Presenter MainFragmentPresenter presenter;
 
     @Inject RepositoryAdapter repositoryAdapter;
 
@@ -41,8 +41,8 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     LinearLayoutManager lm;
 
     @ModuleParam
-    public MainPresenter.State provideState(){
-        return getArguments().getParcelable(MainPresenter.KEY_STATE);
+    public MainFragmentPresenter.State provideState(){
+        return getArguments().getParcelable(MainFragmentPresenter.KEY_STATE);
     }
 
     @Override
@@ -54,16 +54,21 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     @Nullable
     @Override
     public android.view.View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_main, container, false);
+        android.view.View view = inflater.inflate(R.layout.fragment_main, container, false);
+        this.initialize(view, savedInstanceState);
+        return view;
     }
 
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        ((MainActivity)getActivity()).getComponent().plus().inject(this);
-        recyclerView = (RecyclerView) getView().findViewById(R.id.recyclerView);
-        orientationView = getView().findViewById(R.id.orientation);
-        lm = new LinearLayoutManager(recyclerView.getContext(), LinearLayoutManager.VERTICAL, false);
+    private void initialize(android.view.View view, Bundle savedInstanceState) {
+
+        SimpleApplication app = (SimpleApplication) getActivity().getApplication();
+        ComponentActivity activityComponent = ((MainActivity) getActivity()).getComponent();
+        app.componentFragment(activityComponent).inject(this);
+
+        recyclerView = (RecyclerView) view.findViewById(R.id.recyclerView);
+        orientationView = view.findViewById(R.id.orientation);
+        lm = new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false);
+
         recyclerView.setLayoutManager(lm);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         scrollListener = new RecyclerView.OnScrollListener() {
@@ -117,8 +122,13 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     }
 
     @Override
-    public String provideOrientationTag() {
-        return orientationView.getTag().toString();
+    public boolean isInPortrait() {
+        return orientationView.getTag().toString().contains("port");
+    }
+
+    @Override
+    public boolean isTabletAndInPortrait() {
+        return orientationView.getTag().toString().equals("sw600dp|port");
     }
 
     @Override
@@ -127,16 +137,5 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
         super.onDestroyView();
     }
 
-    public static MainFragment newInstance(MainPresenter.State state) {
-        Bundle args = new Bundle();
-        args.putParcelable(MainPresenter.KEY_STATE, state);
-        MainFragment fragment = new MainFragment();
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    public static MainFragment newInstance(){
-        return newInstance(new MainPresenter.State());
-    }
 
 }

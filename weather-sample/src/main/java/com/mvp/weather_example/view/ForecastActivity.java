@@ -10,14 +10,15 @@ import com.mvp.annotation.ModuleParam;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 import com.mvp.weather_example.R;
-import com.mvp.weather_example.presenter.ThreeHourForecastPresenter;
+import com.mvp.weather_example.presenter.ForecastPresenter;
 
-@View(presenter = ThreeHourForecastPresenter.class)
-public class ThreeHourForecastActivity extends AppCompatActivity implements IThreeHourForecastView, DialogInterface.OnClickListener{
+@View(presenter = ForecastPresenter.class)
+public class ForecastActivity extends AppCompatActivity implements ForecastActivityView, DialogInterface.OnClickListener{
 
     public static final String KEY_FORECAST = "forecast";
 
-    @Presenter ThreeHourForecastPresenter presenter;
+    @Presenter
+    ForecastPresenter presenter;
 
     @ModuleParam
     public String forecastWeather() {

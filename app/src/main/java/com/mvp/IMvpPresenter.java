@@ -3,7 +3,7 @@ package com.mvp;
 interface IMvpPresenter<V extends MvpView> {
     void onInitialize();
     void onDestroyed();
-    void onViewsInitialized();
+    void onNavigationEnabled();
     void onViewAttached(V view);
     void onViewReattached(V view);
     void onViewDetached(V view);

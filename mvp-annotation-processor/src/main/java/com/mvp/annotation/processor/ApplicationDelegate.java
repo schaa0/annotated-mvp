@@ -399,9 +399,6 @@ public class ApplicationDelegate extends AbsGeneratingType
             return new ArrayList<>();
         List<ExecutableElement> methods = new ArrayList<>();
         TypeElement element = elementUtils.getTypeElement(component.toString());
-        if (!element.toString().equals("com.mvp.ComponentEventBus") && !(Utils.hasComponentAnnotation(element) || Utils.hasSubComponentAnnotation(element))){
-            return new ArrayList<>();
-        }
         List<? extends TypeMirror> superTypes = typeUtils.directSupertypes(component);
         for (TypeMirror superType : superTypes)
         {
@@ -493,6 +490,25 @@ public class ApplicationDelegate extends AbsGeneratingType
             ExecutableElement method = entry.getValue();
             TypeMirror returnType = method.getReturnType();
             TypeElement element = elementUtils.getTypeElement(returnType.toString());
+
+            List<? extends TypeMirror> superTypes = typeUtils.directSupertypes(element.asType());
+            if (superTypes != null) {
+                for (TypeMirror type : superTypes) {
+                    if (type.toString().equals(Object.class.getName())) {
+                        continue;
+                    }
+                    TypeElement typeElement = elementUtils.getTypeElement(type.toString());
+                    if (typeElement != null && typeElement.getEnclosedElements() != null) {
+                        for (Element t : typeElement.getEnclosedElements()) {
+                            if (t.getKind() == ElementKind.METHOD) {
+                                if (componentsToInstanceType.get(returnType) == null)
+                                    componentsToInstanceType.put(returnType, new ArrayList<TypeMirror>());
+                                componentsToInstanceType.get(returnType).add(((ExecutableElement) t).getReturnType());
+                            }
+                        }
+                    }
+                }
+            }
             for (Element e : element.getEnclosedElements())
             {
                 if (e.getKind() == ElementKind.METHOD)

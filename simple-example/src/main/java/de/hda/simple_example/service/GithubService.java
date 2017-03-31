@@ -1,4 +1,4 @@
-package de.hda.simple_example.business;
+package de.hda.simple_example.service;
 
 import de.hda.simple_example.model.SearchResult;
 import retrofit2.Call;

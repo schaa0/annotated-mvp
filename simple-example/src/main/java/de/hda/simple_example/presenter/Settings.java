@@ -1,13 +1,16 @@
-package de.hda.simple_example.business;
+package de.hda.simple_example.presenter;
 
 import android.content.SharedPreferences;
+
+import javax.inject.Inject;
 
 public class Settings
 {
 
-    private static final String LAST_QUERY_KEY = "lastQuery";
+    public static final String LAST_QUERY_KEY = "lastQuery";
     private final SharedPreferences sharedPreferences;
 
+    @Inject
     public Settings(SharedPreferences sharedPreferences){
         this.sharedPreferences = sharedPreferences;
     }

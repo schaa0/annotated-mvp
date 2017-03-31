@@ -2,15 +2,15 @@ package com.mvp.weather_example.di;
 
 import android.support.v7.app.AppCompatActivity;
 
-import com.mvp.BaseApplicationProvider;
-import com.mvp.ModuleActivity;
+import com.mvp.BaseModuleActivity;
+import com.mvp.MvpApplication;
 import com.mvp.ModuleContext;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 
 @Provider
-public class WeatherApplication extends BaseApplicationProvider {
+public class WeatherApplication extends MvpApplication {
 
     private ComponentSingleton componentWeather;
 
@@ -34,8 +34,12 @@ public class WeatherApplication extends BaseApplicationProvider {
         return componentWeather;
     }
 
+    @ProvidesComponent
     public ComponentActivity createComponentActivity(AppCompatActivity activity)
     {
-        return componentWeather.plus(new ModuleActivity(activity));
+        return DaggerComponentActivity.builder()
+                .componentSingleton(this.componentSingleton())
+                .moduleActivity(new ModuleActivity(activity))
+                .build();
     }
 }

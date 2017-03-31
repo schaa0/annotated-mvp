@@ -184,6 +184,10 @@ public class PresenterBuilderType extends AbsGeneratingType
             Component component = instancesFromComponent.getValue();
             for (ExecutableElement method : component.methods)
             {
+                if (method.getReturnType().toString().equals(void.class.getName())) {
+                    fieldNames.add("");
+                    continue;
+                }
                 ClassName providedInstanceClassName = ClassName.bestGuess(method.getReturnType().toString());
                 String parameterName = toParameterName(providedInstanceClassName);
                 String value = getValueFromNamedAnnotation(method);
@@ -255,6 +259,9 @@ public class PresenterBuilderType extends AbsGeneratingType
             StringBuilder constructorInitializer = new StringBuilder(String.format("this.%s = %s;\n", componentParameterName, componentParameterName));
             for (ExecutableElement componentMethod : componentMethods)
             {
+                if (componentMethod.getReturnType().toString().equals(void.class.getName())) {
+                    continue;
+                }
                 ClassName typeName = ClassName.bestGuess(componentMethod.getReturnType().toString());
                 String parameterName = toParameterName(typeName);
                 String value = getValueFromNamedAnnotation(componentMethod);
@@ -268,6 +275,19 @@ public class PresenterBuilderType extends AbsGeneratingType
             for (int j = 0; j < componentMethods.size(); j++)
             {
                 ExecutableElement componentMethod = componentMethods.get(j);
+                if (componentMethod.getReturnType().toString().equals(void.class.getName())) {
+                    VariableElement variableElement = componentMethod.getParameters().get(0);
+                    createComponentClassBuilder.addMethod(MethodSpec.methodBuilder(componentMethod.getSimpleName().toString())
+                            .addModifiers(Modifier.PUBLIC)
+                            .addAnnotation(Override.class)
+                            .addParameter(ClassName.get(variableElement.asType()), variableElement.getSimpleName().toString())
+                            .returns(void.class)
+                            .addStatement(String.format("%s.%s(%s)", componentParameterName,
+                                    componentMethod.getSimpleName().toString(),
+                                    variableElement.getSimpleName().toString())
+                            ).build());
+                    continue;
+                }
                 ClassName n = ClassName.bestGuess(componentMethod.getReturnType().toString());
                 List<String> fieldNames = theComponent.fieldNames;
                 String fieldName = fieldNames.get(j);
@@ -461,16 +481,6 @@ public class PresenterBuilderType extends AbsGeneratingType
 
         methodBuilder.addStatement("controller.with(provider.mvpEventBus())");
 
-        for (ClassName module : modules)
-        {
-            buildInitializationCode(providingMethods, methodBuilder, module, moduleClassNamesToFieldNames, false);
-        }
-
-        for (ClassName component : components)
-        {
-            buildInitializationCode(providingMethods, methodBuilder, component, componentClassNamesToFieldNames, true);
-        }
-
         methodBuilder.addCode("this.controller.withSavedInstanceState(bundle);\n");
 
         if (isFragment())
@@ -484,6 +494,16 @@ public class PresenterBuilderType extends AbsGeneratingType
         }
 
         methodBuilder.addCode("this.controller.initialize();\n");
+
+        for (ClassName module : modules)
+        {
+            buildInitializationCode(providingMethods, methodBuilder, module, moduleClassNamesToFieldNames, false);
+        }
+
+        for (ClassName component : components)
+        {
+            buildInitializationCode(providingMethods, methodBuilder, component, componentClassNamesToFieldNames, true);
+        }
 
         methodBuilder
                 .addModifiers(Modifier.PROTECTED)
@@ -525,14 +545,19 @@ public class PresenterBuilderType extends AbsGeneratingType
         {
             StringBuilder paramsBuilder = new StringBuilder();
             List<ExecutableElement> methods = instancesFromComponents.get(component.toString()).methods;
+            // real component is first parameter
             paramsBuilder.append(toParameterName(component));
-            if (!methods.isEmpty()) paramsBuilder.append(", ");
+            // fill up with remaining dependencies
             for (int i = 0; i < methods.size(); i++)
             {
                 ExecutableElement executableElement = methods.get(i);
-                ClassName paramClass = ClassName.bestGuess(executableElement.getReturnType().toString());
+                TypeMirror returnType = executableElement.getReturnType();
+                if (returnType.toString().equals(void.class.getName())) {
+                    continue;
+                }
+                paramsBuilder.append(", ");
+                ClassName paramClass = ClassName.bestGuess(returnType.toString());
                 paramsBuilder.append(toParameterName(paramClass) + getValueFromNamedAnnotation(executableElement));
-                if (i < methods.size() - 1) paramsBuilder.append(", ");
             }
             String delegateName = component.simpleName().toString() + "Delegate";
             String methodName = Character.toLowerCase(component.simpleName().charAt(0)) + component.simpleName().substring(1);
@@ -575,15 +600,24 @@ public class PresenterBuilderType extends AbsGeneratingType
         for (int i = 0; i < parameters.size(); i++)
         {
             VariableElement variableElement = parameters.get(i);
+            TypeMirror typeMirror = variableElement.asType();
             String fieldName;
-            if (isComponent){
-                String classNameString = variableElement.asType().toString();
-                fieldName = providingMethods.get(classNameString).getSimpleName().toString();
+            if (isComponent && typeMirror.toString().equals("android.support.v7.app.AppCompatActivity")) {
+                String controller = isActivity() ? "controller" : "activityController";
+                fieldName = String.format("(android.support.v7.app.AppCompatActivity) controller.%s().get()", controller);
+                sb.append(fieldName);
+                if (i < parameters.size() - 1) sb.append(", ");
+            }else if (isComponent){
+                String classNameString = typeMirror.toString();
+                ExecutableElement e = providingMethods.get(classNameString);
+                fieldName = e != null ? e.getSimpleName().toString() : variableElement.getSimpleName().toString();
+                sb.append(String.format("this.provider.%s()", fieldName));
+                if (i < parameters.size() - 1) sb.append(", ");
             }else{
                 fieldName = providingMethods.get(executableElement.getReturnType().toString()).getSimpleName().toString();
+                sb.append(String.format("this.provider.%s()", fieldName));
+                if (i < parameters.size() - 1) sb.append(", ");
             }
-            sb.append(String.format("this.provider.%s()", fieldName));
-            if (i < parameters.size() - 1) sb.append(", ");
         }
         methodBuilder.addStatement(String.format("this.%s = this.provider.%s(%s)", toParameterName(className), methodName, sb.toString()));
         methodBuilder.endControlFlow();
@@ -630,9 +664,10 @@ public class PresenterBuilderType extends AbsGeneratingType
         for (ClassName c : components)
         {
             TypeElement typeElement = elementUtils.getTypeElement(c.toString());
+
             if (typeElement.getKind() == ElementKind.INTERFACE)
             {
-                Component component = new Component(typeElement);
+                Component component = new Component(typeElement, typeUtil);
                 component.parse();
                 componentHashMap.put(c.toString(), component);
             }
@@ -789,16 +824,34 @@ public class PresenterBuilderType extends AbsGeneratingType
         public List<ExecutableElement> methods = new ArrayList<>();
         private HashMap<String, String> fieldTypeToMethodName = new HashMap<>();
         private TypeElement element;
+        private final Types typeUtils;
         private List<String> fieldNames;
 
-        public Component(TypeElement element)
+        public Component(TypeElement element, Types typeUtils)
         {
             this.element = element;
+            this.typeUtils = typeUtils;
         }
 
         public void parse()
         {
-            List<? extends Element> enclosedElements = this.element.getEnclosedElements();
+            List<? extends TypeMirror> typeMirrors = typeUtils.directSupertypes(this.element.asType());
+            for (TypeMirror typeMirror : typeMirrors) {
+                Element element = typeUtils.asElement(typeMirror);
+                this.internalParse(element);
+            }
+
+            this.internalParse(this.element);
+        }
+
+        private void internalParse(Element element) {
+            if (element.getKind() != ElementKind.INTERFACE) {
+                return;
+            }
+            if (element.asType().toString().equals(Object.class.getName())) {
+                return;
+            }
+            List<? extends Element> enclosedElements = element.getEnclosedElements();
             for (Element enclosedElement : enclosedElements)
             {
                 if (enclosedElement.getKind() == ElementKind.METHOD)
@@ -810,7 +863,6 @@ public class PresenterBuilderType extends AbsGeneratingType
                 }
             }
         }
-
 
         public void setFieldNames(List<String> fieldNames)
         {

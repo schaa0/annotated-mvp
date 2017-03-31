@@ -1,8 +1,10 @@
 package com.mvp;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.SensorManager;
 import android.location.LocationManager;
+import android.preference.PreferenceManager;
 
 import javax.inject.Singleton;
 
@@ -37,5 +39,11 @@ public class ModuleContext
     @Singleton
     public SensorManager sensorManager(Context context) {
         return (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+    }
+
+    @Provides
+    @Singleton
+    public SharedPreferences sharedPreferences(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context);
     }
 }

@@ -1,4 +1,4 @@
-package de.hda.simple_example.business;
+package de.hda.simple_example.service;
 
 import android.util.Log;
 

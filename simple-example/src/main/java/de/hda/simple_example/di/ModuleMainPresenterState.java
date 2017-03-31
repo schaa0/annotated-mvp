@@ -2,23 +2,19 @@ package de.hda.simple_example.di;
 
 import dagger.Module;
 import dagger.Provides;
-import de.hda.simple_example.business.MainPresenter;
-
-/**
- * Created by Andy on 21.12.2016.
- */
+import de.hda.simple_example.presenter.MainFragmentPresenter;
 
 @Module
 public class ModuleMainPresenterState {
 
-    private MainPresenter.State state;
+    private MainFragmentPresenter.State state;
 
-    public ModuleMainPresenterState(MainPresenter.State state){
+    public ModuleMainPresenterState(MainFragmentPresenter.State state){
         this.state = state;
     }
 
     @Provides
-    public MainPresenter.State state() {
+    public MainFragmentPresenter.State state() {
         return state;
     }
 

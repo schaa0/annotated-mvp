@@ -44,7 +44,7 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
     public void onPostResume(){
         if (!onViewsInitializedCalled) {
             onViewsInitializedCalled = true;
-            getPresenter().onViewsInitialized();
+            getPresenter().onNavigationEnabled();
         }
     }
 
@@ -88,7 +88,8 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
             if (onPresenterLoadedListener != null){
                 onPresenterLoadedListener.onPresenterLoaded(presenter);
             }
-            if (firstDelivery)
+            presenter.setIsReattached(!this.firstDelivery);
+            if (this.firstDelivery)
                 presenter.onViewAttached(view);
             else
                 presenter.onViewReattached(view);

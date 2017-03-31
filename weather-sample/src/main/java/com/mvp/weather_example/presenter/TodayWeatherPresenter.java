@@ -4,19 +4,20 @@ import android.location.Location;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Presenter;
+import com.mvp.weather_example.di.ComponentActivity;
 import com.mvp.weather_example.di.ComponentSingleton;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.service.LocationProvider;
 import com.mvp.weather_example.service.filter.TodayWeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
-import com.mvp.weather_example.view.ThreeHourForecastActivity;
+import com.mvp.weather_example.view.ForecastActivity;
 
 import java.io.IOException;
 
 import javax.inject.Inject;
 
-@Presenter(needsComponents = {ComponentSingleton.class})
+@Presenter(needsComponents = {ComponentActivity.class})
 public class TodayWeatherPresenter extends WeatherPresenter
 {
 
@@ -76,9 +77,9 @@ public class TodayWeatherPresenter extends WeatherPresenter
 
     private void navigateToDetailScreen(String forecast)
     {
-        getRouter()
-                .navigateTo(ThreeHourForecastActivity.class)
-                .putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecast)
-                .open();
+        getActivityRouter()
+                .navigateTo(ForecastActivity.class)
+                .putExtra(ForecastActivity.KEY_FORECAST, forecast)
+                .commit();
     }
 }

@@ -5,28 +5,32 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+
+import com.mvp.PresenterType;
+import com.mvp.TestCase;
+import com.mvp.TodayWeatherFragmentController;
+import com.mvp.TodayWeatherPresenterBuilder;
+import com.mvp.ViewType;
 import com.mvp.weather_example.di.TestWeatherApplication;
 import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 import com.mvp.weather_example.service.LocationProvider;
+import com.mvp.weather_example.service.ViewPagerFragmentFactory;
 import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.view.MainActivity;
 import com.mvp.weather_example.view.TodayWeatherFragment;
-import com.mvp.weather_example.view.WeatherView;
-
+import com.mvp.weather_example.view.WeatherFragmentView;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowToast;
 import org.robolectric.shadows.support.v4.SupportFragmentController;
-import org.robolectric.util.ActivityController;
-
 import java.io.IOException;
-
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,7 +42,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(constants = BuildConfig.class, sdk = 21, application = TestWeatherApplication.class)
-public class PermissionTest {} /*extends TestCase
+public class PermissionTest  extends TestCase
 {
 
     private TestWeatherApplication provider;
@@ -46,13 +50,6 @@ public class PermissionTest {} /*extends TestCase
     @Before
     public void setUp() throws Exception {
         provider = (TestWeatherApplication) RuntimeEnvironment.application;
-        provider.with(new ViewPagerFragmentFactory(provider.getApplicationContext()){
-            @Override
-            public Fragment getItem(int position)
-            {
-                return new Fragment();
-            }
-        });
     }
 
     @Test
@@ -95,7 +92,7 @@ public class PermissionTest {} /*extends TestCase
                 .parameter(locationProvider)
                 .in(R.id.container);
 
-        WeatherView mockView = mock(WeatherView.class);
+        WeatherFragmentView mockView = mock(WeatherFragmentView.class);
         doReturn(true).when(mockView).isPermissionGranted(anyString());
         TodayWeatherPresenterBuilder.BindingResult bindingResult = configurePresenter(builder, mockView, PresenterType.REAL);
         when(bindingResult.view().isPermissionGranted(anyString())).thenReturn(true);
@@ -131,4 +128,3 @@ public class PermissionTest {} /*extends TestCase
     }
 
 }
-*/
