@@ -1,9 +1,15 @@
-package com.mvp.weather_example.service;
+package com.mvp.weather_example.service.filter;
+
+import com.mvp.annotation.ApplicationScope;
+import com.mvp.weather_example.service.DateProvider;
 
 import java.util.Calendar;
 
 import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 
+@Named("Today")
 public class TodayWeatherResponseFilter extends WeatherResponseFilter
 {
     @Inject

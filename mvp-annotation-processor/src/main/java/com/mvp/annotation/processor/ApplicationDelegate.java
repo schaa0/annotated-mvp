@@ -237,7 +237,7 @@ public class ApplicationDelegate extends AbsGeneratingType
                 VariableElement parameter = parameters.get(i);
                 TypeMirror typeMirror = parameter.asType();
                 ExecutableElement e = providingMethods.get(typeMirror.toString());
-                if (e != null)
+                if (e != null && !Utils.hasSubComponentAnnotation(typeUtils.asElement(e.getReturnType())))
                     params += "this." + e.getSimpleName().toString() + "()";
                 else
                     params += parameter.getSimpleName().toString();
@@ -393,19 +393,25 @@ public class ApplicationDelegate extends AbsGeneratingType
         return null;
     }
 
-    private List<ExecutableElement> findMethodsInComponent(TypeMirror module)
+    private List<ExecutableElement> findMethodsInComponent(TypeMirror component)
     {
-        if (module.toString().equals(Object.class.getName()))
+        if (component.toString().equals(Object.class.getName()))
             return new ArrayList<>();
         List<ExecutableElement> methods = new ArrayList<>();
-        TypeElement element = elementUtils.getTypeElement(module.toString());
-        if (!Utils.hasComponentAnnotation(element)){
+        TypeElement element = elementUtils.getTypeElement(component.toString());
+        if (!element.toString().equals("com.mvp.ComponentEventBus") && !(Utils.hasComponentAnnotation(element) || Utils.hasSubComponentAnnotation(element))){
             return new ArrayList<>();
         }
-        List<? extends TypeMirror> superTypes = typeUtils.directSupertypes(module);
+        List<? extends TypeMirror> superTypes = typeUtils.directSupertypes(component);
         for (TypeMirror superType : superTypes)
         {
-            methods.addAll(findMethodsInComponent(superType));
+            List<ExecutableElement> methodsInComponent = findMethodsInComponent(superType);
+            for (ExecutableElement executableElement : methodsInComponent)
+            {
+                if (!methods.contains(executableElement)) {
+                    methods.add(executableElement);
+                }
+            }
         }
         List<? extends Element> enclosedElements = element.getEnclosedElements();
         for (Element enclosedElement : enclosedElements)
@@ -413,7 +419,11 @@ public class ApplicationDelegate extends AbsGeneratingType
             if (enclosedElement.getKind() == ElementKind.METHOD)
             {
                 ExecutableElement executableElement = (ExecutableElement) enclosedElement;
-                methods.add(executableElement);
+                if (!methods.contains(executableElement))
+                {
+                    methods.add(executableElement);
+                }
+
             }
         }
         return methods;
@@ -485,7 +495,7 @@ public class ApplicationDelegate extends AbsGeneratingType
             TypeElement element = elementUtils.getTypeElement(returnType.toString());
             for (Element e : element.getEnclosedElements())
             {
-                if (e.getKind() == ElementKind.METHOD && !returnType.toString().equals(void.class.toString()))
+                if (e.getKind() == ElementKind.METHOD)
                 {
                     if (componentsToInstanceType.get(returnType) == null)
                         componentsToInstanceType.put(returnType, new ArrayList<TypeMirror>());

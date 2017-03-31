@@ -1,17 +1,22 @@
-package com.mvp.weather_example.di;
+package com.mvp.weather_example.service;
 
 import android.content.Context;
 import android.support.v4.app.Fragment;
 
 import com.mvp.weather_example.R;
+import com.mvp.annotation.ActivityScope;
 import com.mvp.weather_example.view.TodayWeatherFragment;
 import com.mvp.weather_example.view.TomorrowWeatherFragment;
 
+import javax.inject.Inject;
+
+@ActivityScope
 public class ViewPagerFragmentFactory
 {
 
     private Context context;
 
+    @Inject
     public ViewPagerFragmentFactory(Context context){
         this.context = context;
     }

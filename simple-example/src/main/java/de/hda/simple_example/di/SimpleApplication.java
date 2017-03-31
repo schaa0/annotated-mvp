@@ -1,6 +1,10 @@
-package de.hda.simple_example.container;
+package de.hda.simple_example.di;
+
+import android.support.v7.app.AppCompatActivity;
 
 import com.mvp.BaseApplicationProvider;
+import com.mvp.ModuleActivity;
+import com.mvp.ModuleContext;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
@@ -9,17 +13,14 @@ import de.hda.simple_example.business.MainPresenter;
 import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.di.ComponentFragment;
-import de.hda.simple_example.di.DaggerComponentActivity;
 import de.hda.simple_example.di.DaggerComponentApplication;
-import de.hda.simple_example.di.DaggerComponentFragment;
-import de.hda.simple_example.di.ModuleApplication;
-import de.hda.simple_example.di.ModuleGithubService;
+import de.hda.simple_example.di.ModuleSingleton;
 import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.di.ModuleRepository;
 import de.hda.simple_example.model.Repository;
 
 @Provider
-public class ApplicationProvider extends BaseApplicationProvider {
+public class SimpleApplication extends BaseApplicationProvider {
 
     private ComponentApplication componentApplication;
 
@@ -27,9 +28,9 @@ public class ApplicationProvider extends BaseApplicationProvider {
     public void onCreate() {
         super.onCreate();
         componentApplication = DaggerComponentApplication.builder()
-                                                         .moduleGithubService(this.moduleGithubService())
-                                                         .moduleApplication(this.moduleApplication())
-                                                         .componentEventBus(this.componentEventBus())
+                                                         .moduleSingleton(new ModuleSingleton())
+                                                         .moduleContext(new ModuleContext(this.getApplicationContext()))
+                                                         .moduleEventBus(this.mvpEventBus())
                                                          .build();
     }
 
@@ -43,29 +44,19 @@ public class ApplicationProvider extends BaseApplicationProvider {
         return new ModuleMainPresenterState(state);
     }
 
-    @ProvidesModule
-    public ModuleGithubService moduleGithubService(){
-        return new ModuleGithubService();
-    }
-
-    @ProvidesModule
-    public ModuleApplication moduleApplication(){
-        return new ModuleApplication(this.getApplicationContext());
-    }
-
     @ProvidesComponent
     public ComponentApplication componentApplication(){
         return componentApplication;
     }
 
     @ProvidesComponent
-    public ComponentActivity componentActivity(){
-        return DaggerComponentActivity.builder().componentApplication(componentApplication).build();
+    public ComponentActivity componentActivity(AppCompatActivity activity){
+        return componentApplication.plus(new ModuleActivity(activity));
     }
 
     @ProvidesComponent
-    public ComponentFragment componentFragment() {
-        return DaggerComponentFragment.builder().componentApplication(componentApplication).build();
+    public ComponentFragment componentFragment(ComponentActivity componentActivity) {
+        return componentActivity.plus();
     }
 
 }

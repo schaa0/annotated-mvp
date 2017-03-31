@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 public class MvpEventBus implements IMvpEventBus, EventBus {
 
     private static final boolean DEBUG = true;
@@ -26,6 +29,7 @@ public class MvpEventBus implements IMvpEventBus, EventBus {
         this.handler = handler;
         this.executorService = executorService;
     }
+
 
     public MvpEventBus() {
         this(new Handler(Looper.getMainLooper()), Executors.newSingleThreadExecutor());

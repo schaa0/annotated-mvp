@@ -1,27 +1,42 @@
 package com.mvp.weather_example;
 
+import android.content.Context;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 
 import com.mvp.MvpEventBus;
 import com.mvp.MvpPresenter;
+import com.mvp.Router;
 
 import org.junit.After;
 import org.junit.Before;
 import org.mockito.InjectMocks;
+import org.robolectric.Robolectric;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.util.concurrent.RoboExecutorService;
 
 import java.lang.reflect.Field;
+
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class PresenterUnitTestCase
 {
 
     private MvpEventBus eventBus;
+    private StubbedRouter router;
 
     @Before
     public void setUp() throws Exception {
         eventBus = new MvpEventBus(new Handler(Looper.myLooper()), new RoboExecutorService());
+        router = new StubbedRouter();
         findAndSetFields();
+    }
+
+    public StubbedRouter getRouter()
+    {
+        return router;
     }
 
     @After
@@ -41,6 +56,7 @@ public class PresenterUnitTestCase
                     findAndSetField(obj, "executorService", new RoboExecutorService());
                     findAndSetField(obj, "handler", new Handler(Looper.myLooper()));
                     findAndSetField(obj, "eventBus", eventBus);
+                    findAndSetField(obj, "router", router);
                 }
             }
         }

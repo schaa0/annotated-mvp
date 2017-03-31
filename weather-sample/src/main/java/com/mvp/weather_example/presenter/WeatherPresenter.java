@@ -12,11 +12,9 @@ import com.mvp.weather_example.event.PermissionEvent;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.service.ImageRequestManager;
 import com.mvp.weather_example.service.LocationProvider;
-import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.filter.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.view.WeatherView;
-
-import javax.inject.Provider;
 
 public abstract class WeatherPresenter extends MvpPresenter<WeatherView> implements LocationProvider.OnLocationChangedListener, ImageRequestManager.IconCallback
 {

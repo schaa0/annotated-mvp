@@ -15,7 +15,7 @@ public class ActivityPresenter extends MvpPresenter<IView> {
 
     private boolean isLoading;
     private Settings settings;
-    boolean shouldSetLastQueryFromCache = false;
+    private boolean shouldSetLastQueryFromCache = false;
 
     protected ActivityPresenter() {}
 

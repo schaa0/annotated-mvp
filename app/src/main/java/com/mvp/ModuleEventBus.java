@@ -21,7 +21,12 @@ public class ModuleEventBus {
     }
 
     @Provides
-    public IMvpEventBus eventBus() {
+    public EventBus eventBus() {
+        return eventBus;
+    }
+
+    @Provides
+    public IMvpEventBus presenterEventBus() {
         return eventBus;
     }
 

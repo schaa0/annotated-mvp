@@ -49,8 +49,6 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     public void onCreate(@Nullable Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        ApplicationProvider applicationProvider = (ApplicationProvider) getActivity().getApplication();
-        applicationProvider.componentFragment().inject(this);
     }
 
     @Nullable
@@ -62,6 +60,7 @@ public class MainFragment extends Fragment implements IMainView, RepositoryAdapt
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        ((MainActivity)getActivity()).getComponent().plus().inject(this);
         recyclerView = (RecyclerView) getView().findViewById(R.id.recyclerView);
         orientationView = getView().findViewById(R.id.orientation);
         lm = new LinearLayoutManager(recyclerView.getContext(), LinearLayoutManager.VERTICAL, false);

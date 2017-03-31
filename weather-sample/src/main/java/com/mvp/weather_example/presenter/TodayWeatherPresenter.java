@@ -4,19 +4,19 @@ import android.location.Location;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Presenter;
-import com.mvp.weather_example.di.ComponentWeather;
+import com.mvp.weather_example.di.ComponentSingleton;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.service.LocationProvider;
-import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.filter.TodayWeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
+import com.mvp.weather_example.view.ThreeHourForecastActivity;
 
 import java.io.IOException;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
-@Presenter(needsComponents = {ComponentWeather.class})
+@Presenter(needsComponents = {ComponentSingleton.class})
 public class TodayWeatherPresenter extends WeatherPresenter
 {
 
@@ -25,7 +25,7 @@ public class TodayWeatherPresenter extends WeatherPresenter
     }
 
     @Inject
-    public TodayWeatherPresenter(LocationProvider locationProvider, WeatherService weatherService, @Named("Today") WeatherResponseFilter weatherParser)
+    public TodayWeatherPresenter(LocationProvider locationProvider, WeatherService weatherService, TodayWeatherResponseFilter weatherParser)
     {
         super(locationProvider, weatherService, weatherParser);
     }
@@ -65,12 +65,20 @@ public class TodayWeatherPresenter extends WeatherPresenter
                         weatherService.getForecastWeather(longitude, latitude, "metric");
                 dispatchRequestFinished();
                 final String forecastData = weatherParser.parse(weather);
-                submitOnUiThread(() -> getView().showForecastWeather(forecastData));
+                submitOnUiThread(() -> navigateToDetailScreen(forecastData));
             }
         } catch (Exception e)
         {
             e.printStackTrace();
             dispatchRequestFinished();
         }
+    }
+
+    private void navigateToDetailScreen(String forecast)
+    {
+        getRouter()
+                .navigateTo(ThreeHourForecastActivity.class)
+                .putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecast)
+                .open();
     }
 }

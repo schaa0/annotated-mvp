@@ -2,12 +2,13 @@ package com.mvp.weather_example.presenter;
 
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.Presenter;
+import com.mvp.weather_example.di.ComponentSingleton;
 import com.mvp.weather_example.di.ModuleThreeHourForecast;
 import com.mvp.weather_example.view.IThreeHourForecastView;
 
 import javax.inject.Inject;
 
-@Presenter(needsModules = ModuleThreeHourForecast.class)
+@Presenter(needsModules = ModuleThreeHourForecast.class, needsComponents = ComponentSingleton.class)
 public class ThreeHourForecastPresenter extends MvpPresenter<IThreeHourForecastView> {
 
     private String forecastWeather;

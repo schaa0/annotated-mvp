@@ -6,12 +6,14 @@ import android.location.Location;
 import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
+import com.mvp.weather_example.di.TestWeatherApplication;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 import com.mvp.weather_example.presenter.TodayWeatherPresenter;
 import com.mvp.weather_example.service.LocationProvider;
-import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.filter.WeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
+import com.mvp.weather_example.view.ThreeHourForecastActivity;
 import com.mvp.weather_example.view.WeatherView;
 
 import org.junit.Test;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.text.ParseException;
 
 import static com.mvp.weather_example.Responses.createExpectedResult;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,7 +40,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("MissingPermission")
-@Config(sdk = 21, constants = com.mvp.weather_example.BuildConfig.class)
+@Config(sdk = 21, constants = com.mvp.weather_example.BuildConfig.class, application = TestWeatherApplication.class)
 @RunWith(RobolectricTestRunner.class)
 public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
 {
@@ -159,7 +162,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
         presenter.loadForecastWeatherDataForToday();
         String expected = createExpectedResult();
         verify(view).requestStarted();
-        verify(view).showForecastWeather(expected);
+        assertEquals(getRouter().getLastTarget(), ThreeHourForecastActivity.class);
         verify(view).requestFinished();
     }
 

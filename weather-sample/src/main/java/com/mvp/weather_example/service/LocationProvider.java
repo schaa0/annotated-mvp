@@ -6,9 +6,15 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 
+import com.mvp.annotation.ApplicationScope;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class LocationProvider implements LocationListener
 {
 
@@ -29,6 +35,7 @@ public class LocationProvider implements LocationListener
             locationListeners.remove(locationListener);
     }
 
+    @Inject
     public LocationProvider(LocationManager locationManager)
     {
         this.locationManager = locationManager;

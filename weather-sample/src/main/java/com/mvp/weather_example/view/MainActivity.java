@@ -15,7 +15,7 @@ import com.mvp.EventBus;
 import com.mvp.annotation.Event;
 import com.mvp.weather_example.R;
 import com.mvp.weather_example.di.WeatherApplication;
-import com.mvp.weather_example.di.ViewPagerFragmentFactory;
+import com.mvp.weather_example.service.ViewPagerFragmentFactory;
 import com.mvp.weather_example.event.PermissionEvent;
 
 import java.io.IOException;

@@ -29,12 +29,19 @@ public abstract class MvpPresenter<V extends MvpView> implements IMvpPresenter<V
     @Inject
     ExecutorService executorService;
 
+    @Inject
+    Router router;
+
     Map<String, Future<?>> tasks = Collections.synchronizedMap(new HashMap<String, Future<?>>());
     private boolean destroyed;
 
     List<OnEventListener<?>> registeredEventListeners = new ArrayList<>();
 
     public MvpPresenter() { }
+
+    protected Router getRouter() {
+        return this.router;
+    }
 
     private void unregisterEventListeners() {
         for (OnEventListener<?> eventListener : registeredEventListeners){

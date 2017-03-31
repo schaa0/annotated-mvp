@@ -3,6 +3,8 @@ package com.mvp.weather_example.di;
 import android.support.v7.app.AppCompatActivity;
 
 import com.mvp.BaseApplicationProvider;
+import com.mvp.ModuleActivity;
+import com.mvp.ModuleContext;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
@@ -10,14 +12,15 @@ import com.mvp.annotation.ProvidesModule;
 @Provider
 public class WeatherApplication extends BaseApplicationProvider {
 
-    private ComponentWeather componentWeather;
+    private ComponentSingleton componentWeather;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        componentWeather = DaggerComponentWeather.builder()
-                                                 .moduleWeather(this.moduleWeather())
-                                                 .componentEventBus(this.componentEventBus())
+        componentWeather = DaggerComponentSingleton.builder()
+                                                 .moduleSingleton(new ModuleSingleton())
+                                                 .moduleContext(new ModuleContext(this.getApplicationContext()))
+                                                 .moduleEventBus(this.mvpEventBus())
                                                  .build();
     }
 
@@ -26,26 +29,13 @@ public class WeatherApplication extends BaseApplicationProvider {
         return new ModuleThreeHourForecast(threeHourForecastWeather);
     }
 
-    @ProvidesModule
-    public ModuleViewPagerFragmentFactory moduleFragmentFactory(AppCompatActivity activity){
-        return new ModuleViewPagerFragmentFactory(activity);
-    }
-
-    @ProvidesModule
-    public ModuleWeather moduleWeather(){
-        return new ModuleWeather(this.getApplicationContext());
-    }
-
     @ProvidesComponent
-    public ComponentWeather componentWeather(){
+    public ComponentSingleton componentSingleton(){
         return componentWeather;
     }
 
     public ComponentActivity createComponentActivity(AppCompatActivity activity)
     {
-        return DaggerComponentActivity.builder()
-                               .componentEventBus(this.componentEventBus())
-                               .moduleViewPagerFragmentFactory(this.moduleFragmentFactory(activity))
-                               .build();
+        return componentWeather.plus(new ModuleActivity(activity));
     }
 }

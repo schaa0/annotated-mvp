@@ -3,8 +3,8 @@ package com.mvp.weather_example;
 import com.google.gson.Gson;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.service.DateProvider;
-import com.mvp.weather_example.service.TodayWeatherResponseFilter;
-import com.mvp.weather_example.service.TomorrowWeatherResponseFilter;
+import com.mvp.weather_example.service.filter.TodayWeatherResponseFilter;
+import com.mvp.weather_example.service.filter.TomorrowWeatherResponseFilter;
 import com.mvp.weather_example.stubs.StubDateProvider;
 
 import org.junit.Before;

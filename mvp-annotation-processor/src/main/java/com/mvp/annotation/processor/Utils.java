@@ -77,6 +77,10 @@ public class Utils {
         return typeUtils.isAssignable(activityType, elementUtils.getTypeElement("android.support.v7.app.AppCompatActivity").asType());
     }
 
+    public static boolean isComponent(Element element) {
+        return hasComponentAnnotation(element);
+    }
+
     public static boolean isFragment(Types typeUtils, Elements elementUtils, TypeMirror activityType) {
         return typeUtils.isAssignable(activityType, elementUtils.getTypeElement("android.support.v4.app.Fragment").asType());
     }
@@ -318,8 +322,18 @@ public class Utils {
         return methodBuilder;
     }
 
+    public static boolean hasSubComponentAnnotation(Element element)
+    {
+        List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
+        for (AnnotationMirror mirror : mirrors){
+            if (mirror.getAnnotationType().asElement().asType().toString().equals("dagger.Subcomponent")){
+                return true;
+            }
+        }
+        return false;
+    }
 
-    public static boolean hasComponentAnnotation(TypeElement element)
+    public static boolean hasComponentAnnotation(Element element)
     {
         List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
         for (AnnotationMirror mirror : mirrors){
@@ -329,4 +343,5 @@ public class Utils {
         }
         return false;
     }
+
 }

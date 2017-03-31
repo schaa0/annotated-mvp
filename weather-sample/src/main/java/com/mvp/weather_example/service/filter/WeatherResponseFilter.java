@@ -1,7 +1,8 @@
-package com.mvp.weather_example.service;
+package com.mvp.weather_example.service.filter;
 
 import com.mvp.weather_example.model.forecast.threehours.List;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
+import com.mvp.weather_example.service.DateProvider;
 
 import java.text.ParseException;
 import java.util.Calendar;

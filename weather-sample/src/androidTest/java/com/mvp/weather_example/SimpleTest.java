@@ -11,7 +11,7 @@ import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
-import com.mvp.weather_example.service.WeatherApi;
+import com.mvp.weather_example.service.WeatherService;
 import com.mvp.weather_example.stubs.Responses;
 import com.mvp.weather_example.stubs.StubDateProvider;
 import com.mvp.weather_example.view.MainActivity;
@@ -24,6 +24,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 
+import java.io.IOException;
 import java.util.Calendar;
 
 import static android.support.test.espresso.Espresso.onView;
@@ -45,7 +46,7 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
 {
 
     @Mock
-    WeatherApi weatherApi;
+    WeatherService weatherApi;
     @Mock
     ImageRequestManager imageRequestManager;
 
@@ -61,16 +62,16 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     {
         super.setUp();
         doNothing().when(imageRequestManager).load(anyString(), ArgumentMatchers.any(ImageRequestManager.IconCallback.class));
-        dependencies().with(imageRequestManager);
+        //dependencies().with(imageRequestManager);
     }
 
     @Test
-    public void itShouldShowWeatherForNextDay()
+    public void itShouldShowWeatherForNextDay() throws IOException
     {
         doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
-                .when(weatherApi).getForecastWeather(anyDouble(), anyDouble(), anyString(), anyString());
+                .when(weatherApi).getForecastWeather(anyDouble(), anyDouble(), anyString());
 
-        dependencies().with(weatherApi).withNamedTomorrow(dateProvider).apply();
+        //dependencies().with(weatherApi).withNamedTomorrow(dateProvider).open();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();
@@ -105,13 +106,13 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     }
 
     @Test
-    public void itShouldDisplayTemperatureFromApi()
+    public void itShouldDisplayTemperatureFromApi() throws IOException
     {
         doReturn(new WeatherCall<>(TomorrowWeather.class, Responses.TOMORROW_WEATHER))
-                .when(weatherApi).getTomorrowWeather(anyDouble(), anyDouble(), anyString(), anyInt(), anyString());
+                .when(weatherApi).getTomorrowWeather(anyDouble(), anyDouble(), anyString(), anyInt());
 
         doReturn(new WeatherCall<>(TodayWeather.class, Responses.TODAY_WEATHER))
-                .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble(), anyString(), anyString());
+                .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble(), anyString());
 
         dependencies().with(weatherApi).apply();
 

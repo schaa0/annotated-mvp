@@ -4,20 +4,20 @@ import android.location.Location;
 
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.Presenter;
-import com.mvp.weather_example.di.ComponentWeather;
+import com.mvp.weather_example.di.ComponentSingleton;
 import com.mvp.weather_example.model.Weather;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.service.LocationProvider;
-import com.mvp.weather_example.service.WeatherResponseFilter;
+import com.mvp.weather_example.service.filter.TomorrowWeatherResponseFilter;
 import com.mvp.weather_example.service.WeatherService;
+import com.mvp.weather_example.view.ThreeHourForecastActivity;
 
 import java.io.IOException;
 import java.text.ParseException;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
-@Presenter(needsComponents = { ComponentWeather.class })
+@Presenter(needsComponents = { ComponentSingleton.class })
 public class TomorrowWeatherPresenter extends WeatherPresenter {
     private static final int FORECAST_DAYS = 1;
 
@@ -25,7 +25,7 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
     protected TomorrowWeatherPresenter() { }
 
     @Inject
-    public TomorrowWeatherPresenter(LocationProvider locationProvider, WeatherService weatherService, @Named("Tomorrow") WeatherResponseFilter weatherParser) {
+    public TomorrowWeatherPresenter(LocationProvider locationProvider, WeatherService weatherService, TomorrowWeatherResponseFilter weatherParser) {
         super(locationProvider, weatherService, weatherParser);
     }
 
@@ -75,7 +75,10 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
 
     private void postForecastWeather(String forecastData)
     {
-        getView().showForecastWeather(forecastData);
+        getRouter()
+                .navigateTo(ThreeHourForecastActivity.class)
+                .putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecastData)
+                .open();
         dispatchRequestFinished();
     }
 }

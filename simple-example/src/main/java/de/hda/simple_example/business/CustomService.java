@@ -23,11 +23,11 @@ public class CustomService {
         Log.e(CustomService.class.getName(), "Query: " + event.getQuery());
     }
 
-    public void onCreate() {
+    public void register() {
         eventBus.register(this);
     }
 
-    public void onDestroy() {
+    public void unregister() {
         eventBus.unregister(this);
     }
 }

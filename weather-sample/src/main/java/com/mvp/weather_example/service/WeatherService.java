@@ -1,14 +1,20 @@
 package com.mvp.weather_example.service;
 
+import com.mvp.annotation.ApplicationScope;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 
 import java.io.IOException;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import retrofit2.Call;
 import retrofit2.Response;
 
+@Singleton
 public class WeatherService
 {
 
@@ -16,7 +22,8 @@ public class WeatherService
     private final ImageRequestManager imageRequestManager;
     private String apiKey;
 
-    public WeatherService(WeatherApi api, ImageRequestManager imageRequestManager, String apiKey){
+    @Inject
+    public WeatherService(WeatherApi api, ImageRequestManager imageRequestManager, @Named("apiKey") String apiKey){
         this.api = api;
         this.imageRequestManager = imageRequestManager;
         this.apiKey = apiKey;

@@ -16,11 +16,11 @@ import com.mvp.annotation.View;
 
 import javax.inject.Inject;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
 import de.hda.simple_example.R;
 import de.hda.simple_example.business.ActivityPresenter;
 import de.hda.simple_example.business.CustomService;
+import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.SimpleApplication;
 import de.hda.simple_example.event.Contract;
 
 
@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Inject
     CustomService customService;
 
+    private ComponentActivity component;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,10 +43,11 @@ public class MainActivity extends AppCompatActivity implements IView {
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         this.savedInstanceState = savedInstanceState;
 
-        ApplicationProvider provider = (ApplicationProvider) getApplication();
-        provider.componentActivity().inject(this);
+        SimpleApplication provider = (SimpleApplication) getApplication();
+        component = provider.componentActivity(this);
+        component.inject(this);
 
-        customService.onCreate();
+        customService.register();
 
         if (savedInstanceState == null){
             FragmentTransaction ft = getSupportFragmentManager()
@@ -86,13 +89,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                 return true;
             }
         });
-        searchView.setOnQueryTextFocusChangeListener(new android.view.View.OnFocusChangeListener() {
-
-            @Override
-            public void onFocusChange(android.view.View v, boolean hasFocus) {
-                isFocused = hasFocus;
-            }
-        });
+        searchView.setOnQueryTextFocusChangeListener((v, hasFocus) -> isFocused = hasFocus);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 
             @Override
@@ -124,7 +121,7 @@ public class MainActivity extends AppCompatActivity implements IView {
     @Override
     protected void onDestroy() {
         savedInstanceState = null;
-        customService.onDestroy();
+        customService.unregister();
         super.onDestroy();
     }
 
@@ -190,4 +187,8 @@ public class MainActivity extends AppCompatActivity implements IView {
     boolean isExpanded;
     boolean isFocused;
 
+    public ComponentActivity getComponent()
+    {
+        return component;
+    }
 }

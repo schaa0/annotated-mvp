@@ -11,5 +11,4 @@ public interface WeatherView extends MvpView {
     boolean isPermissionGranted(String permission);
     void requestPermission(String permission, int requestCode);
     void showIcon(Bitmap icon);
-    void showForecastWeather(String forecastString);
 }

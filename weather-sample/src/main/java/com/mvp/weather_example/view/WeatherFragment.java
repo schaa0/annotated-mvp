@@ -76,13 +76,6 @@ public abstract class WeatherFragment extends Fragment implements WeatherView
     }
 
     @Override
-    public void showForecastWeather(String forecastString) {
-        Intent intent = new Intent(getActivity(), ThreeHourForecastActivity.class);
-        intent.putExtra(ThreeHourForecastActivity.KEY_FORECAST, forecastString);
-        startActivity(intent);
-    }
-
-    @Override
     public void requestStarted() {
         progressBar.setVisibility(ProgressBar.VISIBLE);
     }
