@@ -12,11 +12,11 @@ public interface WeatherApi
 {
 
     @GET("/data/2.5/weather")
-    Call<TodayWeather> getCurrentWeather(@Query("lon") double longitude, @Query("lat")double latitude, @Query("units") String metric, @Query("appid") String apiKey);
+    Call<TodayWeather> getCurrentWeather(@Query("lon") double longitude, @Query("lat")double latitude, @Query("units") String metric, @Query("lang") String lang, @Query("appid") String apiKey);
 
     @GET("/data/2.5/forecast/daily")
-    Call<TomorrowWeather> getTomorrowWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("cnt") int days, @Query("appid") String apiKey);
+    Call<TomorrowWeather> getTomorrowWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("cnt") int days, @Query("lang") String lang, @Query("appid") String apiKey);
 
     @GET("/data/2.5/forecast")
-    Call<ThreeHoursForecastWeather> getForecastWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("appid") String apiKey);
+    Call<ThreeHoursForecastWeather> getForecastWeather(@Query("lon") double longitude, @Query("lat") double latitude, @Query("units") String metric, @Query("lang") String lang, @Query("appid") String apiKey);
 }

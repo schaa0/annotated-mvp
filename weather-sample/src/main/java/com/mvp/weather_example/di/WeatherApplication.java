@@ -24,11 +24,6 @@ public class WeatherApplication extends MvpApplication {
                                                  .build();
     }
 
-    @ProvidesModule
-    public ModuleThreeHourForecast getThreeHourForecast(String threeHourForecastWeather){
-        return new ModuleThreeHourForecast(threeHourForecastWeather);
-    }
-
     @ProvidesComponent
     public ComponentSingleton componentSingleton(){
         return componentWeather;

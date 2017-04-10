@@ -32,6 +32,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.reset;
@@ -115,7 +116,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
         when(view.isPermissionGranted(PERM_COARSE_LOCATION)).thenReturn(true);
         when(view.isPermissionGranted(PERM_FINE_LOCATION)).thenReturn(true);
         Location location = createLocation(1.0, 1.0);
-        when(weatherService.getCurrentWeather(1.0, 1.0, "metric"))
+        when(weatherService.getCurrentWeather(1.0, 1.0))
                 .thenReturn(new Gson().fromJson(Responses.TODAY_WEATHER, TodayWeather.class));
         when(locationProvider.lastLocation()).thenReturn(location);
 
@@ -123,7 +124,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
 
         verify(view, atLeastOnce()).isPermissionGranted(anyString());
         verify(view).requestStarted();
-        verify(view).showWeather("3.76", "100");
+        verify(view).showWeather(anyString(), anyString(), eq("3.76°C"), eq("100%"));
         verify(view).requestFinished();
     }
 
@@ -157,7 +158,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
         double latitude = 1.0;
         when(locationProvider.lastLocation()).thenReturn(createLocation(longitude, latitude));
         when(weatherParser.parse(any(ThreeHoursForecastWeather.class))).thenReturn(createExpectedResult());
-        when(weatherService.getForecastWeather(longitude, latitude, "metric"))
+        when(weatherService.getForecastWeather(longitude, latitude))
                 .thenReturn(new Gson().fromJson(Responses.FORECAST_RESULT, ThreeHoursForecastWeather.class));
         presenter.loadForecastWeatherDataForToday();
         verify(view).requestStarted();

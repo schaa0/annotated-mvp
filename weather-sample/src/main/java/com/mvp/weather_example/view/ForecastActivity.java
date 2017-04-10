@@ -6,7 +6,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 import com.mvp.weather_example.R;
@@ -20,7 +20,7 @@ public class ForecastActivity extends AppCompatActivity implements ForecastActiv
     @Presenter
     ForecastPresenter presenter;
 
-    @ModuleParam
+    @Param
     public String forecastWeather() {
         return getIntent().getStringExtra(KEY_FORECAST);
     }

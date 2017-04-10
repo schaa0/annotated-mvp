@@ -9,10 +9,9 @@ import de.hda.simple_example.R;
 import de.hda.simple_example.container.DetailActivityView;
 import de.hda.simple_example.container.DetailFragment;
 import de.hda.simple_example.di.ComponentActivity;
-import de.hda.simple_example.di.ModuleRepository;
 import de.hda.simple_example.model.Repository;
 
-@Presenter(needsModules = { ModuleRepository.class}, needsComponents = { ComponentActivity.class} )
+@Presenter(needsComponents = {ComponentActivity.class} )
 public class DetailActivityPresenter extends MvpPresenter<DetailActivityView> {
 
     private Repository repository;

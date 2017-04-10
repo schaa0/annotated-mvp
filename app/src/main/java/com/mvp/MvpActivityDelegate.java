@@ -84,6 +84,7 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
         if (!loadFinishedCalled) {
             loadFinishedCalled = true;
             this.presenter = presenter;
+            boolean wasDetached = presenter.getView() == null;
             presenter.setView(view);
             if (onPresenterLoadedListener != null){
                 onPresenterLoadedListener.onPresenterLoaded(presenter);
@@ -91,7 +92,7 @@ public abstract class MvpActivityDelegate<V extends MvpView, P extends MvpPresen
             presenter.setIsReattached(!this.firstDelivery);
             if (this.firstDelivery)
                 presenter.onViewAttached(view);
-            else
+            else if (wasDetached)
                 presenter.onViewReattached(view);
         }
     }

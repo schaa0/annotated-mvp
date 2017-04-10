@@ -224,4 +224,16 @@ public class TodayWeather implements Parcelable, Weather
         String iconId = weather.get(0).getIcon();
         return "http://openweathermap.org/img/w/" + iconId + ".png";
     }
+
+    @Override
+    public String city()
+    {
+        return name;
+    }
+
+    @Override
+    public String description()
+    {
+        return weather.get(0).getDescription();
+    }
 }

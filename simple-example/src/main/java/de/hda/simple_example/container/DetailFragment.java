@@ -7,7 +7,7 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
@@ -24,7 +24,8 @@ public class DetailFragment extends Fragment implements DetailFragmentView {
     @Presenter
     DetailFragmentPresenter presenter;
 
-    @ModuleParam public Repository getRepository() {
+    @Param
+    public Repository getRepository() {
         return getArguments().getParcelable(KEY_REPOSITORY);
     }
 

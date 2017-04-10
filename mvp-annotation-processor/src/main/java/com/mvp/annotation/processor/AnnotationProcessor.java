@@ -3,6 +3,7 @@ package com.mvp.annotation.processor;
 import com.mvp.annotation.BackgroundThread;
 import com.mvp.annotation.DelegateScope;
 import com.mvp.annotation.Event;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.OnEventListener;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.PresenterScope;
@@ -40,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.inject.Inject;
@@ -88,6 +90,7 @@ public class AnnotationProcessor extends AbstractProcessor
 
     private boolean alreadyProcessed = false;
     private boolean shouldSkipAllRounds = false;
+    private Filer filer;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -95,13 +98,15 @@ public class AnnotationProcessor extends AbstractProcessor
         this.processingEnv = env;
         typeUtils = processingEnv.getTypeUtils();
         elementUtils = processingEnv.getElementUtils();
+        filer = processingEnv.getFiler();
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env)
     {
 
-        if (shouldSkipAllRounds){
+        if (shouldSkipAllRounds)
+        {
             return true;
         }
 
@@ -114,7 +119,8 @@ public class AnnotationProcessor extends AbstractProcessor
         if (componentProvider == null)
         {
             Iterator<? extends Element> iterator = env.getElementsAnnotatedWith(Provider.class).iterator();
-            if (!iterator.hasNext()){
+            if (!iterator.hasNext())
+            {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
                 shouldSkipAllRounds = true;
                 return true;
@@ -151,14 +157,16 @@ public class AnnotationProcessor extends AbstractProcessor
                     continue;
                 }
 
-                if (!derivesFromBasePresenterClass(declaredClassType, presenterType)){
+                if (!derivesFromBasePresenterClass(declaredClassType, presenterType))
+                {
                     /* Presenter must derive from MvpPresenter class */
                     continue;
                 }
 
                 TypeMirror viewType = findViewTypeOfPresenter(presenterType, classType);
 
-                if (viewType == null) {
+                if (viewType == null)
+                {
                     /* Presenter does not specify a view type as generic argument */
                     continue;
                 }
@@ -179,9 +187,24 @@ public class AnnotationProcessor extends AbstractProcessor
                     continue;
                 }
 
+                TypeElement viewImplementation = elementUtils.getTypeElement(viewImplementationClassName.toString());
+                List<TypeMirror> constructorParams = new ArrayList<>();
+                List<? extends Element> enclosedElements = viewImplementation.getEnclosedElements();
+                for (Element enclosedElement : enclosedElements)
+                {
+                    if (enclosedElement.getKind() == ElementKind.METHOD)
+                    {
+                        ExecutableElement executableElement = (ExecutableElement) enclosedElement;
+                        if (executableElement.getAnnotation(Param.class) != null)
+                        {
+                            constructorParams.add(executableElement.getReturnType());
+                        }
+                    }
+                }
+
                 String presenterPackage = extractPackage(classType);
 
-                AnnotationMemberModuleClasses annotationMemberModuleClasses = new AnnotationMemberModuleClasses(presenterPackage).parse(element);
+                AnnotationMemberModuleClasses annotationMemberModuleClasses = new AnnotationMemberModuleClasses(filer, typeUtils, presenterPackage, constructorParams).parse(element);
                 AnnotationMemberComponentClasses annotationMemberComponentClasses = new AnnotationMemberComponentClasses().parse(element);
 
                 String simpleComponentPresenterClassName = "Component" + element.getSimpleName().toString();
@@ -304,7 +327,8 @@ public class AnnotationProcessor extends AbstractProcessor
         return viewImplementationClassName;
     }
 
-    private boolean isSubtypeIfErased(TypeMirror type, TypeMirror targetType) {
+    private boolean isSubtypeIfErased(TypeMirror type, TypeMirror targetType)
+    {
 
         TypeMirror erasedTargetType = typeUtils.erasure(targetType);
         TypeMirror erasedType = typeUtils.erasure(type);
@@ -490,34 +514,69 @@ public class AnnotationProcessor extends AbstractProcessor
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = moduleClass.packageName() + "." + moduleClass.simpleName();
                 ExecutableElement executableElement = providingMethods.get(o);
-                if (executableElement == null){
-                    throw new IllegalStateException(String.format("Module %s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", o));
-                }
-                List<? extends VariableElement> parameters = executableElement.getParameters();
-                String parameterFormat = "";
-                String[] parameterFieldNames = new String[parameters.size()];
-                for (int i = 0; i < parameters.size(); i++)
+                List<? extends VariableElement> parameters;
+                if (executableElement == null)
                 {
-                    VariableElement parameter = parameters.get(i);
-                    TypeName typeName = ClassName.get(parameter.asType());
-                    String s = parameter.getSimpleName().toString();
-                    methodBuilder.addParameter(typeName, s);
-                    parameterFormat += "%s";
-                    if (i < parameters.size() - 1)
+                    TypeElement element = elementUtils.getTypeElement(o);
+                    List<? extends Element> enclosedElements = element.getEnclosedElements();
+                    for (Element enclosedElement : enclosedElements)
                     {
-                        parameterFormat += ", ";
+                        if (enclosedElement.getKind() == ElementKind.CONSTRUCTOR)
+                        {
+                            ExecutableElement e = (ExecutableElement) enclosedElement;
+                            parameters = e.getParameters();
+                            String parameterFormat = "";
+                            String[] parameterFieldNames = new String[parameters.size()];
+                            for (int i = 0; i < parameters.size(); i++)
+                            {
+                                VariableElement parameter = parameters.get(i);
+                                TypeName typeName = ClassName.get(parameter.asType());
+                                String s = parameter.getSimpleName().toString();
+                                methodBuilder.addParameter(typeName, s);
+                                parameterFormat += "%s";
+                                if (i < parameters.size() - 1)
+                                {
+                                    parameterFormat += ", ";
+                                }
+                                parameterFieldNames[i] = parameter.getSimpleName().toString();
+                            }
+                            Object[] obj = new Object[parameters.size() + 2];
+                            obj[0] = methodName;
+                            for (int i = 1; i <= parameterFieldNames.length; i++)
+                            {
+                                obj[i] = parameterFieldNames[i-1];
+                            }
+                            methodBuilder.addCode(String.format(".%s(new $T(" + parameterFormat + "))", obj), ClassName.bestGuess(o));
+                            break;
+                        }
                     }
-                    parameterFieldNames[i] = parameter.getSimpleName().toString();
+                }else {
+                    parameters = executableElement.getParameters();
+                    String parameterFormat = "";
+                    String[] parameterFieldNames = new String[parameters.size()];
+                    for (int i = 0; i < parameters.size(); i++)
+                    {
+                        VariableElement parameter = parameters.get(i);
+                        TypeName typeName = ClassName.get(parameter.asType());
+                        String s = parameter.getSimpleName().toString();
+                        methodBuilder.addParameter(typeName, s);
+                        parameterFormat += "%s";
+                        if (i < parameters.size() - 1)
+                        {
+                            parameterFormat += ", ";
+                        }
+                        parameterFieldNames[i] = parameter.getSimpleName().toString();
+                    }
+                    Object[] obj = new Object[parameters.size() + 2];
+                    obj[0] = methodName;
+                    obj[1] = executableElement.getSimpleName().toString();
+                    for (int i = 0; i < parameterFieldNames.length; i++)
+                    {
+                        obj[i + 2] = parameterFieldNames[i];
+                    }
+                    String moduleCode = String.format(".%s(application.%s(" + parameterFormat + "))", obj);
+                    methodBuilder.addCode(moduleCode);
                 }
-                Object[] obj = new Object[parameters.size() + 2];
-                obj[0] = methodName;
-                obj[1] = executableElement.getSimpleName().toString();
-                for (int i = 0; i < parameterFieldNames.length; i++)
-                {
-                    obj[i + 2] = parameterFieldNames[i];
-                }
-                String moduleCode = String.format(".%s(application.%s(" + parameterFormat + "))", obj);
-                methodBuilder.addCode(moduleCode);
             }
 
             ClassName[] componentClasses = typeComponentPresenter.getComponentClasses();
@@ -538,7 +597,7 @@ public class AnnotationProcessor extends AbstractProcessor
                     ExecutableElement moduleMethod = providingMethods.get(type.toString());
                     if (!type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()) && moduleMethod == null)
                         throw new IllegalStateException(String.format("Error while processing %s: %s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", type, o));
-                    else if(type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()))
+                    else if (type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()))
                         params.append("activity");
                     else
                         params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
@@ -933,9 +992,10 @@ public class AnnotationProcessor extends AbstractProcessor
                 boolean equalParams = areParamsEqual(parameters, parameters1);
                 if (equalParams)
                 {
-                    if (method.getAnnotation(UiThread.class) != null || method.getAnnotation(BackgroundThread.class) != null ){
+                    if (method.getAnnotation(UiThread.class) != null || method.getAnnotation(BackgroundThread.class) != null)
+                    {
                         toRemove = m;
-                    }else
+                    } else
                     {
                         alreadyAdded = true;
                     }
@@ -944,7 +1004,8 @@ public class AnnotationProcessor extends AbstractProcessor
             }
         }
 
-        if (toRemove != null){
+        if (toRemove != null)
+        {
             allMethods.remove(toRemove);
         }
 
@@ -1467,13 +1528,19 @@ public class AnnotationProcessor extends AbstractProcessor
     private class AnnotationMemberModuleClasses
     {
 
+        private final Filer filer;
+        private final Types types;
+        private final List<TypeMirror> constructorParams;
         private String presenterPackage;
         private String moduleFormat;
         private ClassName[] classes;
 
-        public AnnotationMemberModuleClasses(String presenterPackage)
+        public AnnotationMemberModuleClasses(Filer filer, Types types, String presenterPackage, List<TypeMirror> constructorParams)
         {
+            this.filer = filer;
+            this.types = types;
             this.presenterPackage = presenterPackage;
+            this.constructorParams = constructorParams;
         }
 
         public String getModuleFormat()
@@ -1492,7 +1559,11 @@ public class AnnotationProcessor extends AbstractProcessor
             List<Object> moduleClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
 
             moduleFormat = "{ ";
-            classes = new ClassName[moduleClasses.size() + 2];
+            classes = new ClassName[moduleClasses.size() + 3];
+
+            String simplePresenterClassName = element.getSimpleName().toString();
+            ModuleBuilder builder = new ModuleBuilder(filer, presenterPackage, types, simplePresenterClassName, constructorParams);
+            builder.generate();
 
             for (int i = 0; i < moduleClasses.size(); i++)
             {
@@ -1501,6 +1572,12 @@ public class AnnotationProcessor extends AbstractProcessor
                 classes[i] = className;
                 moduleFormat += ", ";
             }
+
+            ClassName className = ClassName.get(presenterPackage, "ModuleParams" + simplePresenterClassName);
+            moduleFormat += "$T.class";
+            classes[classes.length - 3] = className;
+            moduleFormat += ", ";
+
             moduleFormat += "$T.class, ";
             moduleFormat += "$T.class";
             classes[classes.length - 1] = ClassName.get(presenterPackage, "Module" + element.getSimpleName().toString() + "Dependencies");

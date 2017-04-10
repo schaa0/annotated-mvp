@@ -1,6 +1,7 @@
 package com.mvp.annotation.processor;
 
 
+import com.mvp.annotation.ProvidesModule;
 import com.mvp.annotation.processor.unittest.AbsGeneratingType;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -17,7 +18,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 
 public class ModuleBuilder extends AbsGeneratingType {
-
 
     private final String simplePresenterClassName;
     private final List<TypeMirror> params;
@@ -39,7 +39,9 @@ public class ModuleBuilder extends AbsGeneratingType {
 
     @Override
     protected TypeSpec.Builder build() {
-        builder = TypeSpec.classBuilder("Module" + this.simplePresenterClassName);
+        builder = TypeSpec.classBuilder("ModuleParams" + this.simplePresenterClassName);
+        builder.addModifiers(Modifier.PUBLIC);
+        builder.addAnnotation(ClassName.get("dagger", "Module"));
         this.createFields();
         this.builder.addMethod(this.createConstructor());
         this.createProvidingMethods();
@@ -50,13 +52,13 @@ public class ModuleBuilder extends AbsGeneratingType {
         for (int position = 0; position < this.params.size(); position++) {
             TypeMirror param = this.params.get(position);
             String paramTypeName = types.asElement(param).getSimpleName().toString();
-            MethodSpec.Builder builder = MethodSpec.methodBuilder(paramTypeName);
+            MethodSpec.Builder builder = MethodSpec.methodBuilder(paramTypeName.toLowerCase());
             builder.addModifiers(Modifier.PUBLIC);
             TypeName returnType = ClassName.get(param);
             builder.returns(returnType);
             String variableName = String.format("param%s", position);
-            builder.addParameter(returnType, variableName);
             builder.addStatement("return this." + variableName);
+            builder.addAnnotation(ClassName.get("dagger", "Provides"));
             this.builder.addMethod(builder.build());
         }
     }
@@ -73,7 +75,8 @@ public class ModuleBuilder extends AbsGeneratingType {
         builder.addModifiers(Modifier.PUBLIC);
         for (int i = 0; i < this.params.size(); i++) {
             TypeMirror param = this.params.get(i);
-            builder.addParameter(ClassName.get(param), "param" + i, Modifier.PRIVATE);
+            builder.addParameter(ClassName.get(param), "param" + i);
+            builder.addStatement(String.format("this.param%s = param%s", i, i));
         }
         return builder.build();
     }

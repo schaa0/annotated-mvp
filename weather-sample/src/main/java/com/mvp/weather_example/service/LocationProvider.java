@@ -19,10 +19,12 @@ public class LocationProvider implements LocationListener
 {
 
     public static final int MIN_LOCATION_UPDATE_INTERVAL = 5000;
-    public static final int MIN_DISTANCE_IN_METERS = 100;
+    public static final int MIN_DISTANCE_IN_METERS = 1000;
 
     private LocationManager locationManager;
     private List<OnLocationChangedListener> locationListeners = new ArrayList<>();
+
+    private boolean isActive = false;
 
     public void addOnLocationChangedListener(OnLocationChangedListener locationListener)
     {
@@ -68,11 +70,19 @@ public class LocationProvider implements LocationListener
 
     public void requestLocationUpdates()
     {
+        if (isActive) {
+            return;
+        }
+        isActive = true;
         locationManager.requestLocationUpdates(getBestProvider(), MIN_LOCATION_UPDATE_INTERVAL, MIN_DISTANCE_IN_METERS, this);
     }
 
-    public void removeUpdates()
+    private void removeUpdates()
     {
+        if (!isActive) {
+            return;
+        }
+        isActive = false;
         locationManager.removeUpdates(this);
     }
 
@@ -92,14 +102,20 @@ public class LocationProvider implements LocationListener
     @Override
     public void onProviderEnabled(String provider)
     {
-        requestLocationUpdates();
         onLocationChanged(lastLocation());
     }
 
     @Override
     public void onProviderDisabled(String provider)
     {
-        locationManager.removeUpdates(this);
+
+    }
+
+    public void destroy() {
+        if (locationListeners.isEmpty())
+        {
+            locationManager.removeUpdates(this);
+        }
     }
 
     public interface OnLocationChangedListener {

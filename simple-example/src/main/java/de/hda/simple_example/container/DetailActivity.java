@@ -4,7 +4,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
@@ -23,7 +23,7 @@ public class DetailActivity extends AppCompatActivity implements DetailActivityV
     @Presenter
     DetailActivityPresenter presenter;
 
-    @ModuleParam
+    @Param
     public Repository repository() {
         return getIntent().getParcelableExtra(KEY_REPOSITORY);
     }

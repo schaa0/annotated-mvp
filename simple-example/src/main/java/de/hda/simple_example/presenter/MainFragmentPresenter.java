@@ -16,7 +16,6 @@ import javax.inject.Inject;
 
 import de.hda.simple_example.container.MainActivityView;
 import de.hda.simple_example.di.ComponentActivity;
-import de.hda.simple_example.di.ModuleMainPresenterState;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
@@ -24,18 +23,15 @@ import de.hda.simple_example.service.GithubService;
 import retrofit2.Call;
 import retrofit2.Response;
 
-@Presenter(
-        needsModules = {ModuleMainPresenterState.class},
-        needsComponents = {ComponentActivity.class}
-)
+@Presenter(needsComponents = {ComponentActivity.class})
 public class MainFragmentPresenter extends MvpPresenter<MainActivityView> {
 
     public static final String KEY_STATE = "KEY_STATE";
 
     private State state;
-    protected GithubService githubService;
+    private GithubService githubService;
 
-    boolean isLoading;
+    private boolean isLoading;
 
     private final Contract.LoadingEvent loading = new Contract.LoadingStartedEvent();
     private final Contract.LoadingFinishedEvent notLoading = new Contract.LoadingFinishedEvent();
@@ -65,7 +61,7 @@ public class MainFragmentPresenter extends MvpPresenter<MainActivityView> {
 
     @Override
     public void onViewReattached(MainActivityView view) {
-        if (getView().isInPortrait()) {
+        if (getView().isTabletAndInPortrait() && state.lastSelectedRepository != Repository.NULL) {
             internalShowDetailView();
         }
     }
@@ -97,12 +93,7 @@ public class MainFragmentPresenter extends MvpPresenter<MainActivityView> {
             final Response<SearchResult> response = repositories.execute();
             if (response.code() == 200) {
                 result = true;
-                submitOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        onRepositoriesLoaded(response.body(), page == 1);
-                    }
-                });
+                submitOnUiThread(() -> onRepositoriesLoaded(response.body(), page == 1));
             }else
                 dispatchEvent(new Contract.GithubServiceErrorEvent(response.errorBody().string())).toAny();
         } catch (IOException e) {

@@ -1,6 +1,6 @@
 package com.mvp.annotation.processor;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.ProvidesComponent;
@@ -164,7 +164,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
                     CtMethod[] methods1 = ctClass.getDeclaredMethods();
                     for (CtMethod method : methods1) {
-                        if (method.hasAnnotation(ModuleParam.class)){
+                        if (method.hasAnnotation(Param.class)){
                             moduleParamClassToMethodName.put(method.getReturnType().getName(), method.getName());
                         }
                     }
@@ -184,7 +184,7 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
                     CtMethod[] methods1 = ctClass.getDeclaredMethods();
                     for (CtMethod method: methods1) {
-                        if (method.hasAnnotation(ModuleParam.class)){
+                        if (method.hasAnnotation(Param.class)){
                             moduleParamClassToMethodName.put(method.getReturnType().getName(), method.getName());
                         }
                     }

@@ -69,7 +69,7 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void itShouldShowWeatherForNextDay() throws IOException
     {
         doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
-                .when(weatherApi).getForecastWeather(anyDouble(), anyDouble(), anyString());
+                .when(weatherApi).getForecastWeather(anyDouble(), anyDouble());
 
         //dependencies().with(weatherApi).withNamedTomorrow(dateProvider).commit();
 
@@ -109,10 +109,10 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void itShouldDisplayTemperatureFromApi() throws IOException
     {
         doReturn(new WeatherCall<>(TomorrowWeather.class, Responses.TOMORROW_WEATHER))
-                .when(weatherApi).getTomorrowWeather(anyDouble(), anyDouble(), anyString(), anyInt());
+                .when(weatherApi).getTomorrowWeather(anyDouble(), anyDouble(), anyInt());
 
         doReturn(new WeatherCall<>(TodayWeather.class, Responses.TODAY_WEATHER))
-                .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble(), anyString());
+                .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble());
 
         dependencies().with(weatherApi).apply();
 
@@ -122,12 +122,12 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
         String tagToday = "android:switcher:" + R.id.container + ":0";
         TodayWeatherFragment todayWeatherFragment =
                 (TodayWeatherFragment) mActivity.getSupportFragmentManager().findFragmentByTag(tagToday);
-        assertEquals("6.0", todayWeatherFragment.temperatureTextView.getText().toString());
+        assertEquals("Temperature: 6.0°C", todayWeatherFragment.temperatureTextView.getText().toString());
 
         String tagTomorrow = "android:switcher:" + R.id.container + ":1";
         TomorrowWeatherFragment tomorrowWeatherFragment =
                 (TomorrowWeatherFragment) mActivity.getSupportFragmentManager().findFragmentByTag(tagTomorrow);
-        assertEquals("7.85°C", tomorrowWeatherFragment.temperatureTextView.getText().toString());
+        assertEquals("Temperature: 7.85°C", tomorrowWeatherFragment.temperatureTextView.getText().toString());
     }
 
 }

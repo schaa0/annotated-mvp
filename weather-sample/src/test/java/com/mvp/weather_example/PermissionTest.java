@@ -77,7 +77,7 @@ public class PermissionTest  extends TestCase
     public void mainActivityReceivesErrorIfLoadingWeatherFails() throws IOException
     {
         WeatherService weatherService = mock(WeatherService.class);
-        when(weatherService.getCurrentWeather(anyDouble(), anyDouble(), anyString()))
+        when(weatherService.getCurrentWeather(anyDouble(), anyDouble()))
             .thenThrow(new IOException("Loading weather failed: with some internal exception message..."));
 
         LocationProvider locationProvider = mock(LocationProvider.class);

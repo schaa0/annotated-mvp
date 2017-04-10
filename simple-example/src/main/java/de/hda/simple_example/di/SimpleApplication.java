@@ -26,16 +26,6 @@ public class SimpleApplication extends MvpApplication {
                                                          .build();
     }
 
-    @ProvidesModule
-    public ModuleRepository moduleRepository(Repository repository) {
-        return new ModuleRepository(repository);
-    }
-
-    @ProvidesModule
-    public ModuleMainPresenterState moduleMainPresenterState(MainFragmentPresenter.State state){
-        return new ModuleMainPresenterState(state);
-    }
-
     @ProvidesComponent
     public ComponentApplication componentApplication(){
         return componentApplication;

@@ -34,25 +34,25 @@ public class WeatherService
         imageRequestManager.load(icon, iconCallback);
     }
 
-    public TomorrowWeather getTomorrowWeather(double longitude, double latitude, String metric, int forecastDays) throws IOException
+    public TomorrowWeather getTomorrowWeather(double longitude, double latitude, int forecastDays) throws IOException
     {
-        Call<TomorrowWeather> call = api.getTomorrowWeather(longitude, latitude, metric, forecastDays, apiKey);
+        Call<TomorrowWeather> call = api.getTomorrowWeather(longitude, latitude, "metric", forecastDays, "de", apiKey);
         Response<TomorrowWeather> execute = call.execute();
         TomorrowWeather tomorrowWeather = execute.body();
         return tomorrowWeather;
     }
 
-    public ThreeHoursForecastWeather getForecastWeather(double longitude, double latitude, String metric) throws IOException
+    public ThreeHoursForecastWeather getForecastWeather(double longitude, double latitude) throws IOException
     {
-        Call<ThreeHoursForecastWeather> call = api.getForecastWeather(longitude, latitude, metric, apiKey);
+        Call<ThreeHoursForecastWeather> call = api.getForecastWeather(longitude, latitude, "metric", "de", apiKey);
         Response<ThreeHoursForecastWeather> execute = call.execute();
         ThreeHoursForecastWeather threeHoursForecastWeather = execute.body();
         return threeHoursForecastWeather;
     }
 
-    public TodayWeather getCurrentWeather(double longitude, double latitude, String metric) throws IOException
+    public TodayWeather getCurrentWeather(double longitude, double latitude) throws IOException
     {
-        Call<TodayWeather> call = api.getCurrentWeather(longitude, latitude, metric, apiKey);
+        Call<TodayWeather> call = api.getCurrentWeather(longitude, latitude, "metric", "de", apiKey);
         Response<TodayWeather> response = call.execute();
         TodayWeather todayWeather = response.body();
         return todayWeather;

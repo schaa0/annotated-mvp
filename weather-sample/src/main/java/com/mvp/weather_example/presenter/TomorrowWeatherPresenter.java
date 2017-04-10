@@ -35,7 +35,7 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
     {
         try{
             dispatchRequestStarted();
-            final Weather weather = weatherService.getTomorrowWeather(longitude, latitude, "metric", FORECAST_DAYS);
+            final Weather weather = weatherService.getTomorrowWeather(longitude, latitude, FORECAST_DAYS);
             updateState(weather);
             submitOnUiThread(() -> postWeatherResult(weather));
         }catch(IOException e){
@@ -46,7 +46,7 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
     private void postWeatherResult(Weather weather)
     {
         weatherService.loadIcon(weather.icon(), TomorrowWeatherPresenter.this);
-        getView().showWeather(lastTemperature, lastHumidity);
+        getView().showWeather(lastCity, lastDescription, lastTemperature, lastHumidity);
         dispatchRequestFinished();
     }
 
@@ -61,7 +61,7 @@ public class TomorrowWeatherPresenter extends WeatherPresenter {
                 dispatchRequestStarted();
                 double longitude = lastKnownLocation.getLongitude();
                 double latitude = lastKnownLocation.getLatitude();
-                ThreeHoursForecastWeather weather = weatherService.getForecastWeather(longitude, latitude, "metric");
+                ThreeHoursForecastWeather weather = weatherService.getForecastWeather(longitude, latitude);
                 final String forecastData = weatherParser.parse(weather);
                 submitOnUiThread(() -> postForecastWeather(forecastData));
             }

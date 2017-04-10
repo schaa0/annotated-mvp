@@ -1,6 +1,6 @@
 package com.mvp.annotation.processor.unittest;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.processor.Gang;
 import com.mvp.annotation.processor.Utils;
 import com.squareup.javapoet.ClassName;
@@ -629,7 +629,7 @@ public class PresenterBuilderType extends AbsGeneratingType
         TypeElement typeElement = (TypeElement) elementActivityClass;
         for (Element element : typeElement.getEnclosedElements())
         {
-            if (element.getKind() == ElementKind.METHOD && element.getAnnotation(ModuleParam.class) != null)
+            if (element.getKind() == ElementKind.METHOD && element.getAnnotation(Param.class) != null)
             {
                 ExecutableElement executableElement = (ExecutableElement) element;
                 m.put(executableElement.getReturnType().toString(), executableElement.getSimpleName().toString());
@@ -711,7 +711,7 @@ public class PresenterBuilderType extends AbsGeneratingType
         for (Element element : activityElement.getEnclosedElements())
         {
             if (element.getKind() == ElementKind.METHOD){
-                if (element.getAnnotation(ModuleParam.class) != null){
+                if (element.getAnnotation(Param.class) != null){
                     ExecutableElement executableElement = (ExecutableElement) element;
                     if (executableElement.getReturnType().toString().equals(returnType.toString()))
                         return false;

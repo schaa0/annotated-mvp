@@ -127,17 +127,29 @@ public class TomorrowWeather implements Weather, Parcelable
 
     @Override
     public String temperature() {
-        return String.valueOf(list.get(0).getTemp().getDay()) + "°C";
+        return String.valueOf(list.get(0).getTemp().getDay());
     }
 
     @Override
     public String humidity() {
-        return String.valueOf(list.get(0).getHumidity()) + "%";
+        return String.valueOf(list.get(0).getHumidity());
     }
 
     @Override
     public String icon() {
         String iconId = list.get(0).getWeather().get(0).getIcon();
         return "http://openweathermap.org/img/w/" + iconId + ".png";
+    }
+
+    @Override
+    public String city()
+    {
+        return city.getName();
+    }
+
+    @Override
+    public String description()
+    {
+        return list.get(0).getWeather().get(0).getDescription();
     }
 }

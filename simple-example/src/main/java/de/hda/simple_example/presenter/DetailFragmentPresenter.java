@@ -10,11 +10,10 @@ import javax.inject.Inject;
 
 import de.hda.simple_example.container.DetailFragmentView;
 import de.hda.simple_example.di.ComponentActivity;
-import de.hda.simple_example.di.ModuleRepository;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.service.GithubService;
 
-@Presenter(needsModules = { ModuleRepository.class }, needsComponents = {ComponentActivity.class})
+@Presenter(needsComponents = {ComponentActivity.class})
 public class DetailFragmentPresenter extends MvpPresenter<DetailFragmentView> {
 
     private Repository repository;

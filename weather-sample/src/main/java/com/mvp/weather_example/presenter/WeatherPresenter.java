@@ -3,6 +3,7 @@ package com.mvp.weather_example.presenter;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.location.Address;
 import android.location.Location;
 
 import com.mvp.MvpPresenter;
@@ -28,7 +29,11 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView>
 
     protected String lastTemperature;
     protected String lastHumidity;
+    protected String lastCity;
+    protected String lastDescription;
+
     private Bitmap icon;
+    private Location lastLocation = null;
 
     protected WeatherPresenter()
     {
@@ -67,7 +72,7 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView>
         }
         if (lastTemperature != null && lastHumidity != null)
         {
-            view.showWeather(lastTemperature, lastHumidity);
+            view.showWeather(lastCity, lastDescription, lastTemperature, lastHumidity);
             view.showIcon(icon);
         } else
         {
@@ -80,10 +85,13 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView>
     {
         locationProvider.removeOnLocationChangedListener(this);
         getView().showIcon(null);
-        if (hasAllPermissions())
-        {
-            locationProvider.removeUpdates();
-        }
+    }
+
+    @Override
+    public void onDestroyed()
+    {
+        locationProvider.destroy();
+        super.onDestroyed();
     }
 
     private void loadWeatherIfAllPermissionsGranted(WeatherFragmentView view)
@@ -139,6 +147,8 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView>
 
     protected void updateState(Weather weather)
     {
+        this.lastDescription = weather.description();
+        this.lastCity = weather.city();
         this.lastTemperature = weather.temperature();
         this.lastHumidity = weather.humidity();
     }
@@ -169,8 +179,28 @@ public abstract class WeatherPresenter extends MvpPresenter<WeatherFragmentView>
     @Override
     public void onLocationChanged(Location location)
     {
-        if (hasAllPermissions())
+        if (hasAllPermissions() && isNewLocation(location))
+        {
+            this.lastLocation = location;
             loadWeather(location);
+        }
+    }
+
+    private boolean isNewLocation(Location location)
+    {
+        if (lastLocation == null) {
+            return true;
+        }
+
+        if (lastLocation.getLongitude() != location.getLongitude()) {
+            return true;
+        }
+
+        if (lastLocation.getLatitude() != location.getLatitude()) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override

@@ -37,10 +37,10 @@ public class TodayWeatherPresenter extends WeatherPresenter
         try
         {
             dispatchRequestStarted();
-            final Weather weather = weatherService.getCurrentWeather(longitude, latitude, "metric");
+            final Weather weather = weatherService.getCurrentWeather(longitude, latitude);
             updateState(weather);
             submitOnUiThread(() -> {
-                getView().showWeather(lastTemperature, lastHumidity);
+                getView().showWeather(lastCity, lastDescription, lastTemperature, lastHumidity);
                 weatherService.loadIcon(weather.icon(), TodayWeatherPresenter.this);
                 dispatchRequestFinished();
             });
@@ -63,7 +63,7 @@ public class TodayWeatherPresenter extends WeatherPresenter
                 double latitude = lastKnownLocation.getLatitude();
                 dispatchRequestStarted();
                 ThreeHoursForecastWeather weather =
-                        weatherService.getForecastWeather(longitude, latitude, "metric");
+                        weatherService.getForecastWeather(longitude, latitude);
                 dispatchRequestFinished();
                 final String forecastData = weatherParser.parse(weather);
                 submitOnUiThread(() -> navigateToDetailScreen(forecastData));

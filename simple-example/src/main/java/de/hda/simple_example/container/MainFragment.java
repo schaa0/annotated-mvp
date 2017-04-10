@@ -10,7 +10,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
-import com.mvp.annotation.ModuleParam;
+import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
@@ -40,7 +40,7 @@ public class MainFragment extends Fragment implements MainActivityView, Reposito
     RecyclerView.OnScrollListener scrollListener;
     LinearLayoutManager lm;
 
-    @ModuleParam
+    @Param
     public MainFragmentPresenter.State provideState(){
         return getArguments().getParcelable(MainFragmentPresenter.KEY_STATE);
     }

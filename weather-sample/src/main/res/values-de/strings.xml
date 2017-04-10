@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wetter-App</string>
+    <string name="today">Heute</string>
+    <string name="tomorrow">Morgen</string>
+    <string name="city_format">Stadt: %1$s</string>
+    <string name="temperature_format">Temperatur: %1$s°C</string>
+    <string name="humidity_format">Luftfeuchtigkeit: %1$s%%</string>
+</resources>

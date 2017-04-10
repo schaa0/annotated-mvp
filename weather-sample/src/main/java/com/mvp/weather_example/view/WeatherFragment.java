@@ -24,6 +24,8 @@ public abstract class WeatherFragment extends Fragment implements WeatherFragmen
     TextView humidityTextView;
     ImageView imageView;
     ProgressBar progressBar;
+    TextView cityTextView;
+    TextView descTextView;
 
     @Nullable
     @Override
@@ -34,6 +36,8 @@ public abstract class WeatherFragment extends Fragment implements WeatherFragmen
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        descTextView = (TextView) getView().findViewById(R.id.descriptionTextView);
+        cityTextView = (TextView) getView().findViewById(R.id.cityTextView);
         temperatureTextView = (TextView) getView().findViewById(R.id.temperatureTextView);
         humidityTextView = (TextView) getView().findViewById(R.id.humidityTextView);
         imageView = (ImageView) getView().findViewById(R.id.imageView);
@@ -44,9 +48,11 @@ public abstract class WeatherFragment extends Fragment implements WeatherFragmen
     protected abstract void onWeatherIconClicked();
 
     @Override
-    public void showWeather(String temperature, String humidity) {
-        temperatureTextView.setText(temperature);
-        humidityTextView.setText(humidity);
+    public void showWeather(String city, String description, String temperature, String humidity) {
+        descTextView.setText(description);
+        cityTextView.setText(getString(R.string.city_format, city));
+        temperatureTextView.setText(getString(R.string.temperature_format, temperature));
+        humidityTextView.setText(getString(R.string.humidity_format, humidity));
     }
 
     @Override
