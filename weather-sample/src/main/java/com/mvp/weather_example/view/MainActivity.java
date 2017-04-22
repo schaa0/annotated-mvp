@@ -17,6 +17,7 @@ import com.mvp.weather_example.R;
 import com.mvp.weather_example.di.WeatherApplication;
 import com.mvp.weather_example.service.ViewPagerFragmentFactory;
 import com.mvp.weather_example.event.PermissionEvent;
+import com.mvp.weather_example.service.WeatherService;
 
 import java.io.IOException;
 
@@ -46,7 +47,8 @@ public class MainActivity extends AppCompatActivity
         tabLayout = (TabLayout) findViewById(R.id.tab_layout1);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
 
-        ((WeatherApplication) getApplication()).createComponentActivity(this).inject(this);
+        WeatherApplication application = (WeatherApplication) getApplication();
+        application.createComponentActivity(this).inject(this);
 
         eventBus.register(this);
 

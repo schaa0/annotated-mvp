@@ -46,7 +46,7 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
 {
 
     @Mock
-    WeatherService weatherApi;
+    WeatherService weatherService;
     @Mock
     ImageRequestManager imageRequestManager;
 
@@ -69,9 +69,9 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void itShouldShowWeatherForNextDay() throws IOException
     {
         doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
-                .when(weatherApi).getForecastWeather(anyDouble(), anyDouble());
+                .when(weatherService).getForecastWeather(anyDouble(), anyDouble());
 
-        //dependencies().with(weatherApi).withNamedTomorrow(dateProvider).commit();
+        dependencies().with(weatherService).apply();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();
@@ -109,12 +109,12 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void itShouldDisplayTemperatureFromApi() throws IOException
     {
         doReturn(new WeatherCall<>(TomorrowWeather.class, Responses.TOMORROW_WEATHER))
-                .when(weatherApi).getTomorrowWeather(anyDouble(), anyDouble(), anyInt());
+                .when(weatherService).getTomorrowWeather(anyDouble(), anyDouble(), anyInt());
 
         doReturn(new WeatherCall<>(TodayWeather.class, Responses.TODAY_WEATHER))
-                .when(weatherApi).getCurrentWeather(anyDouble(), anyDouble());
+                .when(weatherService).getCurrentWeather(anyDouble(), anyDouble());
 
-        dependencies().with(weatherApi).apply();
+        dependencies().with(weatherService).apply();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();

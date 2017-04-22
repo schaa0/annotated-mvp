@@ -11,6 +11,6 @@ import static java.lang.annotation.ElementType.TYPE;
 @Target({ TYPE, FIELD })
 public @interface Presenter {
     ViewEvent[] viewEvents() default {};
-    Class<?>[] needsModules() default {};
-    Class<?>[] needsComponents() default {};
+    Class<?>[] modules() default {};
+    Class<?>[] components() default {};
 }

@@ -11,15 +11,12 @@ import javax.inject.Singleton;
 import dagger.Module;
 import dagger.Provides;
 
-/**
- * Created by Andy on 30.03.2017.
- */
 @Module
-public class ModuleContext
+public class BaseModuleContext
 {
     private Context context;
 
-    public ModuleContext(Context context) {
+    public BaseModuleContext(Context context) {
         this.context = context;
     }
 

@@ -70,7 +70,7 @@ public class Utils {
 
     public static String toParameterName(ClassName module)
     {
-        return Character.toLowerCase(module.simpleName().charAt(0)) + module.simpleName().substring(1);
+        return toParameterName(module.simpleName());
     }
 
     public static boolean isActivity(Types typeUtils, Elements elementUtils, TypeMirror activityType) {
@@ -137,6 +137,10 @@ public class Utils {
 
     public static String extractPackage(TypeMirror classType) {
         return classType.toString().replaceAll("." + convertDataClassToString(classType), "");
+    }
+
+    public static String extractClassName(TypeMirror classType) {
+        return convertDataClassToString(classType);
     }
 
     public static String convertDataClassToString(TypeMirror dataClass) {
@@ -344,4 +348,18 @@ public class Utils {
         return false;
     }
 
+    public static String toParameterName(String simpleName)
+    {
+        return Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+    }
+
+    public static boolean isInnerClass(Types typeUtils, TypeMirror clazz)
+    {
+        Element factoryElement = typeUtils.asElement(clazz);
+        Element enclosingElement = factoryElement.getEnclosingElement();
+        if (enclosingElement != null && enclosingElement.getKind() == ElementKind.CLASS) {
+            return true;
+        }
+        return false;
+    }
 }

@@ -18,7 +18,7 @@ import java.text.ParseException;
 
 import javax.inject.Inject;
 
-@Presenter(needsComponents = { ComponentActivity.class })
+@Presenter(components = { ComponentActivity.class })
 public class TomorrowWeatherPresenter extends WeatherPresenter {
     private static final int FORECAST_DAYS = 1;
 

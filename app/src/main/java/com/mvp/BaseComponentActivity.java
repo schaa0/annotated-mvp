@@ -5,7 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 
 public interface BaseComponentActivity {
     SharedPreferences sharedPreferences();
+    ActivityRouter activityRouter();
     AppCompatActivity activity();
     FragmentRouter fragmentRouter();
-    ActivityRouter activityRouter();
 }

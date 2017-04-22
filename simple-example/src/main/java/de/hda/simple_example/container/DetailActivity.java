@@ -9,6 +9,9 @@ import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
 import de.hda.simple_example.R;
+import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.di.SimpleApplication;
 import de.hda.simple_example.presenter.DetailActivityPresenter;
 import de.hda.simple_example.model.Repository;
 
@@ -23,6 +26,8 @@ public class DetailActivity extends AppCompatActivity implements DetailActivityV
     @Presenter
     DetailActivityPresenter presenter;
 
+    private ComponentActivity component;
+
     @Param
     public Repository repository() {
         return getIntent().getParcelableExtra(KEY_REPOSITORY);
@@ -33,6 +38,17 @@ public class DetailActivity extends AppCompatActivity implements DetailActivityV
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_detail_activity);
         orientationView = findViewById(R.id.orientation);
+        SimpleApplication provider = (SimpleApplication) getApplication();
+        component = provider.componentActivity(this, provider.componentApplication());
+    }
+
+    public ComponentApplication getParentComponent() {
+        SimpleApplication provider = (SimpleApplication) getApplication();
+        return provider.componentApplication();
+    }
+
+    public ComponentActivity getComponent() {
+        return this.component;
     }
 
     private String orientationTag() {

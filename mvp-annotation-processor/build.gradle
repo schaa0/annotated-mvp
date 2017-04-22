@@ -8,4 +8,5 @@ dependencies {
     compile 'com.squareup:javapoet:1.7.0'
     compile 'io.saeid.weaver:weaver-processor:1.0.0-beta5'
     compile 'javax.inject:javax.inject:1'
+    compile 'com.google.dagger:dagger:2.10'
 }

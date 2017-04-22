@@ -224,18 +224,31 @@ public class ApplicationDelegate extends AbsGeneratingType
         for (ExecutableElement method : m)
         {
             MethodSpec.Builder methodBuilder = override(method);
+            List<? extends VariableElement> parameters1 = method.getParameters();
             methodBuilder.addModifiers(Modifier.PUBLIC);
             TypeMirror returnType = method.getReturnType();
-            //if (method.getReturnType().toString().equals("com.mvp.ComponentEventBus"))
-                //continue;
             String s = typeUtils.asElement(returnType).getSimpleName().toString();
             ExecutableElement executableElement = providingMethods.get(returnType.toString());
             String params = "";
             List<? extends VariableElement> parameters = executableElement.getParameters();
             for (int i = 0; i < parameters.size(); i++)
             {
+                boolean found = false;
                 VariableElement parameter = parameters.get(i);
                 TypeMirror typeMirror = parameter.asType();
+                for (VariableElement variableElement : parameters1)
+                {
+                    TypeMirror variableType = variableElement.asType();
+                    if (typeMirror.toString().equals(variableType.toString())) {
+                        params += parameter.getSimpleName().toString();
+                        if (i < parameters.size() - 1) params += ",";
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    continue;
+                }
                 ExecutableElement e = providingMethods.get(typeMirror.toString());
                 if (e != null && !Utils.hasSubComponentAnnotation(typeUtils.asElement(e.getReturnType())))
                     params += "this." + e.getSimpleName().toString() + "()";

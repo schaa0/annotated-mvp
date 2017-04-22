@@ -15,12 +15,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import dagger.Component;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.AnnotationMemberValue;
 import javassist.bytecode.annotation.ArrayMemberValue;
 import javassist.bytecode.annotation.BooleanMemberValue;
@@ -87,10 +89,10 @@ public class ByteCodeProcessor extends WeaverProcessor {
             "$s." + FIELD_VIEW_DELEGATE + " = new %sDelegateBinder( (android.support.v7.app.AppCompatActivity) $s.getActivity(), $s." + FIELD_COMPONENT + ", ((%s) $s%s.getApplication()).mvpEventBus());";
 
     private static final String STATEMENT_MAKE_COMPONENT_IN_ACTIVITY =
-            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s($s, $s%s);";
+            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s($s, $s%s %s);";
 
     private static final String STATEMENT_MAKE_COMPONENT_IN_FRAGMENT =
-            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s((android.support.v7.app.AppCompatActivity) $s.getActivity(), $s%s);";
+            "$s." + FIELD_COMPONENT + " = ((%s) $s.%sgetApplication()).getProvider().%s((android.support.v7.app.AppCompatActivity) $s.getActivity(), $s%s %s);";
 
 
     private static final String STATEMENT_SET_ONPRESENTERLOADED_LISTENER =
@@ -100,8 +102,18 @@ public class ByteCodeProcessor extends WeaverProcessor {
 
     private String applicationClassName;
 
+    HashMap<String, ComponentMethod> presenterComponentProviderMethods = new HashMap<>();
     HashMap<String, CtMethod> componentProviderMethods = new HashMap<>();
     HashMap<String, String> moduleParamClassToMethodName = new HashMap<>();
+
+    private static class ComponentMethod {
+        ComponentMethod(CtMethod method, CtClass dependency) {
+            this.method = method;
+            this.dependency = dependency;
+        }
+        public CtMethod method;
+        public CtClass dependency;
+    }
 
     @Override
     public synchronized void init(WeaveEnvironment env) {
@@ -136,7 +148,30 @@ public class ByteCodeProcessor extends WeaverProcessor {
         for (CtMethod method : methods) {
             if (isComponentProviderMethod(method)){
                 CtClass returnTypeClass = method.getReturnType();
-                componentProviderMethods.put(returnTypeClass.getName(),method);
+                AnnotationsAttribute attr = (AnnotationsAttribute) returnTypeClass.getClassFile()
+                                                                     .getAttribute(AnnotationsAttribute.visibleTag);
+                if (attr != null) {
+                    Annotation annotation = attr.getAnnotation(Component.class.getName());
+                    if (annotation != null)
+                    {
+                        ArrayMemberValue dependencies = (ArrayMemberValue) annotation.getMemberValue("dependencies");
+                        MemberValue[] values = dependencies.getValue();
+                        CtClass[] clazzez = new CtClass[values.length];
+                        for (int i = 0; i < values.length; i++)
+                        {
+                            MemberValue value = values[i];
+                            ClassMemberValue v = (ClassMemberValue) value;
+                            String clazz = v.getValue();
+                            clazzez[i] = stringToCtClass(pool, new String[]{clazz})[0];
+                        }
+                        CtClass dependency = clazzez.length > 0 ? clazzez[0] : null;
+                        presenterComponentProviderMethods.put(returnTypeClass.getName(), new ComponentMethod(method, dependency));
+                    }else {
+                        presenterComponentProviderMethods.put(returnTypeClass.getName(), new ComponentMethod(method, null));
+                    }
+                }else {
+                    presenterComponentProviderMethods.put(returnTypeClass.getName(), new ComponentMethod(method, null));
+                }
             }
         }
 
@@ -154,6 +189,13 @@ public class ByteCodeProcessor extends WeaverProcessor {
                     injectDependencyProviderField(ctClass, classInjector);
                     injectMethod("getProvider", classInjector);
                     applicationClassName = ctClass.getName();
+                    CtMethod[] declaredMethods = ctClass.getDeclaredMethods();
+                    for (CtMethod declaredMethod : declaredMethods)
+                    {
+                        if (declaredMethod.hasAnnotation(ProvidesComponent.class)) {
+                            componentProviderMethods.put(declaredMethod.getReturnType().getName(), declaredMethod);
+                        }
+                    }
                     writeClass(ctClass);
                 }
 
@@ -305,14 +347,19 @@ public class ByteCodeProcessor extends WeaverProcessor {
         CtMethod onPostResume = findBestMethod(ctClass, "onPostResume");
         CtMethod onDestroy = findBestMethod(ctClass, "onDestroy");
         CtMethod onSaveInstanceState = findBestMethod(ctClass, "onSaveInstanceState", BUNDLE_CLASS);
-        CtMethod ctMethod = componentProviderMethods.get(componentPresenterInterfaceName);
-        CtClass[] parameterTypes = ctMethod.getParameterTypes();
+        ComponentMethod componentMethod = presenterComponentProviderMethods.get(componentPresenterInterfaceName);
+        CtClass[] parameterTypes = componentMethod.method.getParameterTypes();
         StringBuilder sb = new StringBuilder();
+        String dependencyParam = componentMethod.dependency != null ? ", $s.getParentComponent()" : "";
         if (parameterTypes.length > 2) {
             sb.append(", ");
             for (int i = 2; i < parameterTypes.length; i++) {
                 CtClass parameterType = parameterTypes[i];
-                String methodName = moduleParamClassToMethodName.get(parameterType.getName());
+                String name = parameterType.getName();
+                String methodName = moduleParamClassToMethodName.get(name);
+                if (methodName == null) {
+                    continue;
+                }
                 sb.append("$s.").append(methodName).append("()");
                 if (i < parameterTypes.length - 1) {
                     sb.append(", ");
@@ -320,7 +367,12 @@ public class ByteCodeProcessor extends WeaverProcessor {
             }
         }
         String parameters = sb.toString();
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_ACTIVITY, applicationClassName, "", ctMethod.getName(), parameters));
+        if (parameters.trim().endsWith(",")) {
+            parameters = parameters.trim().substring(0, parameters.length()-2);
+        }
+        String methodName = componentMethod.method.getName();
+
+        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_ACTIVITY, applicationClassName, "", methodName, parameters, dependencyParam));
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE, ctClass.getName(), applicationClassName, ""));
         atTheEnd(classInjector, onCreate, STATEMENT_DELEGATE_ONCREATE);
         atTheEnd(classInjector, onCreate, String.format(STATEMENT_SET_ONPRESENTERLOADED_LISTENER, ctClass.getName()));
@@ -340,14 +392,17 @@ public class ByteCodeProcessor extends WeaverProcessor {
         CtMethod onDestroy = findBestMethod(ctClass, "onDestroy");
         CtMethod onSaveInstanceState = findBestMethod(ctClass, "onSaveInstanceState", BUNDLE_CLASS);
 
-        CtMethod ctMethod = componentProviderMethods.get(componentPresenterInterfaceName);
-        CtClass[] parameterTypes = ctMethod.getParameterTypes();
+        ComponentMethod componentMethod = presenterComponentProviderMethods.get(componentPresenterInterfaceName);
+        CtClass[] parameterTypes = componentMethod.method.getParameterTypes();
         StringBuilder sb = new StringBuilder();
         if (parameterTypes.length > 2) {
             sb.append(", ");
             for (int i = 2; i < parameterTypes.length; i++) {
                 CtClass parameterType = parameterTypes[i];
                 String methodName = moduleParamClassToMethodName.get(parameterType.getName());
+                if (methodName == null) {
+                    continue;
+                }
                 sb.append("$s.").append(methodName).append("()");
                 if (i < parameterTypes.length - 1) {
                     sb.append(", ");
@@ -355,13 +410,22 @@ public class ByteCodeProcessor extends WeaverProcessor {
             }
         }
         String parameters = sb.toString();
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_MAKE_COMPONENT_IN_FRAGMENT, applicationClassName, "getActivity().", ctMethod.getName(), parameters));
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_NEW_DELEGATE_IN_FRAGMENT, ctClass.getName(), applicationClassName, ".getActivity()"));
-        atTheEnd(classInjector, onCreate, String.format(STATEMENT_SET_ONPRESENTERLOADED_LISTENER, ctClass.getName()));
+        if (parameters.trim().endsWith(",")) {
+            parameters = parameters.trim().substring(0, parameters.length()-2);
+        }
+        String methodName = componentMethod.method.getName();
+
+        String dependencyParam = componentMethod.dependency != null ? ", $s.getParentComponent()" : "";
+        afterSuper(classInjector, onActivityCreated, STATEMENT_DELEGATE_ONCREATE);
+        afterSuper(classInjector, onActivityCreated,
+                String.format(STATEMENT_SET_ONPRESENTERLOADED_LISTENER, ctClass.getName()));
+        afterSuper(classInjector, onActivityCreated,
+                String.format(STATEMENT_NEW_DELEGATE_IN_FRAGMENT, ctClass.getName(), applicationClassName, ".getActivity()"));
+        afterSuper(classInjector, onActivityCreated,
+                String.format(STATEMENT_MAKE_COMPONENT_IN_FRAGMENT, applicationClassName, "getActivity().", methodName, parameters, dependencyParam));
         afterSuper(classInjector, onResume, String.format(STATEMENT_GET_PRESENTER, presenterFieldName, presenterClassName));
         afterSuper(classInjector, onSaveInstanceState, STATEMENT_DELEGATE_ONSAVEINSTANCESTATE);
         beforeSuper(classInjector, onDestroy, STATEMENT_DELEGATE_ONDESTROY);
-        afterSuper(classInjector, onActivityCreated, STATEMENT_DELEGATE_ONCREATE);
     }
 
     private void injectDelegateLifeCycleIntoCustomView(CtClass ctClass,ClassInjector classInjector)

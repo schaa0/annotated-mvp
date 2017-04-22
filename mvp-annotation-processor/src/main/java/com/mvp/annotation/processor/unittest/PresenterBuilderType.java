@@ -738,7 +738,7 @@ public class PresenterBuilderType extends AbsGeneratingType
     private List<ClassName> findModules(Element presenterElement)
     {
         List<ClassName> classNames = new ArrayList<>();
-        AnnotationValue value = getAnnotationValue(presenterElement, "needsModules");
+        AnnotationValue value = getAnnotationValue(presenterElement, "modules");
         List<Object> moduleClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
         for (Object moduleClass : moduleClasses)
         {
@@ -751,7 +751,7 @@ public class PresenterBuilderType extends AbsGeneratingType
     private List<ClassName> findComponents(Element presenterElement)
     {
         List<ClassName> classNames = new ArrayList<>();
-        AnnotationValue value = getAnnotationValue(presenterElement, "needsComponents");
+        AnnotationValue value = getAnnotationValue(presenterElement, "components");
         List<Object> componentClasses = value != null ? (List<Object>) value.getValue() : new ArrayList<>();
         for (Object componentClass : componentClasses)
         {

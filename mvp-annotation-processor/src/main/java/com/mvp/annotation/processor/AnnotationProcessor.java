@@ -12,6 +12,8 @@ import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.UiThread;
 import com.mvp.annotation.View;
 import com.mvp.annotation.ViewEvent;
+import com.mvp.annotation.processor.graph.Node;
+import com.mvp.annotation.processor.graph.ObjectGraph;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -28,6 +30,7 @@ import com.squareup.javapoet.WildcardTypeName;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,6 +50,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -61,14 +65,16 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
+import dagger.Provides;
+
 import static com.mvp.annotation.processor.Utils.getAnnotationValue;
 
 public class AnnotationProcessor extends AbstractProcessor
 {
 
     public static final String CLASSNAME_DEPENDENCY_PROVIDER = "DependencyProvider";
-    public static final String MEMBER_NEEDS_MODULES = "needsModules";
-    public static final String MEMBER_NEEDS_COMPONENTS = "needsComponents";
+    public static final String MEMBER_NEEDS_MODULES = "modules";
+    public static final String MEMBER_NEEDS_COMPONENTS = "components";
     static final ParameterizedTypeName IFACTORY_CLASS_NAME = ParameterizedTypeName.get(ClassName.get("com.mvp", "IFactory"), WildcardTypeName.subtypeOf(TypeName.OBJECT));
     private static final String MEMBER_PRESENTER_CLASS = "presenter";
     private static ClassName APP_COMPAT_ACTIVITY;
@@ -91,6 +97,7 @@ public class AnnotationProcessor extends AbstractProcessor
     private boolean alreadyProcessed = false;
     private boolean shouldSkipAllRounds = false;
     private Filer filer;
+    private ObjectGraph objectGraph;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -107,7 +114,7 @@ public class AnnotationProcessor extends AbstractProcessor
 
         if (shouldSkipAllRounds)
         {
-            return true;
+            return false;
         }
 
         APP_COMPAT_ACTIVITY = ClassName.get("android.support.v7.app", "AppCompatActivity");
@@ -123,7 +130,7 @@ public class AnnotationProcessor extends AbstractProcessor
             {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
                 shouldSkipAllRounds = true;
-                return true;
+                return false;
             }
             componentProvider = iterator.next();
         }
@@ -295,7 +302,9 @@ public class AnnotationProcessor extends AbstractProcessor
         }
 
         if (!alreadyProcessed)
-            generateCustomEventListenerClasses(env);
+        {
+            this.generateCustomEventListenerClasses(env);
+        }
 
         writeFactoryInterface();
         writeMethodsClass();
@@ -303,13 +312,14 @@ public class AnnotationProcessor extends AbstractProcessor
 
         if (env.processingOver())
         {
+            //objectGraph.generate();
             generateDependencyProvider(env);
             generateOnPresenterLoadedListeners();
         }
 
         alreadyProcessed = true;
 
-        return true;
+        return false;
     }
 
     private ClassName findViewImplementationClassName(Element element)
@@ -580,11 +590,19 @@ public class AnnotationProcessor extends AbstractProcessor
             }
 
             ClassName[] componentClasses = typeComponentPresenter.getComponentClasses();
+
             for (ClassName componentClass : componentClasses)
             {
                 String simpleName = componentClass.simpleName();
                 String methodName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
                 String o = componentClass.packageName() + "." + componentClass.simpleName();
+                Element componentDependency = null;
+                Object dependency = typeComponentPresenter.getComponentDependency(elementUtils.getTypeElement(o));
+                if (dependency != null) {
+                    componentDependency = elementUtils.getTypeElement(dependency.toString().replace(".class", ""));
+                    ClassName className = ClassName.bestGuess(componentDependency.asType().toString());
+                    methodBuilder.addParameter(className, Utils.toParameterName(className));
+                }
                 ExecutableElement executableElement = providingMethods.get(o);
                 if (executableElement == null)
                     throw new IllegalStateException(String.format("Component %s is not provided by a method, which is annotated with @ProvidesComponent, in the application class!", o));
@@ -594,13 +612,29 @@ public class AnnotationProcessor extends AbstractProcessor
                 {
                     VariableElement variable = parameters.get(position);
                     TypeMirror type = variable.asType();
-                    ExecutableElement moduleMethod = providingMethods.get(type.toString());
-                    if (!type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()) && moduleMethod == null)
+
+                    if (componentDependency != null && type.toString().equals(componentDependency.asType().toString())) {
+                        params.append(Utils.toParameterName(ClassName.bestGuess(componentDependency.asType().toString())));
+                        if (position < parameters.size() - 1)
+                            params.append(", ");
+                        continue;
+                    }
+
+                    ExecutableElement method = providingMethods.get(type.toString());
+                    if (!type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()) && method == null)
                         throw new IllegalStateException(String.format("Error while processing %s: %s is not provided by a method, which is annotated with @ProvidesModule, in the application class!", type, o));
                     else if (type.toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString()))
                         params.append("activity");
                     else
-                        params.append(String.format("application.%s()", moduleMethod.getSimpleName().toString()));
+                    {
+                        String param = "";
+
+                        List<? extends VariableElement> p = method.getParameters();
+                        if (!p.isEmpty() && p.get(0).asType().toString().equals(APP_COMPAT_ACTIVITY_TYPE.toString())) {
+                            param += "activity";
+                        }
+                        params.append(String.format("application.%s(%s)", method.getSimpleName().toString(), param));
+                    }
                     if (position < parameters.size() - 1)
                         params.append(", ");
                 }
@@ -1476,10 +1510,11 @@ public class AnnotationProcessor extends AbstractProcessor
     public Set<String> getSupportedAnnotationTypes()
     {
         Set<String> supportedAnnotations = new HashSet<>();
-        supportedAnnotations.add(Presenter.class.getCanonicalName());
+        /*supportedAnnotations.add(Presenter.class.getCanonicalName());
         supportedAnnotations.add(View.class.getCanonicalName());
         supportedAnnotations.add(Provider.class.getCanonicalName());
-        supportedAnnotations.add(Generated.class.getCanonicalName());
+        supportedAnnotations.add(Generated.class.getCanonicalName());*/
+        supportedAnnotations.add("*");
         return supportedAnnotations;
     }
 
@@ -1523,6 +1558,13 @@ public class AnnotationProcessor extends AbstractProcessor
         {
             return componentClasses;
         }
+
+        public Object getComponentDependency(Element component) {
+            AnnotationValue dependencies = Utils.getAnnotationValue(component, "dagger.Component", "dependencies");
+            List<Object> values = (List<Object>) dependencies.getValue();
+            return values.isEmpty() ? null : values.get(0);
+        }
+
     }
 
     private class AnnotationMemberModuleClasses

@@ -12,6 +12,9 @@ import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 
 import de.hda.simple_example.R;
+import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.ComponentApplication;
+import de.hda.simple_example.di.SimpleApplication;
 import de.hda.simple_example.presenter.DetailFragmentPresenter;
 import de.hda.simple_example.model.Repository;
 
@@ -42,5 +45,14 @@ public class DetailFragment extends Fragment implements DetailFragmentView {
     @Override
     public void showId(String id) {
         textView.setText(id);
+    }
+
+    private ComponentActivity getParentComponent() {
+        if (getActivity() instanceof MainActivity) {
+            return ((MainActivity) getActivity()).getComponent();
+        }else
+        {
+            return ((DetailActivity)getActivity()).getComponent();
+        }
     }
 }

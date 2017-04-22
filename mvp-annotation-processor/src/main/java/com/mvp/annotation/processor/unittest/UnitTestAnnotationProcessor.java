@@ -5,6 +5,8 @@ import com.mvp.annotation.Provider;
 import com.mvp.annotation.View;
 import com.mvp.annotation.processor.ApplicationDelegate;
 import com.mvp.annotation.processor.Gang;
+import com.mvp.annotation.processor.graph.ObjectGraph;
+import com.mvp.annotation.processor.graph.TopNode;
 import com.squareup.javapoet.ClassName;
 
 import java.lang.annotation.Annotation;
@@ -45,6 +47,7 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
     private boolean processed = false;
     private Messager messager;
     private boolean shouldSkipAllRounds = false;
+    private ObjectGraph objectGraph;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -60,9 +63,16 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment)
     {
         if (shouldSkipAllRounds)
-            return true;
+            return false;
+        if (!processed) {
+            objectGraph = new ObjectGraph(processingEnv, roundEnvironment, elementUtils, typeUtils);
+            objectGraph.evaluate();
+        }
+        if (roundEnvironment.processingOver()) {
+            List<String> createdDelegates = objectGraph.generate();
+        }
         if (processed)
-            return true;
+            return false;
 
         processed = true;
 
@@ -80,13 +90,13 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
             if (!iterator.hasNext()){
                 messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
                 shouldSkipAllRounds = true;
-                return true;
+                return false;
             }
             provider = elementUtils.getTypeElement(iterator.next().asType().toString());
             if (!viewElements.isEmpty()){
                 new TriggerType(filer, packageName + ".trigger", viewElements, ClassName.get(provider)).generate();
             }
-            return true;
+            return false;
         }
 
         TypeElement triggerElement = elementUtils.getTypeElement(packageName + ".trigger.Trigger");
@@ -94,7 +104,7 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         {
             messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "Trigger element has not been generated!");
             shouldSkipAllRounds = true;
-            return true;
+            return false;
         }
 
         AnnotationValue views = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "views");
@@ -102,7 +112,7 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         if (application == null || application.getValue() == null){
             messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, "There should be an application class annotated with @Provider!");
             shouldSkipAllRounds = true;
-            return true;
+            return false;
         }
 
         Object applicationClass =  application.getValue();
@@ -110,13 +120,13 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
 
         if (typeElement1 != null || typeElement != null){
             String p = ClassName.bestGuess(provider.asType().toString()).packageName();
-            String prefix = typeElement1 != null ? "AndroidTest" : "Test";
-            ApplicationDelegate applicationDelegate = new ApplicationDelegate(processingEnv.getFiler(), p, typeUtils, elementUtils, (TypeElement) provider, prefix);
+            String prefix = typeElement1 != null ? "ATest" : "Test";
+            ApplicationDelegate applicationDelegate = new ApplicationDelegate(processingEnv.getFiler(), p, typeUtils, elementUtils, provider, prefix);
             applicationDelegate.generate();
             if (typeElement1 != null)
             {
                 new TestRunnerType(filer, packageName, ClassName.get(provider.asType())).generate();
-                return true;
+                return false;
             }
         }
 
@@ -146,12 +156,12 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
             DeclaredType presenterType = typeUtils.getDeclaredType(elementUtils.getTypeElement("com.mvp.MvpPresenter"));
             TypeMirror uiViewType = findViewTypeOfPresenter(presenterType, presenterElement.asType());
             Gang gang = new Gang(typeUtils.asElement(activityType), elementUtils.getTypeElement(presenterClassString), typeUtils.asElement(uiViewType));
-            new TestControllerType(filer, typeUtils, elementUtils, packageName, gang).generate();
-            new PresenterBuilderType(filer, elementUtils, typeUtils, packageName, gang, packageName, provider).generate();
+            //new TestControllerType(filer, typeUtils, elementUtils, packageName, gang).generate();
+            //new PresenterBuilderType(filer, elementUtils, typeUtils, packageName, gang, packageName, provider).generate();
             new TestablePresenterModuleType(filer, elementUtils, getPackageName(presenterElement), gang).generate();
         }
 
-        return true;
+        return false;
     }
 
     private <T extends Annotation> Set<Element> findElementsAnnotatedWith(Class<T> clazz, Set<? extends Element> rootElements)

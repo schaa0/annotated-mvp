@@ -14,19 +14,21 @@ import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 
-@Presenter(needsComponents = {ComponentActivity.class} )
+@Presenter(components = {ComponentActivity.class} )
 public class MainActivityPresenter extends MvpPresenter<IView> {
 
-    private boolean isLoading;
     private Settings settings;
-    private boolean shouldSetLastQueryFromCache = false;
-
-    protected MainActivityPresenter() {}
 
     @Inject
     public MainActivityPresenter(Settings settings){
         this.settings = settings;
     }
+
+    private boolean isLoading;
+
+    private boolean shouldSetLastQueryFromCache = false;
+
+    protected MainActivityPresenter() {}
 
     @Override
     public void onViewAttached(IView view) {

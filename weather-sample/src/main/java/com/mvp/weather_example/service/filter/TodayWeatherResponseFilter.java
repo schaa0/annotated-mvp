@@ -10,6 +10,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 @Named("Today")
+@Singleton
 public class TodayWeatherResponseFilter extends WeatherResponseFilter
 {
     @Inject

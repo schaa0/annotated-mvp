@@ -16,6 +16,7 @@ import com.mvp.annotation.View;
 import javax.inject.Inject;
 
 import de.hda.simple_example.R;
+import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.presenter.MainActivityPresenter;
 import de.hda.simple_example.service.CustomService;
 import de.hda.simple_example.di.ComponentActivity;
@@ -26,13 +27,13 @@ import de.hda.simple_example.event.Contract;
 @View(presenter = MainActivityPresenter.class)
 public class MainActivity extends AppCompatActivity implements IView {
 
-    public static final String KEY_SEARCHVIEW_STATE = "KEY_SEARCHVIEW_STATE";
-
     @Presenter
     MainActivityPresenter presenter;
 
     @Inject
     CustomService customService;
+
+    public static final String KEY_SEARCHVIEW_STATE = "KEY_SEARCHVIEW_STATE";
 
     private ComponentActivity component;
 
@@ -44,11 +45,20 @@ public class MainActivity extends AppCompatActivity implements IView {
         this.savedInstanceState = savedInstanceState;
 
         SimpleApplication provider = (SimpleApplication) getApplication();
-        component = provider.componentActivity(this);
+        component = provider.componentActivity(this, this.getParentComponent());
         component.inject(this);
 
         customService.register();
 
+    }
+
+    public ComponentApplication getParentComponent() {
+        SimpleApplication provider = (SimpleApplication) getApplication();
+        return provider.componentApplication();
+    }
+
+    public ComponentActivity getComponent() {
+        return this.component;
     }
 
     @Override
@@ -183,8 +193,4 @@ public class MainActivity extends AppCompatActivity implements IView {
     boolean isExpanded;
     boolean isFocused;
 
-    public ComponentActivity getComponent()
-    {
-        return component;
-    }
 }

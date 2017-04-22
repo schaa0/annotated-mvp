@@ -7,8 +7,10 @@ import java.util.Calendar;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Singleton;
 
 @Named("Tomorrow")
+@Singleton
 public class TomorrowWeatherResponseFilter extends WeatherResponseFilter
 {
     @Inject

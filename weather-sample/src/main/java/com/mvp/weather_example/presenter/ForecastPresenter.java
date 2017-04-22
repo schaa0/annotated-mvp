@@ -1,5 +1,7 @@
 package com.mvp.weather_example.presenter;
 
+import android.support.v4.app.FragmentManager;
+
 import com.mvp.MvpPresenter;
 import com.mvp.annotation.Presenter;
 import com.mvp.weather_example.di.ComponentActivity;
@@ -7,7 +9,7 @@ import com.mvp.weather_example.view.ForecastActivityView;
 
 import javax.inject.Inject;
 
-@Presenter(needsComponents = ComponentActivity.class)
+@Presenter(components = ComponentActivity.class)
 public class ForecastPresenter extends MvpPresenter<ForecastActivityView> {
 
     private String forecastWeather;

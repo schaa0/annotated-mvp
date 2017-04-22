@@ -19,6 +19,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import de.hda.simple_example.R;
+import de.hda.simple_example.di.ComponentApplication;
 import de.hda.simple_example.presenter.MainFragmentPresenter;
 import de.hda.simple_example.di.ComponentActivity;
 import de.hda.simple_example.di.SimpleApplication;
@@ -62,8 +63,7 @@ public class MainFragment extends Fragment implements MainActivityView, Reposito
     private void initialize(android.view.View view, Bundle savedInstanceState) {
 
         SimpleApplication app = (SimpleApplication) getActivity().getApplication();
-        ComponentActivity activityComponent = ((MainActivity) getActivity()).getComponent();
-        app.componentFragment(activityComponent).inject(this);
+        app.componentFragment(this.getParentComponent()).inject(this);
 
         recyclerView = (RecyclerView) view.findViewById(R.id.recyclerView);
         orientationView = view.findViewById(R.id.orientation);
@@ -137,5 +137,8 @@ public class MainFragment extends Fragment implements MainActivityView, Reposito
         super.onDestroyView();
     }
 
+    private ComponentActivity getParentComponent() {
+        return ((MainActivity)getActivity()).getComponent();
+    }
 
 }

@@ -17,7 +17,7 @@ import java.io.IOException;
 
 import javax.inject.Inject;
 
-@Presenter(needsComponents = {ComponentActivity.class})
+@Presenter(components = {ComponentActivity.class})
 public class TodayWeatherPresenter extends WeatherPresenter
 {
 

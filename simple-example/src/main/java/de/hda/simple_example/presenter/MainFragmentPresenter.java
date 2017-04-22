@@ -16,6 +16,7 @@ import javax.inject.Inject;
 
 import de.hda.simple_example.container.MainActivityView;
 import de.hda.simple_example.di.ComponentActivity;
+import de.hda.simple_example.di.ComponentFragment;
 import de.hda.simple_example.event.Contract;
 import de.hda.simple_example.model.Repository;
 import de.hda.simple_example.model.SearchResult;
@@ -23,7 +24,7 @@ import de.hda.simple_example.service.GithubService;
 import retrofit2.Call;
 import retrofit2.Response;
 
-@Presenter(needsComponents = {ComponentActivity.class})
+@Presenter(components = {ComponentFragment.class})
 public class MainFragmentPresenter extends MvpPresenter<MainActivityView> {
 
     public static final String KEY_STATE = "KEY_STATE";
