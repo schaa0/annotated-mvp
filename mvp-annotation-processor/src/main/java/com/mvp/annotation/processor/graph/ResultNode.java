@@ -9,8 +9,10 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -26,17 +28,19 @@ import javax.lang.model.util.Types;
 
 public class ResultNode
 {
+    protected final TypeMirror clazz;
+    protected final ClassName outerClass;
     private final TypeElement providingClass;
     private final ExecutableElement providingMethod;
-    protected final TypeMirror clazz;
     private final Elements elementUtils;
     private final Types typeUtils;
-    protected final ClassName outerClass;
     protected List<ResultNode> params = new ArrayList<>();
 
     private boolean isDependentOnParentComponent = false;
     private boolean isDependentOnModule = false;
     private boolean isDependentOnInjectConstructor;
+    private boolean isProvider;
+    private MemberNode memberNode;
 
     public ResultNode(Elements elementUtils, Types typeUtils, String outerClass, TypeMirror clazz, TypeElement providingClass, ExecutableElement providingMethod)
     {
@@ -46,6 +50,25 @@ public class ResultNode
         this.clazz = clazz;
         this.providingClass = providingClass;
         this.providingMethod = providingMethod;
+    }
+
+    public static List<TypeElement> searchForInjectMembers(Elements elementUtils, TypeMirror clazz)
+    {
+        List<TypeElement> elements = new ArrayList<>();
+        TypeElement typeElement = elementUtils.getTypeElement(clazz.toString());
+        for (Element element : typeElement.getEnclosedElements())
+        {
+            if (element.getKind() == ElementKind.FIELD)
+            {
+                if (element.getAnnotation(Inject.class) != null)
+                {
+                    VariableElement variableElement = (VariableElement) element;
+                    TypeMirror typeMirror = variableElement.asType();
+                    elements.add(elementUtils.getTypeElement(typeMirror.toString()));
+                }
+            }
+        }
+        return elements;
     }
 
     public void addResultNode(ResultNode resultNode)
@@ -69,15 +92,18 @@ public class ResultNode
         return sb.toString();
     }
 
-    public String getInterfaceName() {
+    public String getInterfaceName()
+    {
         return "I" + Utils.extractClassName(this.clazz) + "Provider";
     }
 
-    private TypeName getInnerClass(String className) {
+    private ClassName getInnerClass(String className)
+    {
         return outerClass.nestedClass(className);
     }
 
-    public void buildDelegateInterface(TypeSpec.Builder componentBuilder, List<String> createdInterfaces) {
+    public void buildDelegateInterface(TypeSpec.Builder componentBuilder, List<String> createdInterfaces)
+    {
 
         for (ResultNode param : this.params)
         {
@@ -97,8 +123,16 @@ public class ResultNode
                 getMethodBuilder.returns(ClassName.get(this.clazz));
                 for (ResultNode param : this.params)
                 {
+                    TypeName clazz;
+                    if (param.isProvider)
+                    {
+                        clazz = ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(param.clazz));
+                    } else
+                    {
+                        clazz = ClassName.get(param.clazz);
+                    }
                     String name = Utils.toParameterName(Utils.extractClassName(param.clazz));
-                    getMethodBuilder.addParameter(ClassName.get(param.clazz), name);
+                    getMethodBuilder.addParameter(clazz, name);
                 }
                 builder.addMethod(getMethodBuilder.build());
                 componentBuilder.addType(builder.build());
@@ -117,7 +151,8 @@ public class ResultNode
         ParameterizedTypeName provider = ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(clazz));
         String className = this.getProviderClassName();
 
-        if (createdClasses.contains(className)) {
+        if (createdClasses.contains(className))
+        {
             return;
         }
 
@@ -128,10 +163,19 @@ public class ResultNode
             builder = TypeSpec.classBuilder(className);
             builder.addField(ClassName.get(providingClass.asType()), paramName);
             builder.addSuperinterface(provider);
-            MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
-                                                              .addModifiers(Modifier.PUBLIC)
-                                                              .addParameter(ClassName.get(providingClass.asType()), paramName)
-                                                              .addStatement(String.format("this.%s = %s", paramName, paramName));
+            MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder();
+
+            if (this.memberNode != null) {
+                TypeName providerTypeName = this.memberNode.getProviderTypeName();
+                String providerName = this.memberNode.getProviderName(this.memberNode);
+                constructorBuilder.addParameter(providerTypeName, providerName);
+                builder.addField(providerTypeName, providerName, Modifier.PRIVATE);
+                constructorBuilder.addStatement(String.format("this.%s = %s", providerName, providerName));
+            }
+
+            constructorBuilder.addModifiers(Modifier.PUBLIC)
+                              .addParameter(ClassName.get(providingClass.asType()), paramName)
+                              .addStatement(String.format("this.%s = %s", paramName, paramName));
             builder.addMethod(constructorBuilder.build());
             builder.addMethod(MethodSpec.methodBuilder("get")
                                         .addModifiers(Modifier.PUBLIC)
@@ -151,13 +195,22 @@ public class ResultNode
                                                               .addModifiers(Modifier.PUBLIC)
                                                               .addStatement(String.format("this.%s = %s", paramName, paramName));
 
+            if (this.memberNode != null)
+            {
+                TypeName providerTypeName = this.memberNode.getProviderTypeName();
+                String providerName = this.memberNode.getProviderName(this.memberNode);
+                constructorBuilder.addParameter(providerTypeName, providerName);
+                builder.addField(providerTypeName, providerName, Modifier.PRIVATE);
+                constructorBuilder.addStatement(String.format("this.%s = %s", providerName, providerName));
+            }
+
             constructorBuilder.addParameter(ClassName.get(providingClass.asType()), paramName);
 
             builder.addField(this.getDelegateTypeName(), "delegate");
             constructorBuilder.addStatement("this.delegate = delegate");
             for (ResultNode param : this.params)
             {
-                ParameterizedTypeName typeName = ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(param.clazz));
+                TypeName typeName = param.getProviderTypeName();
                 String name = Utils.toParameterName(Utils.extractClassName(param.providingClass.asType()));
                 constructorBuilder.addParameter(typeName, name);
                 builder.addField(typeName, name, Modifier.PRIVATE);
@@ -167,10 +220,26 @@ public class ResultNode
             builder.addMethod(constructorBuilder.build());
 
             StringBuilder sb = new StringBuilder();
+
+            if (this.memberNode != null) {
+                sb.append("this.").append(memberNode.getProviderName(memberNode));
+                if (!this.params.isEmpty()) {
+                    sb.append(", ");
+                }
+            }
+
             for (int position = 0; position < this.params.size(); position++)
             {
                 ResultNode node = this.params.get(position);
-                sb.append(String.format("%s.get()", Utils.toParameterName(Utils.extractClassName(node.providingClass.asType()))));
+                String parameterName = Utils.toParameterName(Utils.extractClassName(node.providingClass.asType()));
+                if (!node.isProvider)
+                {
+                    sb.append(String.format("%s.get()", parameterName));
+                } else
+                {
+                    sb.append(String.format("%s", parameterName));
+                }
+
                 if (position < this.params.size() - 1)
                 {
                     sb.append(", ");
@@ -178,13 +247,20 @@ public class ResultNode
             }
 
             MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get")
-                                               .addModifiers(Modifier.PUBLIC)
-                                               .addAnnotation(Override.class)
-                                               .returns(ClassName.get(clazz));
+                                                     .addModifiers(Modifier.PUBLIC)
+                                                     .addAnnotation(Override.class)
+                                                     .returns(ClassName.get(clazz));
             getMethod.beginControlFlow("if (this.delegate != null)");
-            getMethod.addStatement(String.format("return delegate.get(%s)", sb.toString()));
+            String name = this.clazz.toString();
+            String p = Utils.toParameterName(Utils.extractClassName(this.clazz));
+            getMethod.addStatement(String.format("%s %s = delegate.get(%s)", name, p, sb.toString()));
+            if (this.memberNode != null) {
+                getMethod.addStatement(String.format("this.%s.injectMembers(%s)", memberNode.getProviderName(memberNode), p));
+            }
+            getMethod.addStatement(String.format("return %s", p));
             getMethod.nextControlFlow("else");
-            getMethod.addStatement(String.format("return %s.%s(%s)", paramName, providingMethod.getSimpleName().toString(), sb.toString()));
+            String methodName = providingMethod.getSimpleName().toString();
+            getMethod.addStatement(String.format("return %s.%s(%s)", paramName, methodName, sb.toString()));
             getMethod.endControlFlow();
 
             builder.addMethod(getMethod.build());
@@ -194,6 +270,16 @@ public class ResultNode
             builder = TypeSpec.classBuilder(className);
             builder.addSuperinterface(provider);
             MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder();
+
+            if (this.memberNode != null)
+            {
+                TypeName providerTypeName = this.memberNode.getProviderTypeName();
+                String providerName = this.memberNode.getProviderName(this.memberNode);
+                constructorBuilder.addParameter(providerTypeName, providerName);
+                builder.addField(providerTypeName, providerName, Modifier.PRIVATE);
+                constructorBuilder.addStatement(String.format("this.%s = %s", providerName, providerName));
+            }
+
             TypeName delegateType = this.getDelegateTypeName();
             builder.addField(delegateType, "delegate", Modifier.PRIVATE);
             constructorBuilder.addParameter(delegateType, "delegate");
@@ -216,13 +302,23 @@ public class ResultNode
             {
                 ResultNode param = this.params.get(i);
                 String providerName = getProviderName(param);
-                sb1.append(providerName).append(".get()");
+                sb1.append(providerName);
+                if (!param.isProvider)
+                {
+                    sb1.append(".get()");
+                }
                 if (i < this.params.size() - 1)
                     sb1.append(",");
             }
 
             methodGet.beginControlFlow("if (this.delegate != null)");
-            methodGet.addStatement(String.format("return this.delegate.get(%s)", sb1.toString()));
+            String name = this.clazz.toString();
+            String paramName = Utils.toParameterName(Utils.extractClassName(this.clazz));
+            methodGet.addStatement(String.format("%s %s = this.delegate.get(%s)", name, paramName, sb1.toString()));
+            if (this.memberNode != null) {
+                methodGet.addStatement(String.format("this.%s.injectMembers(%s)", memberNode.getProviderName(memberNode), paramName));
+            }
+            methodGet.addStatement(String.format("return %s", paramName));
             methodGet.nextControlFlow("else");
 
             boolean isInnerClass = Utils.isInnerClass(typeUtils, this.clazz);
@@ -232,9 +328,17 @@ public class ResultNode
             TypeElement factoryElement = elementUtils.getTypeElement(factoryClassName);
             VariableElement firstParam = this.getFirstParamOfCreateMethod(factoryElement);
             StringBuilder sb = new StringBuilder();
-            if (firstParam != null && firstParam.asType().toString().contains("MembersInjector")) {
-                sb.append("MembersInjectors.noOp()");
-                if (!this.params.isEmpty()) {
+            if (firstParam != null && firstParam.asType().toString().contains("MembersInjector") && this.memberNode == null)
+            {
+                sb.append("dagger.internal.MembersInjectors.noOp()");
+                if (!this.params.isEmpty())
+                {
+                    sb.append(", ");
+                }
+            }else if(firstParam != null && firstParam.asType().toString().contains("MembersInjector") && this.memberNode != null) {
+                sb.append("this.").append(this.memberNode.getProviderName(this.memberNode));
+                if (!this.params.isEmpty())
+                {
                     sb.append(", ");
                 }
             }
@@ -259,17 +363,26 @@ public class ResultNode
         componentBuilder.addType(builder.build());
     }
 
+    protected TypeName getProviderTypeName()
+    {
+        return ParameterizedTypeName.get(ClassName.get(Provider.class), ClassName.get(this.clazz));
+    }
+
     private VariableElement getFirstParamOfCreateMethod(TypeElement factoryElement)
     {
-        if (factoryElement == null) {
+        if (factoryElement == null)
+        {
             return null;
         }
         for (Element element : factoryElement.getEnclosedElements())
         {
-            if (element.getKind() == ElementKind.METHOD) {
+            if (element.getKind() == ElementKind.METHOD)
+            {
                 ExecutableElement executableElement = (ExecutableElement) element;
-                if (executableElement.getSimpleName().toString().equals("create") && executableElement.getModifiers().contains(Modifier.STATIC)) {
-                    if (!executableElement.getParameters().isEmpty()) {
+                if (executableElement.getSimpleName().toString().equals("create") && executableElement.getModifiers().contains(Modifier.STATIC))
+                {
+                    if (!executableElement.getParameters().isEmpty())
+                    {
                         return executableElement.getParameters().get(0);
                     }
                 }
@@ -330,6 +443,11 @@ public class ResultNode
         }
     }
 
+    public boolean createsDelegateInterface()
+    {
+        return !this.isDependentOnParentComponent;
+    }
+
     public void buildProviderField(TopNode topNode, List<String> createdProviders)
     {
 
@@ -372,6 +490,13 @@ public class ResultNode
             String providerClassName = this.getProviderClassName();
             StringBuilder sb = new StringBuilder();
             String result;
+
+            if (this.memberNode != null)
+            {
+                sb.append("this.").append(this.memberNode.getProviderName(this.memberNode));
+                sb.append(", ");
+            }
+
             if (isDependentOnParentComponent)
             {
                 sb.append("this.").append(Utils.toParameterName(Utils.extractClassName(this.providingClass.asType())));
@@ -396,7 +521,7 @@ public class ResultNode
             }
             constructedProviders.add(providerField);
             return result;
-        }else
+        } else
         {
             return null;
         }
@@ -456,7 +581,8 @@ public class ResultNode
         {
             param.findAndAddModules(modules);
         }
-        if (this.isDependentOnModule()) {
+        if (this.isDependentOnModule())
+        {
             modules.add(this.providingClass);
         }
     }
@@ -470,12 +596,14 @@ public class ResultNode
     {
         for (ResultNode param : this.params)
         {
-            if (param.tryOverrideComponentMethod(elements, builder, method)) {
+            if (param.tryOverrideComponentMethod(elements, builder, method))
+            {
                 return true;
             }
         }
 
-        if (method.getReturnType().toString().equals(this.clazz.toString())) {
+        if (method.getReturnType().toString().equals(this.clazz.toString()))
+        {
 
             MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(method.getSimpleName().toString());
             methodBuilder.addAnnotation(Override.class);
@@ -490,25 +618,68 @@ public class ResultNode
 
             return true;
 
-        }else {
+        } else
+        {
             return false;
         }
 
     }
 
-    public List<TypeElement> searchForInjectMembers(Elements elementUtils)
+    public Collection<? extends TypeMirror> getGeneratedInterfaceType()
     {
-        List<TypeElement> elements = new ArrayList<>();
-        TypeElement typeElement = elementUtils.getTypeElement(this.clazz.toString());
-        for (Element element : typeElement.getEnclosedElements())
+        List<TypeMirror> result = new ArrayList<>();
+        for (ResultNode param : params)
         {
-            if (element.getKind() == ElementKind.FIELD) {
-                if (element.getAnnotation(Inject.class) != null) {
-                    VariableElement variableElement = (VariableElement) element;
-                    elements.add(elementUtils.getTypeElement(variableElement.asType().toString()));
-                }
+            result.addAll(param.getGeneratedInterfaceType());
+        }
+        if (this.createsDelegateInterface())
+        {
+            ClassName innerClass = this.getInnerClass(this.getInterfaceName());
+            TypeMirror e = elementUtils.getTypeElement(innerClass.toString()).asType();
+            result.add(e);
+        }
+        return result;
+    }
+
+    public String toAnnotation(String id, String parentId)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (int position = 0; position < this.params.size(); position++)
+        {
+            ResultNode resultNode = this.params.get(position);
+            sb.append(resultNode.toAnnotation(UUID.randomUUID().toString(), id));
+            if (position < this.params.size() - 1)
+            {
+                sb.append(", ");
             }
         }
-        return elements;
+
+        String annotation = "@com.mvp.annotation.internal.ResultNode(id = \"%s\", parentId = \"%s\", dataType = %s, dependentClass = %s, methodName = \"%s\", isInjector = false)\n";
+        String dataType = this.clazz.toString() + ".class";
+        String dependentClass = this.providingClass.toString() + ".class";
+        String methodName = this.providingMethod.getSimpleName().toString();
+        String s = sb.toString();
+        String seperator = s.isEmpty() ? "" : ", ";
+        return String.format(annotation, id, parentId, dataType, dependentClass, methodName) + seperator + s;
+    }
+
+    public void setIsProvider(boolean isProvider)
+    {
+        this.isProvider = isProvider;
+    }
+
+    public boolean isProvider()
+    {
+        return isProvider;
+    }
+
+    public void setProvider(boolean isProvider)
+    {
+        this.isProvider = isProvider;
+    }
+
+    public void setMemberNode(MemberNode memberNode)
+    {
+        this.memberNode = memberNode;
     }
 }

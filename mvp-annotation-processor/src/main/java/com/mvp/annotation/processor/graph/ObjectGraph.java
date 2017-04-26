@@ -1,13 +1,20 @@
 package com.mvp.annotation.processor.graph;
 
+import com.mvp.annotation.internal.*;
 import com.mvp.annotation.processor.Utils;
 import com.mvp.annotation.processor.graph.Node;
+import com.mvp.annotation.processor.unittest.GraphCache;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -26,23 +33,20 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
-/**
- * Created by Andy on 14.04.2017.
- */
-
 public class ObjectGraph
 {
 
     private final ProcessingEnvironment processingEnvironment;
+    private final Set<? extends Element> components;
     private final Elements elementUtils;
     private final Types typeUtils;
-    private final RoundEnvironment env;
 
     private List<TopNode> topNodes = new ArrayList<>();
+    private boolean isGenerated = false;
 
-    public ObjectGraph(ProcessingEnvironment processingEnvironment, RoundEnvironment env, Elements elementUtils, Types typeUtils) {
+    public ObjectGraph(ProcessingEnvironment processingEnvironment, Set<? extends Element> components, Elements elementUtils, Types typeUtils) {
         this.processingEnvironment = processingEnvironment;
-        this.env = env;
+        this.components = components;
         this.elementUtils = elementUtils;
         this.typeUtils = typeUtils;
     }
@@ -60,9 +64,11 @@ public class ObjectGraph
 
         for (TypeElement scope : scopes)
         {
-            scopeToObjects.put(scope, new ArrayList<TypeElement>());
-            Set<? extends Element> elements = env.getElementsAnnotatedWith(scope);
-            for (Element element : elements)
+            if (!scopeToObjects.containsKey(scope))
+            {
+                scopeToObjects.put(scope, new ArrayList<TypeElement>());
+            }
+            for (Element element : this.components)
             {
                 if (!Utils.hasComponentAnnotation(element)) {
                     List<TypeElement> objects = scopeToObjects.get(scope);
@@ -71,12 +77,9 @@ public class ObjectGraph
             }
         }
 
-        TypeElement componentAnnotation = elementUtils.getTypeElement("dagger.Component");
-        Set<? extends Element> components = env.getElementsAnnotatedWith(componentAnnotation);
-        for (Element component : components)
+        for (Element component : this.components)
         {
-            PackageElement packageOf = elementUtils.getPackageOf(component);
-            NodeComponent nodeComponent = NodeComponent.createFrom(packageOf, processingEnvironment, elementUtils, typeUtils, (TypeElement) component);
+            NodeComponent nodeComponent = NodeComponent.createFrom(processingEnvironment, elementUtils, typeUtils, (TypeElement) component);
             TopNode topNode = nodeComponent.buildDependencyGraph();
             topNodes.add(topNode);
         }
@@ -86,9 +89,7 @@ public class ObjectGraph
     {
         List<TypeElement> scopes = new ArrayList<>();
 
-        TypeElement componentAnnotation = elementUtils.getTypeElement("dagger.Component");
-        Set<? extends Element> elements = env.getElementsAnnotatedWith(componentAnnotation);
-        for (Element element : elements)
+        for (Element element : this.components)
         {
             List<? extends AnnotationMirror> annotationMirrors = element.getAnnotationMirrors();
             for (AnnotationMirror annotationMirror : annotationMirrors)
@@ -98,7 +99,10 @@ public class ObjectGraph
                 for (AnnotationMirror mirror : mirrors)
                 {
                     if (mirror.getAnnotationType().toString().equals("javax.inject.Scope")) {
-                        scopes.add(annotation);
+                        if (!scopes.contains(annotation))
+                        {
+                            scopes.add(annotation);
+                        }
                         break;
                     }
                 }
@@ -107,23 +111,87 @@ public class ObjectGraph
         return scopes;
     }
 
-    public List<String> generate()
+    public void generate()
     {
-        List<String> delegates = new ArrayList<>();
         for (TopNode topNode : this.topNodes)
         {
             try {
-                PackageElement packageOf = elementUtils.getPackageOf(topNode.getComponentType());
-                JavaFile.builder(packageOf.getQualifiedName().toString(), topNode.toClass().build())
+                TypeElement componentType = topNode.getComponentType();
+                PackageElement packageOf = elementUtils.getPackageOf(componentType);
+                TypeSpec build = topNode.toClass().build();
+                String packageName = packageOf.getQualifiedName().toString();
+                JavaFile.builder(packageName, build)
                         .addFileComment("Generated code")
                         .indent("   ")
                         .build().writeTo(processingEnvironment.getFiler());
             } catch (IOException e) {
-                //e.printStackTrace();
+
             }
             log(topNode.toString());
-            delegates.addAll(topNode.getCreatedDelegates());
         }
-        return delegates;
+        isGenerated = true;
     }
+
+    public List<TypeMirror> getCreatedInterfaces()
+    {
+        List<TypeMirror> result = new ArrayList<>();
+        for (TopNode topNode : this.topNodes)
+        {
+            result.addAll(topNode.getGeneratedInterfaceTypes());
+        }
+        return result;
+    }
+
+    public boolean isGenerated()
+    {
+        return this.isGenerated;
+    }
+
+    public List<TopNode> getTopNodes()
+    {
+        return this.topNodes;
+    }
+
+    public static Set<? extends Element> createFromAnnotation(Elements elementUtils, AnnotationValue graph, AnnotationValue views) {
+
+        Set<Element> topNodes = new HashSet<>();
+
+        AnnotationMirror mirror = (AnnotationMirror) graph.getValue();
+        Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = mirror.getElementValues();
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet())
+        {
+            String key = entry.getKey().getSimpleName().toString();
+            if (key.equals("nodes")) {
+                AnnotationValue nodes = entry.getValue();
+                List<AnnotationValue> value = (List<AnnotationValue>) nodes.getValue();
+                for (AnnotationValue annotationValue : value)
+                {
+                    AnnotationMirror e = (AnnotationMirror) annotationValue.getValue();
+                    Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues1 = e.getElementValues();
+                    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> nodeEntry : elementValues1.entrySet())
+                    {
+                        String nodeKey = nodeEntry.getKey().getSimpleName().toString();
+                        if (nodeKey.equals("componentType")) {
+                            String componentType = String.valueOf(nodeEntry.getValue().getValue()).replace(".class", "");
+                            topNodes.add(elementUtils.getTypeElement(componentType));
+                        }
+                    }
+                }
+            }
+        }
+
+        /*List<Object> value = (List<Object>) views.getValue();
+        for (Object o : value)
+        {
+            String viewClass = String.valueOf(o).replace(".class", "");
+            TypeElement viewElement = elementUtils.getTypeElement(viewClass);
+            TypeMirror presenter = Utils.findPresenterClassInViewImplementationClass(viewElement);
+            String packageName = Utils.extractPackage(presenter);
+            String className = Utils.extractClassName(presenter);
+            topNodes.add(elementUtils.getTypeElement(packageName + ".Component" + className));
+        }*/
+
+        return topNodes;
+    }
+
 }

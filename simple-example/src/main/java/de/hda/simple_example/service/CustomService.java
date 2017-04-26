@@ -3,9 +3,11 @@ package de.hda.simple_example.service;
 import android.util.Log;
 
 import com.mvp.EventBus;
+import com.mvp.annotation.ActivityScope;
 import com.mvp.annotation.Event;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import de.hda.simple_example.event.Contract;
 

@@ -8,6 +8,7 @@ import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 public class ImageRequestManager {
 
@@ -18,8 +19,8 @@ public class ImageRequestManager {
     private RequestManager requestManager;
 
     @Inject
-    public ImageRequestManager(RequestManager requestManager){
-        this.requestManager = requestManager;
+    public ImageRequestManager(Provider<RequestManager> requestManager){
+        this.requestManager = requestManager.get();
     }
 
     public void load(String iconUrl, final IconCallback iconCallback) {

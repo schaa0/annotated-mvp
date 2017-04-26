@@ -5,17 +5,24 @@ import com.mvp.annotation.ProvidesComponent;
 import com.mvp.annotation.ProvidesModule;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.processing.Filer;
+import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -25,10 +32,12 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.JavaFileObject;
 
 /**
  * Created by Andy on 14.12.2016.
@@ -118,6 +127,54 @@ public class Utils {
                 shortest = s;
         }
         return shortest;
+    }
+
+    public static TypeMirror findPresenterClassInViewImplementationClass(Element elementActivityClass) {
+        TypeElement typeElement = (TypeElement) elementActivityClass;
+        List<? extends Element> enclosedElements = typeElement.getEnclosedElements();
+        for (Element enclosedElement : enclosedElements) {
+            if (enclosedElement.getKind() == ElementKind.FIELD){
+                Presenter presenterAnnotation = enclosedElement.getAnnotation(Presenter.class);
+                if (presenterAnnotation != null){
+                    VariableElement variableElement = (VariableElement) enclosedElement;
+                    return variableElement.asType();
+                }
+            }
+        }
+        return null;
+    }
+
+    public static boolean isProviderType(Elements elements, Types types, TypeMirror typeMirror) {
+        TypeMirror erasure = types.erasure(typeMirror);
+        if (erasure.toString().equals(Provider.class.getName()))
+        {
+            DeclaredType declaredType = (DeclaredType) typeMirror;
+            List<? extends TypeMirror> typeParameters = declaredType.getTypeArguments();
+            if (!typeParameters.isEmpty())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static TypeMirror getGenericTypeIfIsProvider(Elements elements, Types types, TypeMirror typeMirror) {
+
+        if (!Utils.isProviderType(elements, types, typeMirror)) {
+            return typeMirror;
+        }
+
+        TypeMirror erasure = types.erasure(typeMirror);
+        if (erasure.toString().equals(Provider.class.getName()))
+        {
+            DeclaredType declaredType = (DeclaredType) typeMirror;
+            List<? extends TypeMirror> typeParameters = declaredType.getTypeArguments();
+            if (!typeParameters.isEmpty())
+            {
+                return typeParameters.get(0);
+            }
+        }
+        return null;
     }
 
     public static String findPresenterFieldInViewImplementationClass(Element elementActivityClass) {
@@ -362,4 +419,5 @@ public class Utils {
         }
         return false;
     }
+
 }

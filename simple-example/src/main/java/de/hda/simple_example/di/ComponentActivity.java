@@ -6,6 +6,7 @@ import com.mvp.annotation.ActivityScope;
 
 import dagger.Component;
 import de.hda.simple_example.container.MainActivity;
+import de.hda.simple_example.presenter.Settings;
 import de.hda.simple_example.service.GithubService;
 
 
@@ -15,4 +16,5 @@ public interface ComponentActivity extends BaseComponentActivity
 {
     void inject(MainActivity mainActivity);
     GithubService githubService();
+    Settings settings();
 }

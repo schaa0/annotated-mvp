@@ -1,12 +1,10 @@
 package com.mvp.annotation.processor.unittest;
 
-import com.mvp.annotation.Generate;
+import com.mvp.annotation.internal.Generate;
 import com.mvp.annotation.Provider;
 import com.mvp.annotation.View;
-import com.mvp.annotation.processor.ApplicationDelegate;
 import com.mvp.annotation.processor.Gang;
 import com.mvp.annotation.processor.graph.ObjectGraph;
-import com.mvp.annotation.processor.graph.TopNode;
 import com.squareup.javapoet.ClassName;
 
 import java.lang.annotation.Annotation;
@@ -60,31 +58,28 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
     }
 
     @Override
-    public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment)
+    public boolean process(Set<? extends TypeElement> set, RoundEnvironment env)
     {
+
+        if (env.errorRaised()) {
+            return false;
+        }
+
         if (shouldSkipAllRounds)
             return false;
-        if (!processed) {
-            objectGraph = new ObjectGraph(processingEnv, roundEnvironment, elementUtils, typeUtils);
-            objectGraph.evaluate();
-        }
-        if (roundEnvironment.processingOver()) {
-            List<String> createdDelegates = objectGraph.generate();
-        }
-        if (processed)
-            return false;
 
-        processed = true;
-
-        Set<? extends Element> rootElements = roundEnvironment.getRootElements();
+        Set<? extends Element> rootElements = env.getRootElements();
         if (viewElements.isEmpty())
             viewElements = findElementsAnnotatedWith(View.class, rootElements);
 
         String packageName = "com.mvp";
-        TypeElement typeElement = elementUtils.getTypeElement("org.robolectric.RobolectricTestRunner");
-        TypeElement typeElement1 = elementUtils.getTypeElement("android.support.test.runner.AndroidJUnit4");
 
-        if (typeElement == null && typeElement1 == null)
+        log(String.format("is unit test: %s", isUnitTest()));
+        log(String.format("is android test: %s", isAndroidTest()));
+        log(String.format("object graph evaluated: %s", String.valueOf(objectGraph != null)));
+        log(String.format("object graph generated: %s", String.valueOf(objectGraph != null && objectGraph.isGenerated())));
+
+        if (objectGraph == null && !isUnitTest() && !isAndroidTest())
         {
             Iterator<Element> iterator = findElementsAnnotatedWith(Provider.class, rootElements).iterator();
             if (!iterator.hasNext()){
@@ -92,10 +87,36 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
                 shouldSkipAllRounds = true;
                 return false;
             }
+            TypeElement componentAnnotation = elementUtils.getTypeElement("dagger.Component");
+            Set<? extends Element> components = env.getElementsAnnotatedWith(componentAnnotation);
+            objectGraph = new ObjectGraph(processingEnv, components, elementUtils, typeUtils);
+            objectGraph.evaluate();
             provider = elementUtils.getTypeElement(iterator.next().asType().toString());
             if (!viewElements.isEmpty()){
-                new TriggerType(filer, packageName + ".trigger", viewElements, ClassName.get(provider)).generate();
+                new TriggerType(filer, packageName + ".trigger", viewElements, ClassName.get(provider), objectGraph.getTopNodes()).generate();
             }
+            return false;
+        }
+
+        if (objectGraph != null && (isUnitTest() || isAndroidTest())) {
+            List<TypeMirror> createdInterfaces = objectGraph.getCreatedInterfaces();
+            String p = ClassName.bestGuess(provider.asType().toString()).packageName();
+            String prefix = isAndroidTest() ? "AndroidTest" : "Test";
+            ApplicationTestDelegate testDelegate = new ApplicationTestDelegate(processingEnv.getFiler(), p, typeUtils, elementUtils, provider, prefix, createdInterfaces);
+            testDelegate.generate();
+        }
+
+        if (objectGraph != null && (isAndroidTest() || isUnitTest()))
+        {
+            objectGraph.generate();
+        }
+
+        if (processed)
+            return false;
+
+        processed = true;
+
+        if (!isUnitTest() && !isAndroidTest()) {
             return false;
         }
 
@@ -107,6 +128,8 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
             return false;
         }
 
+        AnnotationValue graph = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "graph");
+        //objectGraph = ObjectGraph.createFromAnnotation(processingEnv, roundEnvironment, elementUtils, typeUtils, graph);
         AnnotationValue views = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "views");
         AnnotationValue application = getAnnotationValue(triggerElement, Generate.class.getCanonicalName(), "application");
         if (application == null || application.getValue() == null){
@@ -118,16 +141,15 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         Object applicationClass =  application.getValue();
         provider = elementUtils.getTypeElement(ClassName.bestGuess(applicationClass.toString().replace(".class", "")).toString());
 
-        if (typeElement1 != null || typeElement != null){
-            String p = ClassName.bestGuess(provider.asType().toString()).packageName();
-            String prefix = typeElement1 != null ? "ATest" : "Test";
-            ApplicationDelegate applicationDelegate = new ApplicationDelegate(processingEnv.getFiler(), p, typeUtils, elementUtils, provider, prefix);
-            applicationDelegate.generate();
-            if (typeElement1 != null)
-            {
-                new TestRunnerType(filer, packageName, ClassName.get(provider.asType())).generate();
-                return false;
-            }
+        Set<? extends Element> components = ObjectGraph.createFromAnnotation(elementUtils, graph, views);
+
+        objectGraph = new ObjectGraph(processingEnv, components, elementUtils, typeUtils);
+        objectGraph.evaluate();
+        objectGraph.generate();
+
+        if (isAndroidTest()){
+            new TestRunnerType(filer, packageName, ClassName.get(provider.asType())).generate();
+            return false;
         }
 
         if (viewElements.isEmpty())
@@ -164,6 +186,21 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
         return false;
     }
 
+    public void log(String message)
+    {
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, message);
+    }
+
+    public boolean isAndroidTest()
+    {
+        return elementUtils.getTypeElement("android.support.test.runner.AndroidJUnit4") != null;
+    }
+
+    public boolean isUnitTest()
+    {
+        return elementUtils.getTypeElement("org.robolectric.RobolectricTestRunner") != null;
+    }
+
     private <T extends Annotation> Set<Element> findElementsAnnotatedWith(Class<T> clazz, Set<? extends Element> rootElements)
     {
         Set<Element> elements = new LinkedHashSet<>();
@@ -175,18 +212,6 @@ public class UnitTestAnnotationProcessor extends AbstractProcessor
             }
         }
         return elements;
-    }
-
-    private <T extends Annotation> Element findElementAnnotatedWith(Class<T> clazz, Set<? extends Element> elements)
-    {
-        for (Element element : elements)
-        {
-            if (element.getAnnotation(clazz) != null)
-            {
-                return element;
-            }
-        }
-        return null;
     }
 
     private String getPackageName(Element viewElement)

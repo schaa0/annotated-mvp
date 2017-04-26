@@ -9,6 +9,7 @@ import com.mvp.ModuleEventBus;
 import javax.inject.Singleton;
 
 import dagger.Component;
+import de.hda.simple_example.presenter.Settings;
 import de.hda.simple_example.service.GithubService;
 
 @Singleton
@@ -16,4 +17,5 @@ import de.hda.simple_example.service.GithubService;
 public interface ComponentApplication extends ComponentEventBus {
     GithubService githubService();
     SharedPreferences sharedPreferences();
+    Settings settings();
 }

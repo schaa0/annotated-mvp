@@ -9,7 +9,10 @@ import com.squareup.javapoet.TypeSpec;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -21,12 +24,14 @@ import javax.lang.model.util.Types;
 public class MemberNode extends ResultNode
 {
 
+    private final ParameterizedTypeName injectorType;
     private TypeName injector;
     private String initializeInjectorStatement;
 
     public MemberNode(Elements elementUtils, Types typeUtils, String outerClass, TypeMirror clazz)
     {
         super(elementUtils, typeUtils, outerClass, clazz, null, null);
+        this.injectorType = ParameterizedTypeName.get(ClassName.bestGuess("dagger.MembersInjector"), ClassName.get(this.clazz));
     }
 
     @Override
@@ -81,16 +86,52 @@ public class MemberNode extends ResultNode
         {
             param.buildProviderField(topNode, createdProviders);
         }
+        if (!createdProviders.contains(this.getProviderName(this)))
+        {
+            TypeSpec.Builder componentBuilder = topNode.getClassBuilder();
+            componentBuilder.addField(injectorType, this.getInjectorFieldName(), Modifier.PRIVATE);
+            createdProviders.add(this.getProviderName(this));
+        }
+    }
+
+    @Override
+    protected String getProviderName(ResultNode param)
+    {
+        return Utils.toParameterName(Utils.extractClassName(param.clazz)) + "Injector";
     }
 
     @Override
     public void buildProviders(MethodSpec.Builder builder, List<String> constructedProviders)
     {
+
         for (ResultNode param : this.params)
         {
             param.buildProviders(builder, constructedProviders);
         }
-        builder.addStatement(this.initializeInjectorStatement, this.injector);
+
+        if (!constructedProviders.contains(this.getProviderName(this)))
+        {
+
+            if (this.initializeInjectorStatement == null)
+            {
+                StringBuilder sb = new StringBuilder();
+                for (int position = 0; position < this.params.size(); position++)
+                {
+                    ResultNode resultNode = this.params.get(position);
+                    sb.append("this.").append(resultNode.getProviderName(resultNode));
+                    if (position < this.params.size() - 1)
+                    {
+                        sb.append(", ");
+                    }
+                }
+                String simpleClassName = Utils.extractClassName(this.clazz);
+                builder.addStatement(String.format("this.%s = $T.create(%s)", this.getInjectorFieldName(), sb.toString()), ClassName.bestGuess(Utils.extractPackage(this.clazz) + "." + simpleClassName + "_MembersInjector"));
+            } else if (this.initializeInjectorStatement != null && this.injector != null)
+            {
+                builder.addStatement(this.initializeInjectorStatement, this.injector);
+            }
+            constructedProviders.add(this.getProviderName(this));
+        }
     }
 
     @Override
@@ -137,9 +178,6 @@ public class MemberNode extends ResultNode
                 }
             }
 
-            ParameterizedTypeName typeName = ParameterizedTypeName.get(ClassName.bestGuess("dagger.MembersInjector"), ClassName.get(this.clazz));
-            builder.addField(typeName, this.getInjectorFieldName(), Modifier.PRIVATE);
-
             initializeInjectorStatement = String.format("this.%s = $T.create(%s)", this.getInjectorFieldName(), sb.toString());
 
             methodBuilder.addStatement(String.format("$T.injectMembers(this.%s, %s)", this.getInjectorFieldName(), param.getSimpleName().toString()),
@@ -156,5 +194,36 @@ public class MemberNode extends ResultNode
     private String getInjectorFieldName()
     {
         return Utils.toParameterName(Utils.extractClassName(this.clazz)) + "Injector";
+    }
+
+    @Override
+    public boolean createsDelegateInterface()
+    {
+        return false;
+    }
+
+    @Override
+    public String toAnnotation(String id, String parentId)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (int position = 0; position < this.params.size(); position++)
+        {
+            ResultNode resultNode = this.params.get(position);
+            sb.append(resultNode.toAnnotation(UUID.randomUUID().toString(), id));
+            if (position < this.params.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        String annotation = "@com.mvp.annotation.internal.ResultNode(id = \"%s\", parentId = \"%s\", dataType = %s, isInjector = true)\n";
+        String dataType = this.clazz.toString() + ".class";
+        String s = sb.toString();
+        String seperator = s.isEmpty() ? "" : ", ";
+        return String.format(annotation, id, parentId, dataType) + seperator + sb.toString();
+    }
+
+    @Override
+    protected TypeName getProviderTypeName()
+    {
+        return ParameterizedTypeName.get(ClassName.get(dagger.MembersInjector.class), ClassName.get(this.clazz));
     }
 }

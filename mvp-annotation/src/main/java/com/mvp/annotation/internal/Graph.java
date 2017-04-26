@@ -1,18 +1,15 @@
-package com.mvp.annotation;
+package com.mvp.annotation.internal;
+
+import com.mvp.annotation.internal.TopNode;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Created by Andy on 14.12.2016.
- */
-
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.TYPE})
-public @interface Generate
+@Target({ElementType.ANNOTATION_TYPE})
+public @interface Graph
 {
-    Class<?>[] views();
-    Class<?> application();
+    TopNode[] nodes();
 }

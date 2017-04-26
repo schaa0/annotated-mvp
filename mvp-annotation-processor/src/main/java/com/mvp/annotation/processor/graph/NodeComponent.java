@@ -2,17 +2,18 @@ package com.mvp.annotation.processor.graph;
 
 import com.mvp.annotation.processor.Utils;
 
+import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
@@ -27,7 +28,6 @@ import javax.tools.Diagnostic;
 public class NodeComponent
 {
 
-    private final PackageElement packageOf;
     private final ProcessingEnvironment processingEnvironment;
     private final Elements elementUtils;
     private final Types typeUtils;
@@ -36,12 +36,11 @@ public class NodeComponent
     private final List<Dependency> dependentModules;
     private final List<Dependency> dependentComponents;
 
-    private NodeComponent(PackageElement packageOf, ProcessingEnvironment processingEnvironment,
+    private NodeComponent(ProcessingEnvironment processingEnvironment,
                           Elements elementUtils, Types typeUtils, TypeElement component,
                           List<ExecutableElement> allProvidingMethods, List<Dependency> dependentModules,
                           List<Dependency> dependentComponents)
     {
-        this.packageOf = packageOf;
         this.processingEnvironment = processingEnvironment;
         this.elementUtils = elementUtils;
         this.typeUtils = typeUtils;
@@ -51,12 +50,12 @@ public class NodeComponent
         this.dependentComponents = dependentComponents;
     }
 
-    public static NodeComponent createFrom(PackageElement packageOf, ProcessingEnvironment processingEnvironment, Elements elementUtils, Types typeUtils, TypeElement component)
+    public static NodeComponent createFrom(ProcessingEnvironment processingEnvironment, Elements elementUtils, Types typeUtils, TypeElement component)
     {
         List<Dependency> dependentModules = getDependentModules(elementUtils, typeUtils, component);
         List<Dependency> dependentComponents = getDependentComponents(elementUtils, typeUtils, component);
         List<ExecutableElement> allProvidingMethods = getProvidingMethods(elementUtils, typeUtils, component);
-        return new NodeComponent(packageOf, processingEnvironment, elementUtils, typeUtils, component, allProvidingMethods, dependentModules, dependentComponents);
+        return new NodeComponent(processingEnvironment, elementUtils, typeUtils, component, allProvidingMethods, dependentModules, dependentComponents);
     }
 
     private static List<ExecutableElement> getProvidingMethods(Elements elementUtils, Types typeUtils, TypeElement component)
@@ -65,8 +64,9 @@ public class NodeComponent
         List<? extends TypeMirror> typeMirrors = typeUtils.directSupertypes(component.asType());
         for (TypeMirror typeMirror : typeMirrors)
         {
-            if (!typeMirror.toString().equals(Object.class.getName())) {
-                allMethods.addAll(getProvidingMethods(elementUtils, typeUtils, elementUtils.getTypeElement(typeMirror.toString())));
+            TypeMirror erasure = typeUtils.erasure(typeMirror);
+            if (!erasure.toString().equals(Object.class.getName())) {
+                allMethods.addAll(getProvidingMethods(elementUtils, typeUtils, elementUtils.getTypeElement(erasure.toString())));
             }
         }
         for (Element element : component.getEnclosedElements())
@@ -174,14 +174,19 @@ public class NodeComponent
                 TypeMirror returnType = executableElement.getReturnType();
                 if (!returnType.toString().equals(void.class.getName()))
                 {
-                    topNode.addResultNode(this.findDependencies(returnType));
+                    boolean isProvider = Utils.isProviderType(elementUtils, typeUtils, returnType);
+                    returnType = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, returnType);
+                    topNode.addResultNode(this.findDependencies(topNode, returnType, isProvider, false));
                 }else if (returnType.toString().equals(void.class.getName()) && executableElement.getParameters().size() == 1) {
                     TypeMirror parameter = executableElement.getParameters().get(0).asType();
                     MemberNode resultNode = new MemberNode(elementUtils, typeUtils, this.getClassName(), parameter);
-                    List<TypeElement> typeElements = resultNode.searchForInjectMembers(elementUtils);
+                    List<TypeElement> typeElements = resultNode.searchForInjectMembers(elementUtils, parameter);
                     for (TypeElement typeElement : typeElements)
                     {
-                        resultNode.addResultNode(this.findDependencies(typeElement.asType()));
+                        TypeMirror typeMirror = typeElement.asType();
+                        boolean isProvider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                        typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                        resultNode.addResultNode(this.findDependencies(topNode, typeMirror, isProvider, false));
                     }
                     topNode.addResultNode(resultNode);
                 }
@@ -194,25 +199,25 @@ public class NodeComponent
         processingEnvironment.getMessager().printMessage(Diagnostic.Kind.NOTE, message);
     }
 
-    private ResultNode findDependencies(TypeMirror returnType)
+    private ResultNode findDependencies(TopNode topNode, TypeMirror returnType, boolean isProvider, boolean memberInjector)
     {
         this.log("searching dependencies for: " + returnType.toString());
-        ResultNode resultNode = this.tryFindInDependentComponent(returnType);
+        ResultNode resultNode = this.tryFindInDependentComponent(topNode, returnType, isProvider, memberInjector);
         if (resultNode != null) {
             return resultNode;
         }
-        resultNode = this.tryFindInDependentModules(returnType);
+        resultNode = this.tryFindInDependentModules(topNode, returnType, isProvider, memberInjector);
         if (resultNode != null) {
             return resultNode;
         }
-        resultNode = this.tryFindThroughInjectConstructor(returnType);
+        resultNode = this.tryFindThroughInjectConstructor(topNode, returnType, isProvider, memberInjector);
         if (resultNode != null) {
             return resultNode;
         }
         return null;
     }
 
-    private ResultNode tryFindThroughInjectConstructor(TypeMirror returnType)
+    private ResultNode tryFindThroughInjectConstructor(TopNode topNode, TypeMirror returnType, boolean isProvider, boolean memberInjector)
     {
         this.log("trying to find dependencies for: " + returnType.toString() + " through @Inject Constructor");
         TypeElement typeElement = elementUtils.getTypeElement(returnType.toString());
@@ -226,15 +231,29 @@ public class NodeComponent
                 if (parameters.isEmpty()) {
                     this.log("no parameters found in @Inject constructor for: " + returnType.toString());
                 }
+                List<TypeElement> injectMembers = ResultNode.searchForInjectMembers(elementUtils, returnType);
                 ResultNode resultNode = new ResultNode(elementUtils, typeUtils, this.getClassName(), returnType, typeElement, executableElement);
-                List<TypeElement> injectMembers = resultNode.searchForInjectMembers(elementUtils);
-                for (TypeElement injectMember : injectMembers)
+                resultNode.setIsProvider(isProvider);
+                if (!injectMembers.isEmpty())
                 {
-                    resultNode.addResultNode(this.findDependencies(injectMember.asType()));
+                    MemberNode memberNode = new MemberNode(elementUtils, typeUtils, this.getClassName(), returnType);
+                    for (TypeElement injectMember : injectMembers)
+                    {
+                        TypeMirror typeMirror = injectMember.asType();
+                        boolean provider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                        typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                        ResultNode dependencies = this.findDependencies(topNode, typeMirror, provider, false);
+                        memberNode.addResultNode(dependencies);
+                        resultNode.setMemberNode(memberNode);
+                    }
+                    topNode.addResultNode(memberNode);
                 }
                 for (VariableElement parameter : parameters)
                 {
-                    resultNode.addResultNode(this.findDependencies(parameter.asType()));
+                    TypeMirror typeMirror = parameter.asType();
+                    boolean provider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                    typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                    resultNode.addResultNode(this.findDependencies(topNode, typeMirror, provider, false));
                 }
                 resultNode.setDependentOnInjectConstructor(true);
                 return resultNode;
@@ -243,7 +262,7 @@ public class NodeComponent
         return null;
     }
 
-    private ResultNode tryFindInDependentModules(TypeMirror theClass)
+    private ResultNode tryFindInDependentModules(TopNode topNode, TypeMirror theClass, boolean isProvider, boolean memberInjector)
     {
         this.log("trying to find dependencies for: " + theClass.toString() + " in modules");
         for (Dependency dependentModule : dependentModules)
@@ -260,15 +279,29 @@ public class NodeComponent
                         if (parameters.isEmpty()) {
                             this.log("no parameters found in providing method for: " + theClass.toString());
                         }
+                        List<TypeElement> injectMembers = ResultNode.searchForInjectMembers(elementUtils, theClass);
                         ResultNode resultNode = new ResultNode(elementUtils, typeUtils, this.getClassName(), theClass, dependentModule.getTypeElement(), executableElement);
-                        List<TypeElement> injectMembers = resultNode.searchForInjectMembers(elementUtils);
-                        for (TypeElement injectMember : injectMembers)
+                        resultNode.setIsProvider(isProvider);
+                        if (!injectMembers.isEmpty())
                         {
-                            resultNode.addResultNode(this.findDependencies(injectMember.asType()));
+                            MemberNode memberNode = new MemberNode(elementUtils, typeUtils, this.getClassName(), theClass);
+                            for (TypeElement injectMember : injectMembers)
+                            {
+                                TypeMirror typeMirror = injectMember.asType();
+                                boolean provider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                                typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                                ResultNode dependencies = this.findDependencies(topNode, typeMirror, provider, false);
+                                memberNode.addResultNode(dependencies);
+                                resultNode.setMemberNode(memberNode);
+                            }
+                            topNode.addResultNode(memberNode);
                         }
                         for (VariableElement parameter : parameters)
                         {
-                            resultNode.addResultNode(this.findDependencies(parameter.asType()));
+                            TypeMirror typeMirror = parameter.asType();
+                            boolean provider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                            typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                            resultNode.addResultNode(this.findDependencies(topNode, typeMirror, provider, false));
                         }
                         resultNode.setDependentOnModule(true);
                         return resultNode;
@@ -279,7 +312,7 @@ public class NodeComponent
         return null;
     }
 
-    private ResultNode tryFindInDependentComponent(TypeMirror theClass)
+    private ResultNode tryFindInDependentComponent(TopNode topNode, TypeMirror theClass, boolean isProvider, boolean memberInjector)
     {
         this.log("trying to find dependencies for: " + theClass.toString() + " in dependent components");
         for (Dependency dependency : dependentComponents)
@@ -292,11 +325,22 @@ public class NodeComponent
                     if (executableElement.getReturnType().toString().equals(theClass.toString()))
                     {
                         this.log("found " + theClass.toString() + " in dependent component");
+                        List<TypeElement> injectMembers = ResultNode.searchForInjectMembers(elementUtils, theClass);
                         ResultNode resultNode = new ResultNode(elementUtils, typeUtils, this.getClassName(), theClass, dependency.getTypeElement(), executableElement);
-                        List<TypeElement> injectMembers = resultNode.searchForInjectMembers(elementUtils);
-                        for (TypeElement injectMember : injectMembers)
+                        resultNode.setIsProvider(isProvider);
+                        if (!injectMembers.isEmpty())
                         {
-                            resultNode.addResultNode(this.findDependencies(injectMember.asType()));
+                            MemberNode memberNode = new MemberNode(elementUtils, typeUtils, this.getClassName(), theClass);
+                            for (TypeElement injectMember : injectMembers)
+                            {
+                                TypeMirror typeMirror = injectMember.asType();
+                                boolean provider = Utils.isProviderType(elementUtils, typeUtils, typeMirror);
+                                typeMirror = Utils.getGenericTypeIfIsProvider(elementUtils, typeUtils, typeMirror);
+                                ResultNode dependencies = this.findDependencies(topNode, typeMirror, provider, false);
+                                memberNode.addResultNode(dependencies);
+                                resultNode.setMemberNode(memberNode);
+                            }
+                            topNode.addResultNode(memberNode);
                         }
                         resultNode.setDependentOnParentComponent(true);
                         return resultNode;

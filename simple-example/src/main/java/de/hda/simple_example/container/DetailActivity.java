@@ -39,7 +39,7 @@ public class DetailActivity extends AppCompatActivity implements DetailActivityV
         setContentView(R.layout.layout_detail_activity);
         orientationView = findViewById(R.id.orientation);
         SimpleApplication provider = (SimpleApplication) getApplication();
-        component = provider.componentActivity(this, provider.componentApplication());
+        component = provider.componentActivity(this);
     }
 
     public ComponentApplication getParentComponent() {

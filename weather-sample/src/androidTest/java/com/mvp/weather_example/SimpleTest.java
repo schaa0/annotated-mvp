@@ -1,17 +1,24 @@
 package com.mvp.weather_example;
 
+import android.content.Context;
+import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.support.test.espresso.ViewInteraction;
 import android.support.test.runner.AndroidJUnit4;
 
+import com.bumptech.glide.RequestManager;
 import com.mvp.CustomActivityTestRule;
 import com.mvp.uiautomator.UiAutomatorTestCase;
 import com.mvp.weather_example.di.AndroidTestWeatherApplication;
+import com.mvp.weather_example.di.TestDaggerComponentSingleton;
 import com.mvp.weather_example.model.forecast.threehours.ThreeHoursForecastWeather;
 import com.mvp.weather_example.model.forecast.tomorrow.TomorrowWeather;
 import com.mvp.weather_example.model.today.TodayWeather;
 import com.mvp.weather_example.service.DateProvider;
 import com.mvp.weather_example.service.ImageRequestManager;
-import com.mvp.weather_example.service.WeatherService;
+import com.mvp.weather_example.service.LocationProvider;
+import com.mvp.weather_example.service.WeatherApi;
 import com.mvp.weather_example.stubs.Responses;
 import com.mvp.weather_example.stubs.StubDateProvider;
 import com.mvp.weather_example.view.MainActivity;
@@ -27,6 +34,8 @@ import org.mockito.Mock;
 import java.io.IOException;
 import java.util.Calendar;
 
+import javax.inject.Provider;
+
 import static android.support.test.espresso.Espresso.onView;
 import static android.support.test.espresso.action.ViewActions.click;
 import static android.support.test.espresso.assertion.ViewAssertions.matches;
@@ -38,17 +47,24 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
 
 @RunWith(AndroidJUnit4.class)
 public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplication>
 {
 
+    public static final double FAKE_LONGITUDE = 1.0;
+    public static final double FAKE_LATITUDE = 1.0;
+
     @Mock
-    WeatherService weatherService;
+    WeatherApi weatherApi;
     @Mock
     ImageRequestManager imageRequestManager;
+    @Mock
+    LocationProvider locationProvider;
 
     DateProvider dateProvider = new StubDateProvider(2017, Calendar.JANUARY, 22, 23, 0, 0);
 
@@ -61,17 +77,31 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void setUp() throws Exception
     {
         super.setUp();
+        doReturn(fakeLocation()).when(locationProvider).lastLocation();
         doNothing().when(imageRequestManager).load(anyString(), ArgumentMatchers.any(ImageRequestManager.IconCallback.class));
-        //dependencies().with(imageRequestManager);
+
+        dependencies().withImageRequestManager(requestManager -> imageRequestManager)
+                      .withDateProvider(() -> dateProvider)
+                      .withWeatherApi(() -> weatherApi)
+                      .withLocationProvider(locationManager -> locationProvider);
+    }
+
+    private Location fakeLocation()
+    {
+        Location location = new Location("");
+        location.setLongitude(FAKE_LONGITUDE);
+        location.setLatitude(FAKE_LATITUDE);
+        return location;
     }
 
     @Test
     public void itShouldShowWeatherForNextDay() throws IOException
     {
-        doReturn(new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST))
-                .when(weatherService).getForecastWeather(anyDouble(), anyDouble());
+        when(weatherApi.getForecastWeather(eq(FAKE_LONGITUDE), eq(FAKE_LATITUDE), eq("metric"), eq("de"), anyString())).thenReturn(
+                new WeatherCall<>(ThreeHoursForecastWeather.class, Responses.THREE_HOUR_FORECAST)
+        );
 
-        dependencies().with(weatherService).apply();
+        dependencies().apply();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();
@@ -109,12 +139,12 @@ public class SimpleTest extends UiAutomatorTestCase<AndroidTestWeatherApplicatio
     public void itShouldDisplayTemperatureFromApi() throws IOException
     {
         doReturn(new WeatherCall<>(TomorrowWeather.class, Responses.TOMORROW_WEATHER))
-                .when(weatherService).getTomorrowWeather(anyDouble(), anyDouble(), anyInt());
+                .when(weatherApi).getTomorrowWeather(eq(FAKE_LONGITUDE), eq(FAKE_LATITUDE), eq("metric"), eq(1), eq("de"), anyString());
 
         doReturn(new WeatherCall<>(TodayWeather.class, Responses.TODAY_WEATHER))
-                .when(weatherService).getCurrentWeather(anyDouble(), anyDouble());
+                .when(weatherApi).getCurrentWeather(eq(FAKE_LONGITUDE), eq(FAKE_LATITUDE), eq("metric"), eq("de"), anyString());
 
-        dependencies().with(weatherService).apply();
+        dependencies().apply();
 
         mActivity = rule.launchActivity(null);
         allowPermissionsIfNeeded();

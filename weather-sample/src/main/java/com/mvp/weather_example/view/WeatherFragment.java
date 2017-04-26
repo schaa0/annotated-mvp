@@ -1,5 +1,6 @@
 package com.mvp.weather_example.view;
 
+import android.app.Application;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -15,6 +16,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.mvp.weather_example.R;
+import com.mvp.weather_example.di.ComponentSingleton;
+import com.mvp.weather_example.di.WeatherApplication;
 import com.mvp.weather_example.presenter.WeatherPresenter;
 
 public abstract class WeatherFragment extends Fragment implements WeatherFragmentView
@@ -84,6 +87,11 @@ public abstract class WeatherFragment extends Fragment implements WeatherFragmen
     @Override
     public void requestFinished() {
         progressBar.setVisibility(View.GONE);
+    }
+
+    public ComponentSingleton getParentComponent() {
+        WeatherApplication application = (WeatherApplication) this.getActivity().getApplication();
+        return application.componentSingleton();
     }
 
 }

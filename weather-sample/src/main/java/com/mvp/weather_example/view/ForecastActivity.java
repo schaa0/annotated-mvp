@@ -10,6 +10,8 @@ import com.mvp.annotation.Param;
 import com.mvp.annotation.Presenter;
 import com.mvp.annotation.View;
 import com.mvp.weather_example.R;
+import com.mvp.weather_example.di.ComponentSingleton;
+import com.mvp.weather_example.di.WeatherApplication;
 import com.mvp.weather_example.presenter.ForecastPresenter;
 
 @View(presenter = ForecastPresenter.class)
@@ -43,5 +45,10 @@ public class ForecastActivity extends AppCompatActivity implements ForecastActiv
     @Override
     public void onClick(DialogInterface dialogInterface, int i) {
         onBackPressed();
+    }
+
+    public ComponentSingleton getParentComponent() {
+        WeatherApplication application = (WeatherApplication) this.getApplication();
+        return application.componentSingleton();
     }
 }

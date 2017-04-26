@@ -1,11 +1,13 @@
 package com.mvp.annotation.processor.unittest;
 
-import com.mvp.annotation.Generate;
+import com.mvp.annotation.internal.Generate;
+import com.mvp.annotation.processor.graph.TopNode;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
@@ -20,12 +22,14 @@ public class TriggerType extends AbsGeneratingType
 {
     private final Set<Element> viewElements;
     private ClassName applicationClassName;
+    private final List<TopNode> topNodes;
 
-    public TriggerType(Filer filer, String packageName, Set<Element> viewElements, ClassName applicationClassName)
+    public TriggerType(Filer filer, String packageName, Set<Element> viewElements, ClassName applicationClassName, List<TopNode> topNodes)
     {
         super(filer, packageName);
         this.viewElements = viewElements;
         this.applicationClassName = applicationClassName;
+        this.topNodes = topNodes;
     }
 
     @Override
@@ -48,8 +52,25 @@ public class TriggerType extends AbsGeneratingType
         AnnotationSpec.Builder annotationBuilder = AnnotationSpec.builder(Generate.class);
         annotationBuilder.addMember("views", params, (Object[]) vars);
         annotationBuilder.addMember("application", "$T.class", applicationClassName);
+        String graph = this.buildGraph();
+        annotationBuilder.addMember("graph", graph);
         return TypeSpec.classBuilder("Trigger")
                 .addModifiers(Modifier.ABSTRACT)
                 .addAnnotation(annotationBuilder.build());
+    }
+
+    private String buildGraph()
+    {
+        String graph = "@com.mvp.annotation.internal.Graph( nodes = {\n%s\n})";
+        StringBuilder sb = new StringBuilder();
+        for (int position = 0; position < this.topNodes.size(); position++)
+        {
+            TopNode topNode = this.topNodes.get(position);
+            sb.append(topNode.toAnnotation());
+            if (position < this.topNodes.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        return String.format(graph, sb.toString());
     }
 }

@@ -11,11 +11,15 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
+import javax.annotation.Generated;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
 public class TopNode
@@ -166,8 +170,56 @@ public class TopNode
         return componentName;
     }
 
-    public List<String> getCreatedDelegates()
+    public List<TypeMirror> getGeneratedInterfaceTypes()
     {
-        return this.createdDelegates;
+        List<TypeMirror> generatedInterfaceTypes = new ArrayList<>();
+        for (ResultNode resultNode : resultNodes)
+        {
+            generatedInterfaceTypes.addAll(resultNode.getGeneratedInterfaceType());
+        }
+        return generatedInterfaceTypes;
+    }
+
+    public String toAnnotation()
+    {
+        String myId = UUID.randomUUID().toString();
+        StringBuilder sb = new StringBuilder();
+        int size = this.resultNodes.size();
+        for (int position = 0; position < size; position++)
+        {
+            ResultNode resultNode = this.resultNodes.get(position);
+            String s = resultNode.toAnnotation(UUID.randomUUID().toString(), "");
+            sb.append(s);
+            if (position < size - 1) {
+                sb.append(", ");
+            }
+        }
+        String dc = this.dc();
+        String annotation = "@com.mvp.annotation.internal.TopNode(id = \"%s\", componentType = %s, dependentComponents = %s, nodes = {%s})";
+        String component = this.getComponentType().toString() + ".class";
+        return String.format(annotation, myId, component, dc, sb.toString());
+    }
+
+    private String dc()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{ ");
+        for (int position = 0; position < this.dependentComponents.size(); position++)
+        {
+            Dependency dc = this.dependentComponents.get(position);
+            sb.append(dc.getTypeElement().toString()).append(".class");
+            if (position < this.dependentComponents.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(" }");
+        return sb.toString();
+    }
+
+    public static TopNode createFromAnnotation(Elements elements, String topNodeId, AnnotationMirror nodes, String componentType, List<Object> dependentComponents)
+    {
+        TypeElement typeElement = elements.getTypeElement(componentType);
+       // TopNode topNode = new TopNode(elements, typeElement, )
+        return null;
     }
 }

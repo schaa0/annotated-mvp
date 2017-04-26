@@ -3,7 +3,9 @@ package de.hda.simple_example.presenter;
 import android.content.SharedPreferences;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
 public class Settings
 {
 

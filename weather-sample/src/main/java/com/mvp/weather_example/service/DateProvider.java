@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 public class DateProvider {
 

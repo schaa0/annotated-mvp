@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements IView {
         this.savedInstanceState = savedInstanceState;
 
         SimpleApplication provider = (SimpleApplication) getApplication();
-        component = provider.componentActivity(this, this.getParentComponent());
+        component = provider.componentActivity(this);
         component.inject(this);
 
         customService.register();

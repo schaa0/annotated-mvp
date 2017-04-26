@@ -51,7 +51,8 @@ public class Dependency
             {
                 if (!typeMirror.toString().equals(Object.class.getName()))
                 {
-                    allMethods.addAll(getAllMethods(elementUtils, typeUtils, elementUtils.getTypeElement(typeMirror.toString())));
+                    TypeMirror erasure = typeUtils.erasure(typeMirror);
+                    allMethods.addAll(getAllMethods(elementUtils, typeUtils, elementUtils.getTypeElement(erasure.toString())));
                 }
             }
         }

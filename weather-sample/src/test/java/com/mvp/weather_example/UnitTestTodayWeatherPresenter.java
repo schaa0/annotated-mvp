@@ -124,7 +124,7 @@ public class UnitTestTodayWeatherPresenter extends PresenterUnitTestCase
 
         verify(view, atLeastOnce()).isPermissionGranted(anyString());
         verify(view).requestStarted();
-        verify(view).showWeather(anyString(), anyString(), eq("3.76°C"), eq("100%"));
+        verify(view).showWeather(anyString(), anyString(), eq("3.76"), eq("100"));
         verify(view).requestFinished();
     }
 

@@ -19,6 +19,7 @@ public class WeatherApplication extends MvpApplication {
         super.onCreate();
         componentWeather = DaggerComponentSingleton.builder()
                                                    .moduleSingleton(this.moduleSingleton())
+                                                   .baseModuleContext(this.baseModuleContext())
                                                    .moduleEventBus(this.mvpEventBus())
                                                    .build();
     }
@@ -45,5 +46,10 @@ public class WeatherApplication extends MvpApplication {
                 .componentSingleton(this.componentSingleton())
                 .moduleActivity(new ModuleActivity(activity))
                 .build();
+    }
+
+    @ProvidesModule
+    public BaseModuleContext baseModuleContext() {
+        return new BaseModuleContext(this.getApplicationContext());
     }
 }

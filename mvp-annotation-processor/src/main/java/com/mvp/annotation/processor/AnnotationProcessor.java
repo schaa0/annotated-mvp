@@ -97,7 +97,6 @@ public class AnnotationProcessor extends AbstractProcessor
     private boolean alreadyProcessed = false;
     private boolean shouldSkipAllRounds = false;
     private Filer filer;
-    private ObjectGraph objectGraph;
 
     @Override
     public synchronized void init(ProcessingEnvironment env)
@@ -108,9 +107,27 @@ public class AnnotationProcessor extends AbstractProcessor
         filer = processingEnv.getFiler();
     }
 
+    public boolean isAndroidTest()
+    {
+        return elementUtils.getTypeElement("android.support.test.runner.AndroidJUnit4") != null;
+    }
+
+    public boolean isUnitTest()
+    {
+        return elementUtils.getTypeElement("org.robolectric.RobolectricTestRunner") != null;
+    }
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env)
     {
+
+        if (env.errorRaised()) {
+            return false;
+        }
+
+        if (isUnitTest() || isAndroidTest()) {
+            return false;
+        }
 
         if (shouldSkipAllRounds)
         {
@@ -312,7 +329,6 @@ public class AnnotationProcessor extends AbstractProcessor
 
         if (env.processingOver())
         {
-            //objectGraph.generate();
             generateDependencyProvider(env);
             generateOnPresenterLoadedListeners();
         }
